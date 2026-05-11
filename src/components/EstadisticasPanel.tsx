@@ -47,11 +47,11 @@ function getDefaultHasta(): string {
 }
 
 function formatUSD(value: number): string {
-  return value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
+  return Math.round(value).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 function formatKg(value: number): string {
-  return `${value.toLocaleString("es-CL")} kg`;
+  return `${Math.round(value).toLocaleString("es-CL")} kg`;
 }
 
 export default function EstadisticasPanel() {

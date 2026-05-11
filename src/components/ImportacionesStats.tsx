@@ -52,7 +52,7 @@ function getDefaultHasta(): string {
 }
 
 function formatUSD(value: number): string {
-  return value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
+  return Math.round(value).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 export default function ImportacionesStats() {
@@ -215,7 +215,7 @@ export default function ImportacionesStats() {
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total Kilos</div>
-          <div className="stat-value text-warning text-2xl">{Number(data.totals.total_kilos).toLocaleString("es-CL")} kg</div>
+          <div className="stat-value text-warning text-2xl">{Math.round(Number(data.totals.total_kilos)).toLocaleString("es-CL")} kg</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total Flete</div>
