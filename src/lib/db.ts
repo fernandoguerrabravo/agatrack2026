@@ -141,6 +141,14 @@ async function openTunnel(env: DbEnv): Promise<void> {
   console.log("[db] SSH tunnel established successfully");
 }
 
+async function resetConnection(): Promise<void> {
+  if (cached.pool) {
+    try { await cached.pool.end(); } catch { /* ignore */ }
+    cached.pool = null;
+  }
+  cached.tunnelReady = null;
+}
+
 async function getPool(): Promise<mysql.Pool> {
   if (cached.pool) return cached.pool;
 
@@ -165,6 +173,7 @@ async function getPool(): Promise<mysql.Pool> {
     connectionLimit: 10,
     queueLimit: 0,
     enableKeepAlive: true,
+    connectTimeout: 20000,
   });
 
   return cached.pool;
@@ -174,9 +183,22 @@ export async function query<T = mysql.RowDataPacket[]>(
   sql: string,
   params?: ReadonlyArray<unknown>
 ): Promise<T> {
-  const pool = await getPool();
-  const [rows] = await pool.query(sql, params as unknown[] | undefined);
-  return rows as T;
+  try {
+    const pool = await getPool();
+    const [rows] = await pool.query(sql, params as unknown[] | undefined);
+    return rows as T;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // Si es timeout o conexión perdida, resetear y reintentar una vez
+    if (message.includes("ETIMEDOUT") || message.includes("ECONNREFUSED") || message.includes("Connection lost")) {
+      console.log("[db] Connection lost, resetting tunnel and retrying...");
+      await resetConnection();
+      const pool = await getPool();
+      const [rows] = await pool.query(sql, params as unknown[] | undefined);
+      return rows as T;
+    }
+    throw err;
+  }
 }
 
 export async function getConnection(): Promise<mysql.PoolConnection> {
