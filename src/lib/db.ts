@@ -66,7 +66,8 @@ async function openTunnel(env: DbEnv): Promise<void> {
 
   // Si existe DB_TUNNEL_PRIVATE_KEY como contenido directo, usarlo (para deploy en cloud)
   if (process.env.DB_TUNNEL_PRIVATE_KEY) {
-    privateKey = process.env.DB_TUNNEL_PRIVATE_KEY;
+    // Reemplazar \n literales por saltos de línea reales
+    privateKey = process.env.DB_TUNNEL_PRIVATE_KEY.replace(/\\n/g, "\n");
   } else {
     const keyPath = path.isAbsolute(env.DB_TUNNEL_PRIVATE_KEY_PATH)
       ? env.DB_TUNNEL_PRIVATE_KEY_PATH
@@ -90,6 +91,7 @@ async function openTunnel(env: DbEnv): Promise<void> {
   };
 
   await createTunnel(tunnelOptions, serverOptions, sshOptions, forwardOptions);
+  console.log("[db] SSH tunnel established successfully");
 }
 
 async function getPool(): Promise<mysql.Pool> {
@@ -99,6 +101,7 @@ async function getPool(): Promise<mysql.Pool> {
 
   if (!cached.tunnelReady) {
     cached.tunnelReady = openTunnel(env).catch((err) => {
+      console.error("[db] SSH tunnel error:", err);
       cached.tunnelReady = null;
       throw err;
     });
