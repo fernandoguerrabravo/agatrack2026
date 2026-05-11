@@ -26,7 +26,7 @@ type StatsData = {
     cantidad: number;
     total_cif_bk: number;
   };
-  bienCapitalAnual: { anio: number; cantidad: number; total_cif_bk: number }[];
+  bienCapitalAnual: { mes: string; cantidad: number; total_cif_bk: number }[];
   porMes: {
     mes: string;
     cantidad: number;
@@ -208,7 +208,7 @@ export default function ImpuestosPanel() {
         </div>
       </div>
 
-      {/* Tendencia Bien de Capital desde 2025 */}
+      {/* Tendencia Bien de Capital por mes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card bg-base-100 shadow">
           <div className="card-body">
@@ -217,7 +217,7 @@ export default function ImpuestosPanel() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.bienCapitalAnual}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="anio" tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend />
@@ -225,6 +225,9 @@ export default function ImpuestosPanel() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+            <p className="text-xs text-base-content/50 text-center mt-1">
+              Rango: {desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}
+            </p>
           </div>
         </div>
 
@@ -235,7 +238,7 @@ export default function ImpuestosPanel() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.bienCapitalAnual.map((r) => ({ ...r, ahorro: Number(r.total_cif_bk) * 0.06 }))}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="anio" tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
                   <Tooltip formatter={(value) => formatUSD(Number(value))} />
                   <Legend />
@@ -243,6 +246,9 @@ export default function ImpuestosPanel() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+            <p className="text-xs text-base-content/50 text-center mt-1">
+              Rango: {desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}
+            </p>
           </div>
         </div>
       </div>

@@ -67,13 +67,12 @@ export async function GET(request: Request) {
       params
     );
 
-    // Tendencia Bien de Capital por año desde 2024 (independiente del filtro de fechas)
-    const placeholdersTrend = OPERACIONES_EXPORT.map(() => "?").join(",");
+    // Tendencia Bien de Capital por mes (indexada al filtro de fechas)
     const bienCapitalAnual = await query<Record<string, unknown>[]>(
-      `SELECT YEAR(fecha_aceptacion) as anio, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as total_cif_bk
-      FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholdersTrend}) AND rut_cliente = ? AND regimen = 'GENERAL' AND gravamenes_valor_1 = 0 AND fecha_aceptacion >= '2024-01-01'
-      GROUP BY anio ORDER BY anio`,
-      [...OPERACIONES_EXPORT, rut]
+      `SELECT DATE_FORMAT(fecha_aceptacion, '%Y-%m') as mes, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as total_cif_bk
+      FROM out_despacho_fguerra ${whereClause} AND regimen = 'GENERAL' AND gravamenes_valor_1 = 0
+      GROUP BY mes ORDER BY mes`,
+      params
     );
 
     // IVA y Derechos por mes
