@@ -33,6 +33,12 @@ type StatsData = {
   porAduana: { aduana: string; cantidad: number; cif_total: number; peso_total: number }[];
   porIncoterms: { incoterm: string; cantidad: number; cif_total: number; peso_total: number }[];
   porEmisor: { emisor: string; cantidad: number; kilos: number; flete: number }[];
+  maritimo: {
+    container: { cantidad: number; cif: number; peso: number };
+    cargaSuelta: { cantidad: number; cif: number; peso: number };
+    containerMes: { mes: string; cantidad: number; cif: number; peso: number }[];
+    cargaSueltaMes: { mes: string; cantidad: number; cif: number; peso: number }[];
+  };
 };
 
 const COLORS = [
@@ -499,6 +505,171 @@ export default function ImportacionesStats() {
           </div>
         </div>
       </div>
+
+      {/* Marítimo: Container vs Carga Suelta */}
+      {data.maritimo && (Number(data.maritimo.container.cantidad) > 0 || Number(data.maritimo.cargaSuelta.cantidad) > 0) && (
+        <>
+          <h2 className="text-lg font-semibold mt-2">Vía Marítima: Container vs Carga Suelta</h2>
+          <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
+
+          {/* Tortas comparativas */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Por cantidad de operaciones */}
+            <div className="card bg-base-100 shadow">
+              <div className="card-body">
+                <h2 className="card-title text-lg">Por Operaciones</h2>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Container", value: Number(data.maritimo.container.cantidad) },
+                          { name: "Carga Suelta", value: Number(data.maritimo.cargaSuelta.cantidad) },
+                        ]}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ name, percent }: { name?: string; percent?: number }) =>
+                          `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`
+                        }
+                      >
+                        <Cell fill="#4f46e5" />
+                        <Cell fill="#f59e0b" />
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* Por CIF */}
+            <div className="card bg-base-100 shadow">
+              <div className="card-body">
+                <h2 className="card-title text-lg">Por CIF</h2>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Container", value: Number(data.maritimo.container.cif) },
+                          { name: "Carga Suelta", value: Number(data.maritimo.cargaSuelta.cif) },
+                        ]}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ name, percent }: { name?: string; percent?: number }) =>
+                          `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`
+                        }
+                      >
+                        <Cell fill="#4f46e5" />
+                        <Cell fill="#f59e0b" />
+                      </Pie>
+                      <Tooltip formatter={(value) => formatUSD(Number(value))} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* Por Peso */}
+            <div className="card bg-base-100 shadow">
+              <div className="card-body">
+                <h2 className="card-title text-lg">Por Peso</h2>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Container", value: Number(data.maritimo.container.peso) },
+                          { name: "Carga Suelta", value: Number(data.maritimo.cargaSuelta.peso) },
+                        ]}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ name, percent }: { name?: string; percent?: number }) =>
+                          `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`
+                        }
+                      >
+                        <Cell fill="#4f46e5" />
+                        <Cell fill="#f59e0b" />
+                      </Pie>
+                      <Tooltip formatter={(value) => `${Math.round(Number(value)).toLocaleString("es-CL")} kg`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tendencia mensual Container vs Carga Suelta */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="card bg-base-100 shadow">
+              <div className="card-body">
+                <h2 className="card-title text-lg">Operaciones por Mes</h2>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={(() => {
+                      const meses = new Set([
+                        ...data.maritimo.containerMes.map(r => r.mes),
+                        ...data.maritimo.cargaSueltaMes.map(r => r.mes),
+                      ]);
+                      return Array.from(meses).sort().map(mes => ({
+                        mes,
+                        container: Number(data.maritimo.containerMes.find(r => r.mes === mes)?.cantidad ?? 0),
+                        cargaSuelta: Number(data.maritimo.cargaSueltaMes.find(r => r.mes === mes)?.cantidad ?? 0),
+                      }));
+                    })()}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="container" name="Container" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="cargaSuelta" name="Carga Suelta" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            <div className="card bg-base-100 shadow">
+              <div className="card-body">
+                <h2 className="card-title text-lg">CIF por Mes</h2>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={(() => {
+                      const meses = new Set([
+                        ...data.maritimo.containerMes.map(r => r.mes),
+                        ...data.maritimo.cargaSueltaMes.map(r => r.mes),
+                      ]);
+                      return Array.from(meses).sort().map(mes => ({
+                        mes,
+                        container: Number(data.maritimo.containerMes.find(r => r.mes === mes)?.cif ?? 0),
+                        cargaSuelta: Number(data.maritimo.cargaSueltaMes.find(r => r.mes === mes)?.cif ?? 0),
+                      }));
+                    })()}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip formatter={(value) => formatUSD(Number(value))} />
+                      <Legend />
+                      <Bar dataKey="container" name="Container" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="cargaSuelta" name="Carga Suelta" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

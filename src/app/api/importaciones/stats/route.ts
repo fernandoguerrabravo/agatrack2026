@@ -90,6 +90,29 @@ export async function GET(request: Request) {
       params
     );
 
+    // Marítimo: Container vs Carga Suelta (via = 'MARITIMA, FLUVIAL Y LACUSTRE')
+    const maritimoWhere = `${whereClause} AND via = 'MARITIMA, FLUVIAL Y LACUSTRE'`;
+
+    // Totales container vs no container
+    const [maritimoContainer] = await query<Record<string, unknown>[]>(
+      `SELECT COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif, COALESCE(SUM(total_peso_bruto), 0) as peso FROM out_despacho_fguerra ${maritimoWhere} AND bulto_glosa LIKE '%CONT%'`,
+      params
+    );
+    const [maritimoCargaSuelta] = await query<Record<string, unknown>[]>(
+      `SELECT COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif, COALESCE(SUM(total_peso_bruto), 0) as peso FROM out_despacho_fguerra ${maritimoWhere} AND bulto_glosa NOT LIKE '%CONT%'`,
+      params
+    );
+
+    // Por mes: container vs carga suelta
+    const maritimoContainerMes = await query<Record<string, unknown>[]>(
+      `SELECT DATE_FORMAT(fecha_aceptacion, '%Y-%m') as mes, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif, COALESCE(SUM(total_peso_bruto), 0) as peso FROM out_despacho_fguerra ${maritimoWhere} AND bulto_glosa LIKE '%CONT%' GROUP BY mes ORDER BY mes`,
+      params
+    );
+    const maritimoCargaSueltaMes = await query<Record<string, unknown>[]>(
+      `SELECT DATE_FORMAT(fecha_aceptacion, '%Y-%m') as mes, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif, COALESCE(SUM(total_peso_bruto), 0) as peso FROM out_despacho_fguerra ${maritimoWhere} AND bulto_glosa NOT LIKE '%CONT%' GROUP BY mes ORDER BY mes`,
+      params
+    );
+
     return NextResponse.json({
       totals: totals ?? {},
       porMes,
@@ -98,6 +121,12 @@ export async function GET(request: Request) {
       porAduana,
       porIncoterms,
       porEmisor,
+      maritimo: {
+        container: maritimoContainer ?? { cantidad: 0, cif: 0, peso: 0 },
+        cargaSuelta: maritimoCargaSuelta ?? { cantidad: 0, cif: 0, peso: 0 },
+        containerMes: maritimoContainerMes,
+        cargaSueltaMes: maritimoCargaSueltaMes,
+      },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
