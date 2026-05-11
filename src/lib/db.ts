@@ -65,49 +65,58 @@ const globalForDb = globalThis as unknown as { __db?: Cached };
 const cached: Cached = globalForDb.__db ?? { pool: null, tunnelReady: null };
 if (!globalForDb.__db) globalForDb.__db = cached;
 
+function parseKeyFromEnv(raw: string): string {
+  let key = raw;
+  if (!key.trimStart().startsWith("-----")) {
+    key = Buffer.from(key, "base64").toString("utf-8");
+  }
+  key = key.replace(/\\n/g, "\n");
+  if (!key.includes("\n") || key.split("\n").length < 3) {
+    key = key
+      .replace("-----BEGIN OPENSSH PRIVATE KEY-----", "-----BEGIN OPENSSH PRIVATE KEY-----\n")
+      .replace("-----END OPENSSH PRIVATE KEY-----", "\n-----END OPENSSH PRIVATE KEY-----\n");
+  }
+  if (!key.endsWith("\n")) key += "\n";
+  return key;
+}
+
+async function fetchKeyFromUrl(url: string): Promise<string> {
+  console.log("[db] Fetching private key from URL...");
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch private key from URL: ${res.status}`);
+  }
+  let key = await res.text();
+  if (!key.endsWith("\n")) key += "\n";
+  return key;
+}
+
 async function openTunnel(env: DbEnv): Promise<void> {
   let privateKey: Buffer | string;
 
-  // Si existe DB_TUNNEL_PRIVATE_KEY como contenido directo, usarlo (para deploy en cloud)
-  if (process.env.DB_TUNNEL_PRIVATE_KEY) {
-    let key = process.env.DB_TUNNEL_PRIVATE_KEY;
-
-    // Si está en base64 (no empieza con -----), decodificar
-    if (!key.trimStart().startsWith("-----")) {
-      key = Buffer.from(key, "base64").toString("utf-8");
-    }
-
-    // Reemplazar \n literales (string "\\n") por saltos de línea reales
-    key = key.replace(/\\n/g, "\n");
-
-    // Si no tiene saltos de línea internos, intentar reconstruir
-    if (!key.includes("\n") || key.split("\n").length < 3) {
-      key = key
-        .replace("-----BEGIN OPENSSH PRIVATE KEY-----", "-----BEGIN OPENSSH PRIVATE KEY-----\n")
-        .replace("-----END OPENSSH PRIVATE KEY-----", "\n-----END OPENSSH PRIVATE KEY-----\n");
-    }
-
-    // Asegurar que termine con newline
-    if (!key.endsWith("\n")) key += "\n";
-
-    console.log("[db] Private key format check:", key.substring(0, 40), "... length:", key.length, "lines:", key.split("\n").length);
-    privateKey = key;
-  } else if (process.env.DB_TUNNEL_PRIVATE_KEY_URL) {
-    // Descargar la llave desde una URL (ej: DigitalOcean Spaces)
-    console.log("[db] Fetching private key from URL...");
-    const res = await fetch(process.env.DB_TUNNEL_PRIVATE_KEY_URL);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch private key from URL: ${res.status}`);
-    }
-    let key = await res.text();
-    if (!key.endsWith("\n")) key += "\n";
-    console.log("[db] Private key fetched, length:", key.length);
-    privateKey = key;
-  } else {
+  // Prioridad 1: Leer desde archivo (local y servidor con .pem en repo)
+  if (env.DB_TUNNEL_PRIVATE_KEY_PATH) {
     const keyPath = path.isAbsolute(env.DB_TUNNEL_PRIVATE_KEY_PATH)
       ? env.DB_TUNNEL_PRIVATE_KEY_PATH
       : path.join(process.cwd(), env.DB_TUNNEL_PRIVATE_KEY_PATH);
-    privateKey = fs.readFileSync(keyPath);
+
+    if (fs.existsSync(keyPath)) {
+      privateKey = fs.readFileSync(keyPath);
+    } else if (process.env.DB_TUNNEL_PRIVATE_KEY) {
+      privateKey = parseKeyFromEnv(process.env.DB_TUNNEL_PRIVATE_KEY);
+    } else if (process.env.DB_TUNNEL_PRIVATE_KEY_URL) {
+      privateKey = await fetchKeyFromUrl(process.env.DB_TUNNEL_PRIVATE_KEY_URL);
+    } else {
+      throw new Error(`Private key file not found: ${keyPath}`);
+    }
+  } else if (process.env.DB_TUNNEL_PRIVATE_KEY) {
+    // Prioridad 2: Variable de entorno directa
+    privateKey = parseKeyFromEnv(process.env.DB_TUNNEL_PRIVATE_KEY);
+  } else if (process.env.DB_TUNNEL_PRIVATE_KEY_URL) {
+    // Prioridad 3: URL
+    privateKey = await fetchKeyFromUrl(process.env.DB_TUNNEL_PRIVATE_KEY_URL);
+  } else {
+    throw new Error("No private key source available");
   }
 
   const tunnelOptions: TunnelOptions = { autoClose: false, reconnectOnError: true };
