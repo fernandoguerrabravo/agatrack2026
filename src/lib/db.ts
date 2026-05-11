@@ -70,8 +70,19 @@ async function openTunnel(env: DbEnv): Promise<void> {
 
   // Si existe DB_TUNNEL_PRIVATE_KEY como contenido directo, usarlo (para deploy en cloud)
   if (process.env.DB_TUNNEL_PRIVATE_KEY) {
-    // Reemplazar \n literales por saltos de línea reales
-    privateKey = process.env.DB_TUNNEL_PRIVATE_KEY.replace(/\\n/g, "\n");
+    // Manejar diferentes formatos de saltos de línea
+    let key = process.env.DB_TUNNEL_PRIVATE_KEY;
+    // Reemplazar \n literales (string "\\n") por saltos de línea reales
+    key = key.replace(/\\n/g, "\n");
+    // Si no tiene saltos de línea, intentar reconstruir el formato PEM
+    if (!key.includes("\n")) {
+      key = key
+        .replace("-----BEGIN OPENSSH PRIVATE KEY-----", "-----BEGIN OPENSSH PRIVATE KEY-----\n")
+        .replace("-----END OPENSSH PRIVATE KEY-----", "\n-----END OPENSSH PRIVATE KEY-----\n");
+    }
+    // Asegurar que termine con newline
+    if (!key.endsWith("\n")) key += "\n";
+    privateKey = key;
   } else {
     const keyPath = path.isAbsolute(env.DB_TUNNEL_PRIVATE_KEY_PATH)
       ? env.DB_TUNNEL_PRIVATE_KEY_PATH
