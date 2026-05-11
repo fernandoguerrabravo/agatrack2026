@@ -112,11 +112,14 @@ async function openTunnel(env: DbEnv): Promise<void> {
 
   const tunnelOptions: TunnelOptions = { autoClose: false, reconnectOnError: true };
   const serverOptions: ServerOptions = { host: "127.0.0.1", port: env.DB_LOCAL_PORT };
+  console.log("[db] Connecting SSH tunnel to:", env.DB_TUNNEL_HOST, "port:", env.DB_TUNNEL_PORT);
+
   const sshOptions: SshOptions = {
     host: env.DB_TUNNEL_HOST,
     port: env.DB_TUNNEL_PORT,
     username: env.DB_TUNNEL_USER,
     privateKey,
+    readyTimeout: 30000,
   };
   const forwardOptions: ForwardOptions = {
     srcAddr: "127.0.0.1",
