@@ -198,18 +198,28 @@ export async function POST(request: Request) {
   const rut = session.rut;
 
   // Obtener la última pregunta del usuario
-  const lastUserMessage = messages[messages.length - 1]?.content ??
-    messages[messages.length - 1]?.parts?.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("") ?? "";
+  const lastMsg = messages[messages.length - 1];
+  const lastUserMessage = typeof lastMsg?.content === "string"
+    ? lastMsg.content
+    : lastMsg?.parts?.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("") ?? "";
 
   // Detectar intención y obtener datos relevantes
   const intents = extractQueryIntent(lastUserMessage);
   const dbContext = await getDbContext(rut, intents);
 
+  // Convertir mensajes del formato UI (parts) al formato que espera el modelo
+  const convertedMessages = messages.map((msg: { role: string; content?: string; parts?: Array<{ type: string; text?: string }> }) => ({
+    role: msg.role as "user" | "assistant" | "system",
+    content: typeof msg.content === "string"
+      ? msg.content
+      : msg.parts?.filter((p) => p.type === "text").map((p) => p.text ?? "").join("") ?? "",
+  }));
+
   // Generar respuesta con contexto de datos reales
   const result = streamText({
     model: openai("gpt-4o-mini"),
     system: buildSystemPrompt(rut, dbContext),
-    messages,
+    messages: convertedMessages,
   });
 
   return result.toUIMessageStreamResponse();
