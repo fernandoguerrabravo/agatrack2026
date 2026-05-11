@@ -62,11 +62,17 @@ const cached: Cached = globalForDb.__db ?? { pool: null, tunnelReady: null };
 if (!globalForDb.__db) globalForDb.__db = cached;
 
 async function openTunnel(env: DbEnv): Promise<void> {
-  const keyPath = path.isAbsolute(env.DB_TUNNEL_PRIVATE_KEY_PATH)
-    ? env.DB_TUNNEL_PRIVATE_KEY_PATH
-    : path.join(process.cwd(), env.DB_TUNNEL_PRIVATE_KEY_PATH);
+  let privateKey: Buffer | string;
 
-  const privateKey = fs.readFileSync(keyPath);
+  // Si existe DB_TUNNEL_PRIVATE_KEY como contenido directo, usarlo (para deploy en cloud)
+  if (process.env.DB_TUNNEL_PRIVATE_KEY) {
+    privateKey = process.env.DB_TUNNEL_PRIVATE_KEY;
+  } else {
+    const keyPath = path.isAbsolute(env.DB_TUNNEL_PRIVATE_KEY_PATH)
+      ? env.DB_TUNNEL_PRIVATE_KEY_PATH
+      : path.join(process.cwd(), env.DB_TUNNEL_PRIVATE_KEY_PATH);
+    privateKey = fs.readFileSync(keyPath);
+  }
 
   const tunnelOptions: TunnelOptions = { autoClose: false, reconnectOnError: true };
   const serverOptions: ServerOptions = { host: "127.0.0.1", port: env.DB_LOCAL_PORT };
