@@ -208,26 +208,32 @@ export default function ImportacionesStats() {
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total CIF</div>
           <div className="stat-value text-success text-2xl">{formatUSD(Number(data.totals.total_cif_sum))}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total FOB</div>
           <div className="stat-value text-info text-2xl">{formatUSD(Number(data.totals.total_fob_sum))}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total Kilos</div>
           <div className="stat-value text-warning text-2xl">{Math.round(Number(data.totals.total_kilos)).toLocaleString("es-CL")} kg</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total Flete</div>
           <div className="stat-value text-secondary text-2xl">{formatUSD(Number(data.totals.total_flete))}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total Seguro</div>
           <div className="stat-value text-accent text-2xl">{formatUSD(Number(data.totals.total_seguro))}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Promedio CIF</div>
           <div className="stat-value text-base-content text-2xl">{formatUSD(Number(data.totals.promedio_cif))}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
       </div>
 
