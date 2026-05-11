@@ -136,20 +136,24 @@ export default function ImpuestosPanel() {
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">IVA Pagado</div>
           <div className="stat-value text-error text-2xl">{formatUSD(Number(data.totals.total_iva))}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Derechos de Aduana Pagados</div>
           <div className="stat-value text-warning text-2xl">{formatUSD(Number(data.totals.total_derechos_aduana))}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Beneficios Arancelarios Aplicados</div>
           <div className="stat-value text-success text-2xl">
             {formatUSD(Number(data.totals.total_cif) * 0.06 - Number(data.totals.total_derechos_aduana))}
           </div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total Operaciones</div>
           <div className="stat-value text-info">{data.totals.total_operaciones}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
       </div>
 
