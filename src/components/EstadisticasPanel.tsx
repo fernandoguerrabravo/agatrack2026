@@ -22,11 +22,12 @@ type StatsData = {
     total_operaciones: number;
     total_fob_sum: number;
     promedio_fob: number;
+    total_peso: number;
   };
-  porMes: { mes: string; cantidad: number; fob_mes: number }[];
-  porOperacion: { operacion: string; cantidad: number; fob_total: number }[];
-  porPais: { pais_destino: string; cantidad: number; fob_total: number }[];
-  porAduana: { aduana: string; cantidad: number; fob_total: number }[];
+  porMes: { mes: string; cantidad: number; fob_mes: number; peso_mes: number }[];
+  porOperacion: { operacion: string; cantidad: number; fob_total: number; peso_total: number }[];
+  porPais: { pais_destino: string; cantidad: number; fob_total: number; peso_total: number }[];
+  porAduana: { aduana: string; cantidad: number; fob_total: number; peso_total: number }[];
 };
 
 const COLORS = [
@@ -47,6 +48,10 @@ function getDefaultHasta(): string {
 
 function formatUSD(value: number): string {
   return value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
+}
+
+function formatKg(value: number): string {
+  return `${value.toLocaleString("es-CL")} kg`;
 }
 
 export default function EstadisticasPanel() {
@@ -109,83 +114,86 @@ export default function EstadisticasPanel() {
         <div className="card-body p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
             <label className="form-control">
-              <div className="label py-0">
-                <span className="label-text text-xs">Fecha desde</span>
-              </div>
-              <input
-                type="date"
-                className="input input-bordered input-sm"
-                value={desde}
-                onChange={(e) => setDesde(e.target.value)}
-              />
+              <div className="label py-0"><span className="label-text text-xs">Fecha desde</span></div>
+              <input type="date" className="input input-bordered input-sm" value={desde} onChange={(e) => setDesde(e.target.value)} />
             </label>
             <label className="form-control">
-              <div className="label py-0">
-                <span className="label-text text-xs">Fecha hasta</span>
-              </div>
-              <input
-                type="date"
-                className="input input-bordered input-sm"
-                value={hasta}
-                onChange={(e) => setHasta(e.target.value)}
-              />
+              <div className="label py-0"><span className="label-text text-xs">Fecha hasta</span></div>
+              <input type="date" className="input input-bordered input-sm" value={hasta} onChange={(e) => setHasta(e.target.value)} />
             </label>
-            <button className="btn btn-primary btn-sm" onClick={handleBuscar}>
-              Actualizar
-            </button>
+            <button className="btn btn-primary btn-sm" onClick={handleBuscar}>Actualizar</button>
           </div>
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs: 3 dimensiones */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total Operaciones</div>
-          <div className="stat-value text-primary">{data.totals.total_operaciones}</div>
+          <div className="stat-value text-primary">{Number(data.totals.total_operaciones).toLocaleString("es-CL")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total FOB</div>
           <div className="stat-value text-success text-2xl">{formatUSD(Number(data.totals.total_fob_sum))}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
-          <div className="stat-title">Promedio FOB</div>
-          <div className="stat-value text-info text-2xl">{formatUSD(Number(data.totals.promedio_fob))}</div>
+          <div className="stat-title">Total Peso</div>
+          <div className="stat-value text-warning text-2xl">{formatKg(Number(data.totals.total_peso))}</div>
         </div>
       </div>
 
-      {/* Gráfico: FOB por mes */}
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <h2 className="card-title text-lg">FOB por Mes</h2>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.porMes}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(value) => formatUSD(Number(value))} />
-                <Legend />
-                <Line type="monotone" dataKey="fob_mes" name="FOB USD" stroke="#4f46e5" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+      {/* Gráficos por mes: FOB, Peso, Operaciones */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="card bg-base-100 shadow">
+          <div className="card-body">
+            <h2 className="card-title text-lg">FOB por Mes</h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.porMes}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(value) => formatUSD(Number(value))} />
+                  <Legend />
+                  <Line type="monotone" dataKey="fob_mes" name="FOB USD" stroke="#4f46e5" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Gráfico: Operaciones por mes */}
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <h2 className="card-title text-lg">Operaciones por Mes</h2>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.porMes}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="cantidad" name="Cantidad" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="card bg-base-100 shadow">
+          <div className="card-body">
+            <h2 className="card-title text-lg">Peso por Mes</h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.porMes}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}t`} />
+                  <Tooltip formatter={(value) => formatKg(Number(value))} />
+                  <Legend />
+                  <Line type="monotone" dataKey="peso_mes" name="Peso" stroke="#f59e0b" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        <div className="card bg-base-100 shadow">
+          <div className="card-body">
+            <h2 className="card-title text-lg">Operaciones por Mes</h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.porMes}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="cantidad" name="Cantidad" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>
@@ -240,7 +248,36 @@ export default function EstadisticasPanel() {
         </div>
       </div>
 
-      {/* Tabla: Por aduana */}
+      {/* Tabla: Por País Destino - 3 dimensiones */}
+      <div className="card bg-base-100 shadow">
+        <div className="card-body">
+          <h2 className="card-title text-lg">Por País Destino</h2>
+          <div className="overflow-x-auto">
+            <table className="table table-sm table-zebra">
+              <thead>
+                <tr>
+                  <th>País</th>
+                  <th className="text-right">Operaciones</th>
+                  <th className="text-right">FOB Total</th>
+                  <th className="text-right">Peso Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.porPais.map((row, i) => (
+                  <tr key={i}>
+                    <td>{String(row.pais_destino)}</td>
+                    <td className="text-right">{Number(row.cantidad).toLocaleString("es-CL")}</td>
+                    <td className="text-right">{formatUSD(Number(row.fob_total))}</td>
+                    <td className="text-right">{formatKg(Number(row.peso_total))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla: Por Aduana - 3 dimensiones */}
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           <h2 className="card-title text-lg">Por Aduana</h2>
@@ -251,14 +288,45 @@ export default function EstadisticasPanel() {
                   <th>Aduana</th>
                   <th className="text-right">Operaciones</th>
                   <th className="text-right">FOB Total</th>
+                  <th className="text-right">Peso Total</th>
                 </tr>
               </thead>
               <tbody>
                 {data.porAduana.map((row, i) => (
                   <tr key={i}>
                     <td>{String(row.aduana)}</td>
-                    <td className="text-right">{Number(row.cantidad)}</td>
+                    <td className="text-right">{Number(row.cantidad).toLocaleString("es-CL")}</td>
                     <td className="text-right">{formatUSD(Number(row.fob_total))}</td>
+                    <td className="text-right">{formatKg(Number(row.peso_total))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla: Por Tipo de Operación - 3 dimensiones */}
+      <div className="card bg-base-100 shadow">
+        <div className="card-body">
+          <h2 className="card-title text-lg">Por Tipo de Operación</h2>
+          <div className="overflow-x-auto">
+            <table className="table table-sm table-zebra">
+              <thead>
+                <tr>
+                  <th>Operación</th>
+                  <th className="text-right">Operaciones</th>
+                  <th className="text-right">FOB Total</th>
+                  <th className="text-right">Peso Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.porOperacion.map((row, i) => (
+                  <tr key={i}>
+                    <td>{String(row.operacion)}</td>
+                    <td className="text-right">{Number(row.cantidad).toLocaleString("es-CL")}</td>
+                    <td className="text-right">{formatUSD(Number(row.fob_total))}</td>
+                    <td className="text-right">{formatKg(Number(row.peso_total))}</td>
                   </tr>
                 ))}
               </tbody>

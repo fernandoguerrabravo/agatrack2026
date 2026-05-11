@@ -60,27 +60,27 @@ export async function GET(request: Request) {
       params
     );
 
-    // Por tipo de operación
+    // Por tipo de operación: 3 dimensiones
     const porOperacion = await query<Record<string, unknown>[]>(
-      `SELECT operacion, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif_total FROM out_despacho_fguerra ${whereClause} GROUP BY operacion ORDER BY cantidad DESC`,
+      `SELECT operacion, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif_total, COALESCE(SUM(total_peso_bruto), 0) as peso_total FROM out_despacho_fguerra ${whereClause} GROUP BY operacion ORDER BY cantidad DESC`,
       params
     );
 
-    // Por país origen
+    // Por país origen: 3 dimensiones
     const porPaisOrigen = await query<Record<string, unknown>[]>(
-      `SELECT pais_origen_mercancias as pais, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif_total FROM out_despacho_fguerra ${whereClause} GROUP BY pais_origen_mercancias ORDER BY cif_total DESC LIMIT 10`,
+      `SELECT pais_origen_mercancias as pais, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif_total, COALESCE(SUM(total_peso_bruto), 0) as peso_total FROM out_despacho_fguerra ${whereClause} GROUP BY pais_origen_mercancias ORDER BY cif_total DESC LIMIT 10`,
       params
     );
 
-    // Por aduana
+    // Por aduana: 3 dimensiones
     const porAduana = await query<Record<string, unknown>[]>(
-      `SELECT aduana, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif_total FROM out_despacho_fguerra ${whereClause} GROUP BY aduana ORDER BY cantidad DESC`,
+      `SELECT aduana, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif_total, COALESCE(SUM(total_peso_bruto), 0) as peso_total FROM out_despacho_fguerra ${whereClause} GROUP BY aduana ORDER BY cantidad DESC`,
       params
     );
 
-    // Por incoterms
+    // Por incoterms: 3 dimensiones
     const porIncoterms = await query<Record<string, unknown>[]>(
-      `SELECT clausula_venta_incoterms as incoterm, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif_total FROM out_despacho_fguerra ${whereClause} GROUP BY clausula_venta_incoterms ORDER BY cantidad DESC LIMIT 10`,
+      `SELECT clausula_venta_incoterms as incoterm, COUNT(*) as cantidad, COALESCE(SUM(total_cif), 0) as cif_total, COALESCE(SUM(total_peso_bruto), 0) as peso_total FROM out_despacho_fguerra ${whereClause} GROUP BY clausula_venta_incoterms ORDER BY cantidad DESC LIMIT 10`,
       params
     );
 

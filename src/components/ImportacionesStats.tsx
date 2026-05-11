@@ -28,10 +28,10 @@ type StatsData = {
     total_seguro: number;
   };
   porMes: { mes: string; cantidad: number; cif_mes: number; fob_mes: number; kilos_mes: number }[];
-  porOperacion: { operacion: string; cantidad: number; cif_total: number }[];
-  porPaisOrigen: { pais: string; cantidad: number; cif_total: number }[];
-  porAduana: { aduana: string; cantidad: number; cif_total: number }[];
-  porIncoterms: { incoterm: string; cantidad: number; cif_total: number }[];
+  porOperacion: { operacion: string; cantidad: number; cif_total: number; peso_total: number }[];
+  porPaisOrigen: { pais: string; cantidad: number; cif_total: number; peso_total: number }[];
+  porAduana: { aduana: string; cantidad: number; cif_total: number; peso_total: number }[];
+  porIncoterms: { incoterm: string; cantidad: number; cif_total: number; peso_total: number }[];
   porEmisor: { emisor: string; cantidad: number; kilos: number; flete: number }[];
 };
 
@@ -349,14 +349,16 @@ export default function ImportacionesStats() {
                     <th>Aduana</th>
                     <th className="text-right">Operaciones</th>
                     <th className="text-right">CIF Total</th>
+                    <th className="text-right">Peso Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.porAduana.map((row, i) => (
                     <tr key={i}>
                       <td>{String(row.aduana)}</td>
-                      <td className="text-right">{Number(row.cantidad)}</td>
+                      <td className="text-right">{Number(row.cantidad).toLocaleString("es-CL")}</td>
                       <td className="text-right">{formatUSD(Number(row.cif_total))}</td>
+                      <td className="text-right">{Number(row.peso_total).toLocaleString("es-CL")} kg</td>
                     </tr>
                   ))}
                 </tbody>
@@ -376,19 +378,79 @@ export default function ImportacionesStats() {
                     <th>Incoterm</th>
                     <th className="text-right">Operaciones</th>
                     <th className="text-right">CIF Total</th>
+                    <th className="text-right">Peso Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.porIncoterms.map((row, i) => (
                     <tr key={i}>
                       <td>{String(row.incoterm)}</td>
-                      <td className="text-right">{Number(row.cantidad)}</td>
+                      <td className="text-right">{Number(row.cantidad).toLocaleString("es-CL")}</td>
                       <td className="text-right">{formatUSD(Number(row.cif_total))}</td>
+                      <td className="text-right">{Number(row.peso_total).toLocaleString("es-CL")} kg</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla: Por País Origen - 3 dimensiones */}
+      <div className="card bg-base-100 shadow">
+        <div className="card-body">
+          <h2 className="card-title text-lg">Por País Origen</h2>
+          <div className="overflow-x-auto">
+            <table className="table table-sm table-zebra">
+              <thead>
+                <tr>
+                  <th>País</th>
+                  <th className="text-right">Operaciones</th>
+                  <th className="text-right">CIF Total</th>
+                  <th className="text-right">Peso Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.porPaisOrigen.map((row, i) => (
+                  <tr key={i}>
+                    <td>{String(row.pais)}</td>
+                    <td className="text-right">{Number(row.cantidad).toLocaleString("es-CL")}</td>
+                    <td className="text-right">{formatUSD(Number(row.cif_total))}</td>
+                    <td className="text-right">{Number(row.peso_total).toLocaleString("es-CL")} kg</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla: Por Tipo de Operación - 3 dimensiones */}
+      <div className="card bg-base-100 shadow">
+        <div className="card-body">
+          <h2 className="card-title text-lg">Por Tipo de Operación</h2>
+          <div className="overflow-x-auto">
+            <table className="table table-sm table-zebra">
+              <thead>
+                <tr>
+                  <th>Operación</th>
+                  <th className="text-right">Operaciones</th>
+                  <th className="text-right">CIF Total</th>
+                  <th className="text-right">Peso Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.porOperacion.map((row, i) => (
+                  <tr key={i}>
+                    <td>{String(row.operacion)}</td>
+                    <td className="text-right">{Number(row.cantidad).toLocaleString("es-CL")}</td>
+                    <td className="text-right">{formatUSD(Number(row.cif_total))}</td>
+                    <td className="text-right">{Number(row.peso_total).toLocaleString("es-CL")} kg</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

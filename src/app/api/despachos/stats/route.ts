@@ -48,33 +48,33 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Total operaciones y FOB total
+    // Totales: 3 dimensiones
     const [totals] = await query<Record<string, unknown>[]>(
-      `SELECT COUNT(*) as total_operaciones, COALESCE(SUM(total_fob), 0) as total_fob_sum, COALESCE(AVG(total_fob), 0) as promedio_fob FROM out_despacho_fguerra ${whereClause}`,
+      `SELECT COUNT(*) as total_operaciones, COALESCE(SUM(total_fob), 0) as total_fob_sum, COALESCE(AVG(total_fob), 0) as promedio_fob, COALESCE(SUM(total_peso_bruto), 0) as total_peso FROM out_despacho_fguerra ${whereClause}`,
       params
     );
 
-    // Operaciones por mes
+    // Por mes: 3 dimensiones
     const porMes = await query<Record<string, unknown>[]>(
-      `SELECT DATE_FORMAT(fecha_aceptacion, '%Y-%m') as mes, COUNT(*) as cantidad, COALESCE(SUM(total_fob), 0) as fob_mes FROM out_despacho_fguerra ${whereClause} GROUP BY mes ORDER BY mes`,
+      `SELECT DATE_FORMAT(fecha_aceptacion, '%Y-%m') as mes, COUNT(*) as cantidad, COALESCE(SUM(total_fob), 0) as fob_mes, COALESCE(SUM(total_peso_bruto), 0) as peso_mes FROM out_despacho_fguerra ${whereClause} GROUP BY mes ORDER BY mes`,
       params
     );
 
-    // Por tipo de operación
+    // Por tipo de operación: 3 dimensiones
     const porOperacion = await query<Record<string, unknown>[]>(
-      `SELECT operacion, COUNT(*) as cantidad, COALESCE(SUM(total_fob), 0) as fob_total FROM out_despacho_fguerra ${whereClause} GROUP BY operacion ORDER BY cantidad DESC`,
+      `SELECT operacion, COUNT(*) as cantidad, COALESCE(SUM(total_fob), 0) as fob_total, COALESCE(SUM(total_peso_bruto), 0) as peso_total FROM out_despacho_fguerra ${whereClause} GROUP BY operacion ORDER BY cantidad DESC`,
       params
     );
 
-    // Por país destino
+    // Por país destino: 3 dimensiones
     const porPais = await query<Record<string, unknown>[]>(
-      `SELECT pais_destino, COUNT(*) as cantidad, COALESCE(SUM(total_fob), 0) as fob_total FROM out_despacho_fguerra ${whereClause} GROUP BY pais_destino ORDER BY fob_total DESC LIMIT 10`,
+      `SELECT pais_destino, COUNT(*) as cantidad, COALESCE(SUM(total_fob), 0) as fob_total, COALESCE(SUM(total_peso_bruto), 0) as peso_total FROM out_despacho_fguerra ${whereClause} GROUP BY pais_destino ORDER BY fob_total DESC LIMIT 10`,
       params
     );
 
-    // Por aduana
+    // Por aduana: 3 dimensiones
     const porAduana = await query<Record<string, unknown>[]>(
-      `SELECT aduana, COUNT(*) as cantidad, COALESCE(SUM(total_fob), 0) as fob_total FROM out_despacho_fguerra ${whereClause} GROUP BY aduana ORDER BY cantidad DESC`,
+      `SELECT aduana, COUNT(*) as cantidad, COALESCE(SUM(total_fob), 0) as fob_total, COALESCE(SUM(total_peso_bruto), 0) as peso_total FROM out_despacho_fguerra ${whereClause} GROUP BY aduana ORDER BY cantidad DESC`,
       params
     );
 
