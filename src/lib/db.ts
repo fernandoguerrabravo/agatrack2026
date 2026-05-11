@@ -27,8 +27,12 @@ function readEnv(): DbEnv {
     "DB_TUNNEL_HOST",
     "DB_TUNNEL_PORT",
     "DB_TUNNEL_USER",
-    "DB_TUNNEL_PRIVATE_KEY_PATH",
   ] as const;
+
+  // DB_TUNNEL_PRIVATE_KEY_PATH es requerido solo si no existe DB_TUNNEL_PRIVATE_KEY
+  if (!process.env.DB_TUNNEL_PRIVATE_KEY && !process.env.DB_TUNNEL_PRIVATE_KEY_PATH) {
+    throw new Error("Missing required environment variable: DB_TUNNEL_PRIVATE_KEY or DB_TUNNEL_PRIVATE_KEY_PATH");
+  }
 
   for (const key of required) {
     if (!process.env[key]) {
@@ -45,7 +49,7 @@ function readEnv(): DbEnv {
     DB_TUNNEL_HOST: process.env.DB_TUNNEL_HOST!,
     DB_TUNNEL_PORT: Number(process.env.DB_TUNNEL_PORT),
     DB_TUNNEL_USER: process.env.DB_TUNNEL_USER!,
-    DB_TUNNEL_PRIVATE_KEY_PATH: process.env.DB_TUNNEL_PRIVATE_KEY_PATH!,
+    DB_TUNNEL_PRIVATE_KEY_PATH: process.env.DB_TUNNEL_PRIVATE_KEY_PATH ?? "",
     DB_LOCAL_PORT: Number(process.env.DB_LOCAL_PORT ?? "3307"),
   };
 }
