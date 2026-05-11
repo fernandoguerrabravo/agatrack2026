@@ -54,7 +54,7 @@ function getDefaultHasta(): string {
 }
 
 function formatUSD(value: number): string {
-  return value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
+  return Math.round(value).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 export default function ImpuestosPanel() {
