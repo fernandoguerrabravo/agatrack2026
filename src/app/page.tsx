@@ -139,7 +139,7 @@ export default function Home() {
               </div>
               <input
                 type="text"
-                placeholder="96691060-7"
+                placeholder="Ej: 12345678-9"
                 className="input input-bordered w-full"
                 value={rut}
                 onChange={(e) => handleRutChange(e.target.value)}
@@ -148,7 +148,7 @@ export default function Home() {
               />
               <div className="label">
                 <span className="label-text-alt text-base-content/50">
-                  Formato: 12345678-9
+                  Sin puntos, con guión y dígito verificador
                 </span>
               </div>
             </label>
