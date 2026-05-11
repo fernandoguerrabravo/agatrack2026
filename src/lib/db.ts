@@ -92,6 +92,17 @@ async function openTunnel(env: DbEnv): Promise<void> {
 
     console.log("[db] Private key format check:", key.substring(0, 40), "... length:", key.length, "lines:", key.split("\n").length);
     privateKey = key;
+  } else if (process.env.DB_TUNNEL_PRIVATE_KEY_URL) {
+    // Descargar la llave desde una URL (ej: DigitalOcean Spaces)
+    console.log("[db] Fetching private key from URL...");
+    const res = await fetch(process.env.DB_TUNNEL_PRIVATE_KEY_URL);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch private key from URL: ${res.status}`);
+    }
+    let key = await res.text();
+    if (!key.endsWith("\n")) key += "\n";
+    console.log("[db] Private key fetched, length:", key.length);
+    privateKey = key;
   } else {
     const keyPath = path.isAbsolute(env.DB_TUNNEL_PRIVATE_KEY_PATH)
       ? env.DB_TUNNEL_PRIVATE_KEY_PATH
