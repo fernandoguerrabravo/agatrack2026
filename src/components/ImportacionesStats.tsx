@@ -204,7 +204,7 @@ export default function ImportacionesStats() {
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total Operaciones</div>
           <div className="stat-value text-primary">{data.totals.total_operaciones}</div>
-        </div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>        </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total CIF</div>
           <div className="stat-value text-success text-2xl">{formatUSD(Number(data.totals.total_cif_sum))}</div>
@@ -236,6 +236,7 @@ export default function ImportacionesStats() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">CIF por Mes</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.porMes}>
@@ -254,6 +255,7 @@ export default function ImportacionesStats() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">Kilos por Mes</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.porMes}>
@@ -272,6 +274,7 @@ export default function ImportacionesStats() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">Operaciones por Mes</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.porMes}>
@@ -292,6 +295,7 @@ export default function ImportacionesStats() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">Por Tipo de Operación</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -322,6 +326,7 @@ export default function ImportacionesStats() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">Top 10 Países Origen (CIF)</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.porPaisOrigen} layout="vertical">
@@ -342,6 +347,7 @@ export default function ImportacionesStats() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">Por Aduana</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="overflow-x-auto">
               <table className="table table-sm table-zebra">
                 <thead>
@@ -371,6 +377,7 @@ export default function ImportacionesStats() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">Por Incoterms</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="overflow-x-auto">
               <table className="table table-sm table-zebra">
                 <thead>
@@ -401,6 +408,7 @@ export default function ImportacionesStats() {
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           <h2 className="card-title text-lg">Por País Origen</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
           <div className="overflow-x-auto">
             <table className="table table-sm table-zebra">
               <thead>
@@ -430,6 +438,7 @@ export default function ImportacionesStats() {
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           <h2 className="card-title text-lg">Por Tipo de Operación</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
           <div className="overflow-x-auto">
             <table className="table table-sm table-zebra">
               <thead>
@@ -459,6 +468,7 @@ export default function ImportacionesStats() {
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           <h2 className="card-title text-lg">Por Emisor Documento Transporte</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
           <div className="overflow-x-auto">
             <table className="table table-sm table-zebra">
               <thead>

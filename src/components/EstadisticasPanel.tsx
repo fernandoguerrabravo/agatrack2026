@@ -131,14 +131,17 @@ export default function EstadisticasPanel() {
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total Operaciones</div>
           <div className="stat-value text-primary">{Number(data.totals.total_operaciones).toLocaleString("es-CL")}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total FOB</div>
           <div className="stat-value text-success text-2xl">{formatUSD(Number(data.totals.total_fob_sum))}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
           <div className="stat-title">Total Peso</div>
           <div className="stat-value text-warning text-2xl">{formatKg(Number(data.totals.total_peso))}</div>
+          <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
       </div>
 
@@ -147,6 +150,7 @@ export default function EstadisticasPanel() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">FOB por Mes</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.porMes}>
@@ -165,6 +169,7 @@ export default function EstadisticasPanel() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">Peso por Mes</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.porMes}>
@@ -183,6 +188,7 @@ export default function EstadisticasPanel() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">Operaciones por Mes</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.porMes}>
@@ -203,6 +209,7 @@ export default function EstadisticasPanel() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">Por Tipo de Operación</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -233,6 +240,7 @@ export default function EstadisticasPanel() {
         <div className="card bg-base-100 shadow">
           <div className="card-body">
             <h2 className="card-title text-lg">Top 10 Países Destino (FOB)</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.porPais} layout="vertical">
@@ -252,6 +260,7 @@ export default function EstadisticasPanel() {
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           <h2 className="card-title text-lg">Por País Destino</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
           <div className="overflow-x-auto">
             <table className="table table-sm table-zebra">
               <thead>
@@ -281,6 +290,7 @@ export default function EstadisticasPanel() {
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           <h2 className="card-title text-lg">Por Aduana</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
           <div className="overflow-x-auto">
             <table className="table table-sm table-zebra">
               <thead>
@@ -310,6 +320,7 @@ export default function EstadisticasPanel() {
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           <h2 className="card-title text-lg">Por Tipo de Operación</h2>
+            <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
           <div className="overflow-x-auto">
             <table className="table table-sm table-zebra">
               <thead>
