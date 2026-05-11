@@ -5,15 +5,10 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { cleanRut, isValidRut } from "@/lib/rut";
 
-type Tab = "login" | "register";
-
 export default function Home() {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("login");
   const [rut, setRut] = useState("");
   const [password, setPassword] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -35,25 +30,13 @@ export default function Home() {
       return;
     }
 
-    if (tab === "register" && password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const endpoint =
-        tab === "login" ? "/api/auth/login" : "/api/auth/register";
-
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rut: cleaned,
-          password,
-          ...(tab === "register" ? { nombre, email } : {}),
-        }),
+        body: JSON.stringify({ rut: cleaned, password }),
       });
 
       const data = await res.json();
@@ -63,15 +46,7 @@ export default function Home() {
         return;
       }
 
-      if (tab === "login") {
-        router.push("/dashboard");
-      } else {
-        setSuccess("Cuenta creada exitosamente. Ya puedes iniciar sesión.");
-        setTab("login");
-        setPassword("");
-        setNombre("");
-        setEmail("");
-      }
+      router.push("/dashboard");
     } catch {
       setError("Error de conexión. Intenta nuevamente.");
     } finally {
@@ -104,32 +79,6 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Tabs */}
-          <div role="tablist" className="tabs tabs-boxed mb-4">
-            <button
-              role="tab"
-              className={`tab ${tab === "login" ? "tab-active" : ""}`}
-              onClick={() => {
-                setTab("login");
-                setError("");
-                setSuccess("");
-              }}
-            >
-              Iniciar Sesión
-            </button>
-            <button
-              role="tab"
-              className={`tab ${tab === "register" ? "tab-active" : ""}`}
-              onClick={() => {
-                setTab("register");
-                setError("");
-                setSuccess("");
-              }}
-            >
-              Crear Cuenta
-            </button>
-          </div>
-
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* RUT */}
@@ -153,41 +102,6 @@ export default function Home() {
               </div>
             </label>
 
-            {/* Nombre (solo registro) */}
-            {tab === "register" && (
-              <label className="form-control w-full">
-                <div className="label">
-                  <span className="label-text">Nombre empresa (opcional)</span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Mi Empresa SpA"
-                  className="input input-bordered w-full"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  autoComplete="organization"
-                />
-              </label>
-            )}
-
-            {/* Email (solo registro) */}
-            {tab === "register" && (
-              <label className="form-control w-full">
-                <div className="label">
-                  <span className="label-text">Correo electrónico</span>
-                </div>
-                <input
-                  type="email"
-                  placeholder="contacto@empresa.cl"
-                  className="input input-bordered w-full"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                />
-              </label>
-            )}
-
             {/* Contraseña */}
             <label className="form-control w-full">
               <div className="label">
@@ -200,18 +114,8 @@ export default function Home() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={tab === "register" ? 6 : undefined}
-                autoComplete={
-                  tab === "login" ? "current-password" : "new-password"
-                }
+                autoComplete="current-password"
               />
-              {tab === "register" && (
-                <div className="label">
-                  <span className="label-text-alt text-base-content/50">
-                    Mínimo 6 caracteres
-                  </span>
-                </div>
-              )}
             </label>
 
             {/* Mensajes */}
@@ -233,7 +137,7 @@ export default function Home() {
               disabled={loading}
             >
               {loading && <span className="loading loading-spinner loading-sm" />}
-              {tab === "login" ? "Ingresar" : "Crear Cuenta"}
+              Ingresar
             </button>
           </form>
         </div>
