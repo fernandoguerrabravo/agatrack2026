@@ -153,6 +153,52 @@ export default function ImpuestosPanel() {
         </div>
       </div>
 
+      {/* Eficiencia Arancelaria */}
+      {(() => {
+        const cifTotal = Number(data.totals.total_cif);
+        const derechosTeoricos = cifTotal * 0.06; // 6% que se debería pagar sin beneficios
+        const derechosPagados = Number(data.totals.total_derechos_aduana);
+        const ahorroBK = Number(data.bienCapital.total_cif_bk) * 0.06; // Ahorro por Bien de Capital
+        const ahorroTLC = derechosTeoricos - derechosPagados - ahorroBK; // Ahorro por TLC (diferencia restante)
+        const pctEficienciaTotal = derechosTeoricos > 0 ? ((derechosTeoricos - derechosPagados) / derechosTeoricos) * 100 : 0;
+        const pctBK = derechosTeoricos > 0 ? (ahorroBK / derechosTeoricos) * 100 : 0;
+        const pctTLC = derechosTeoricos > 0 ? (Math.max(0, ahorroTLC) / derechosTeoricos) * 100 : 0;
+        const pctPagado = derechosTeoricos > 0 ? (derechosPagados / derechosTeoricos) * 100 : 0;
+
+        return (
+          <div className="card bg-base-100 shadow">
+            <div className="card-body">
+              <h2 className="card-title text-lg">Eficiencia en Uso de Beneficios Arancelarios</h2>
+              <p className="text-sm text-base-content/60 mb-4">
+                Derechos teóricos (6% sobre CIF Total): <span className="font-semibold">{formatUSD(derechosTeoricos)}</span>
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="stat bg-success/5 rounded-lg border border-success/20">
+                  <div className="stat-title">Eficiencia Total</div>
+                  <div className="stat-value text-success text-2xl">{pctEficienciaTotal.toFixed(1)}%</div>
+                  <div className="stat-desc">Ahorro vs derechos teóricos</div>
+                </div>
+                <div className="stat bg-primary/5 rounded-lg border border-primary/20">
+                  <div className="stat-title">Ahorro por TLC</div>
+                  <div className="stat-value text-primary text-2xl">{pctTLC.toFixed(1)}%</div>
+                  <div className="stat-desc">{formatUSD(Math.max(0, ahorroTLC))}</div>
+                </div>
+                <div className="stat bg-secondary/5 rounded-lg border border-secondary/20">
+                  <div className="stat-title">Ahorro por Bien de Capital</div>
+                  <div className="stat-value text-secondary text-2xl">{pctBK.toFixed(1)}%</div>
+                  <div className="stat-desc">{formatUSD(ahorroBK)}</div>
+                </div>
+                <div className="stat bg-warning/5 rounded-lg border border-warning/20">
+                  <div className="stat-title">Derechos Pagados</div>
+                  <div className="stat-value text-warning text-2xl">{pctPagado.toFixed(1)}%</div>
+                  <div className="stat-desc">{formatUSD(derechosPagados)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Gráfico: IVA y Derechos por mes */}
       <div className="card bg-base-100 shadow">
         <div className="card-body">
