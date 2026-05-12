@@ -89,7 +89,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
   "texto_completo": "el texto completo del documento tal como fue extraído"
 }`;
 
-    let analysisText: string;
+    let analysisText: string = "";
 
     if (isImage) {
       // Para imágenes: usar GPT-4o vision
@@ -113,18 +113,22 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       });
       analysisText = result.text;
     } else if (isPdf) {
-      // PDF escaneado: convertir a imagen y enviar a GPT-4o vision
+      // PDF escaneado o con poco texto: convertir a imagen con pdf-to-img
       console.log("[docs] PDF scanned, converting to image for GPT-4o vision, file:", file.name);
+      let converted = false;
       try {
         const { pdf: pdfToImg } = await import("pdf-to-img");
         const pages: string[] = [];
         const pdfDoc = await pdfToImg(buffer, { scale: 2 });
         for await (const page of pdfDoc) {
-          pages.push(`data:image/png;base64,${Buffer.from(page).toString("base64")}`);
-          if (pages.length >= 3) break; // Máximo 3 páginas
+          const pageBase64 = Buffer.from(page).toString("base64");
+          pages.push(`data:image/png;base64,${pageBase64}`);
+          console.log("[docs] Converted page", pages.length, "size:", pageBase64.length);
+          if (pages.length >= 3) break;
         }
 
         if (pages.length > 0) {
+          console.log("[docs] Sending", pages.length, "page(s) to GPT-4o vision");
           const imageContent = pages.map(img => ({ type: "image" as const, image: img }));
           const result = await generateText({
             model: openai("gpt-4o"),
@@ -133,16 +137,19 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             ],
           });
           analysisText = result.text;
-        } else {
-          throw new Error("No pages converted");
+          converted = true;
         }
       } catch (convErr) {
-        console.error("[docs] PDF to image conversion failed:", convErr instanceof Error ? convErr.message : convErr);
-        // Fallback: solo clasificar por nombre
+        console.error("[docs] PDF to image conversion error:", convErr instanceof Error ? convErr.message : convErr);
+      }
+
+      if (!converted) {
+        // Último fallback
+        console.log("[docs] Fallback: classify by filename only");
         const result = await generateText({
           model: openai("gpt-4o-mini"),
           messages: [
-            { role: "user" as const, content: `${prompt}\n\nEl archivo es un PDF escaneado llamado "${file.name}". No se pudo extraer texto ni convertir a imagen. Clasifica el tipo de documento por el nombre del archivo.` },
+            { role: "user" as const, content: `${prompt}\n\nEl archivo es un PDF escaneado llamado "${file.name}". No se pudo procesar. Clasifica el tipo de documento por el nombre.` },
           ],
         });
         analysisText = result.text;
