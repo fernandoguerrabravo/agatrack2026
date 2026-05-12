@@ -26,8 +26,10 @@ const TIPOS_DOCUMENTO = [
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
     const data = await pdfParse(buffer);
+    console.log("[docs] PDF parsed, pages:", data.numpages, "text length:", data.text?.length ?? 0);
     return data.text ?? "";
-  } catch {
+  } catch (err) {
+    console.error("[docs] PDF parse error:", err instanceof Error ? err.message : err);
     return "";
   }
 }
@@ -63,28 +65,35 @@ export async function POST(request: Request) {
       documentText = await extractTextFromPdf(buffer);
     }
 
-    const prompt = `Analiza este documento de comercio exterior. Responde en JSON con este formato exacto:
+    const prompt = `Eres un experto en documentos de comercio exterior. Analiza el siguiente texto extraído de un documento y extrae TODOS los datos relevantes.
+
+INSTRUCCIONES:
+1. Identifica el tipo de documento
+2. Extrae TODOS los campos que puedas encontrar en el texto
+3. Si encuentras números, fechas, nombres, montos, pesos, puertos, etc., inclúyelos
+
+Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este formato:
 {
   "tipo_documento": "uno de: ${TIPOS_DOCUMENTO.join(", ")}",
-  "resumen": "resumen breve del documento en español",
+  "resumen": "resumen de 1-2 líneas del documento",
   "datos_extraidos": {
-    // campos relevantes según el tipo de documento, por ejemplo:
-    // Para BL: shipper, consignee, puerto_embarque, puerto_destino, contenedores, peso, descripcion_mercancia, numero_bl
-    // Para Invoice: proveedor, monto_total, moneda, items, fecha, numero_factura
-    // Para Póliza: aseguradora, monto_asegurado, cobertura, numero_poliza
-    // Para Packing List: total_bultos, peso_bruto, peso_neto, dimensiones
-    // Para Certificado de Origen: pais_origen, producto, tratado, numero_certificado
-    // Para Ficha Técnica: producto, especificaciones
+    // TODOS los campos que encuentres. Ejemplos según tipo:
+    // BL: numero_bl, shipper, consignee, notify_party, puerto_embarque, puerto_destino, nave, viaje, contenedores, descripcion_mercancia, peso_bruto, volumen, fecha_embarque
+    // Invoice: numero_factura, proveedor, comprador, fecha, moneda, monto_total, items (array con descripcion, cantidad, precio_unitario, total), incoterm, pais_origen
+    // Póliza: numero_poliza, aseguradora, asegurado, monto_asegurado, prima, cobertura, vigencia
+    // Packing List: total_bultos, tipo_embalaje, peso_bruto_total, peso_neto_total, volumen_total, items (array)
+    // Certificado de Origen: numero_certificado, pais_origen, exportador, importador, descripcion_mercancia, tratado_aplicable, partida_arancelaria
+    // Ficha Técnica: producto, marca, modelo, especificaciones_tecnicas
   },
-  "texto_completo": "transcripción completa del texto del documento"
-}
-Solo responde con el JSON, sin markdown ni explicaciones.`;
+  "texto_completo": "el texto completo del documento tal como fue extraído"
+}`;
 
     let analysisText: string;
 
     if (isImage) {
       // Para imágenes: usar GPT-4o vision
       const dataUrl = `data:${mimeType};base64,${base64}`;
+      console.log("[docs] Analyzing image with GPT-4o vision...");
       const result = await generateText({
         model: openai("gpt-4o-mini"),
         messages: [
@@ -94,16 +103,16 @@ Solo responde con el JSON, sin markdown ni explicaciones.`;
       analysisText = result.text;
     } else if (isPdf && documentText.length > 50) {
       // Para PDFs con texto extraíble: enviar el texto al LLM
+      console.log("[docs] Analyzing PDF text with GPT-4o-mini, text length:", documentText.length);
       const result = await generateText({
         model: openai("gpt-4o-mini"),
         messages: [
-          { role: "user" as const, content: `${prompt}\n\nContenido del documento (${file.name}):\n\n${documentText.substring(0, 15000)}` },
+          { role: "user" as const, content: `${prompt}\n\n--- TEXTO DEL DOCUMENTO (${file.name}) ---\n\n${documentText.substring(0, 15000)}` },
         ],
       });
       analysisText = result.text;
     } else if (isPdf) {
-      // PDF sin texto (escaneado): convertir primera página a imagen no es posible sin dependencias pesadas
-      // Enviar lo que tenemos
+      console.log("[docs] PDF without extractable text (scanned), file:", file.name);
       const result = await generateText({
         model: openai("gpt-4o-mini"),
         messages: [
@@ -120,6 +129,8 @@ Solo responde con el JSON, sin markdown ni explicaciones.`;
       });
       analysisText = result.text;
     }
+
+    console.log("[docs] GPT response length:", analysisText.length, "first 200:", analysisText.substring(0, 200));
 
     // Parsear respuesta
     let analysis;
