@@ -6,10 +6,14 @@ const globalForPg = globalThis as unknown as { __pg?: Pool };
 function getPool(): Pool {
   if (globalForPg.__pg) return globalForPg.__pg;
 
+  // Quitar sslmode de la URL para manejarlo por código
+  const url = (process.env.POSTGRES_URL ?? "").replace(/[?&]sslmode=[^&]*/g, "");
+
   const pool = new Pool({
-    connectionString: process.env.POSTGRES_URL,
+    connectionString: url,
     ssl: process.env.POSTGRES_SSL === "false" ? false : { rejectUnauthorized: false },
     max: 5,
+    connectionTimeoutMillis: 10000,
   });
 
   globalForPg.__pg = pool;
@@ -32,6 +36,7 @@ export async function initUsersTable(): Promise<void> {
   await pgQuery(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id SERIAL PRIMARY KEY,
+      id_cliente VARCHAR(50) DEFAULT '',
       rut VARCHAR(12) UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       nombre VARCHAR(255) DEFAULT '',

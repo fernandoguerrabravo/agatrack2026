@@ -3,6 +3,7 @@ import { pgQuery, initUsersTable } from "./postgres";
 
 export type UserRecord = {
   id: number;
+  id_cliente: string;
   rut: string;
   password_hash: string;
   nombre: string;
