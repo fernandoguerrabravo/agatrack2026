@@ -57,6 +57,14 @@ export default function PrealertasPanel() {
     }
   }
 
+  async function handleDeleteOperacion(nroOp: string) {
+    if (!confirm(`¿Eliminar todos los documentos de la operación ${nroOp}?`)) return;
+    const res = await fetch(`/api/documentos?nro_operacion=${encodeURIComponent(nroOp)}`, { method: "DELETE" });
+    if (res.ok) {
+      fetchDocumentos();
+    }
+  }
+
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
     if (!nroOperacion.trim() || files.length === 0) return;
@@ -232,6 +240,16 @@ export default function PrealertasPanel() {
                   <div className="collapse-title font-medium flex items-center gap-3">
                     <span className="badge badge-primary badge-sm font-mono">Op. {grupo.nro_operacion}</span>
                     <span className="text-sm text-base-content/60">{grupo.documentos.length} documento{grupo.documentos.length !== 1 ? "s" : ""}</span>
+                    <button
+                      className="btn btn-ghost btn-xs text-error ml-auto"
+                      onClick={(e) => { e.preventDefault(); handleDeleteOperacion(grupo.nro_operacion); }}
+                      title="Eliminar operación completa"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Eliminar todo
+                    </button>
                   </div>
                   <div className="collapse-content">
                     <div className="overflow-x-auto">

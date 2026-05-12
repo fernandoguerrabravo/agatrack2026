@@ -29,3 +29,24 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ documentos: rows });
 }
+
+export async function DELETE(request: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const nroOperacion = searchParams.get("nro_operacion");
+
+  if (!nroOperacion) {
+    return NextResponse.json({ error: "Número de operación requerido." }, { status: 400 });
+  }
+
+  await pgQuery(
+    "DELETE FROM documentos WHERE rut_cliente = $1 AND nro_operacion = $2",
+    [session.rut, nroOperacion]
+  );
+
+  return NextResponse.json({ ok: true });
+}
