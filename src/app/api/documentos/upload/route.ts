@@ -112,19 +112,40 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       });
       analysisText = result.text;
     } else if (isPdf) {
-      // PDF escaneado: enviar como imagen a GPT-4o vision
-      console.log("[docs] PDF scanned, sending to GPT-4o vision, file:", file.name);
-      const dataUrl = `data:image/png;base64,${base64}`;
-      const result = await generateText({
-        model: openai("gpt-4o"),
-        messages: [
-          { role: "user" as const, content: [
-            { type: "text" as const, text: prompt },
-            { type: "image" as const, image: dataUrl },
-          ]},
-        ],
-      });
-      analysisText = result.text;
+      // PDF escaneado: convertir a imagen y enviar a GPT-4o vision
+      console.log("[docs] PDF scanned, converting to image for GPT-4o vision, file:", file.name);
+      try {
+        const { pdf: pdfToImg } = await import("pdf-to-img");
+        const pages: string[] = [];
+        const pdfDoc = await pdfToImg(buffer, { scale: 2 });
+        for await (const page of pdfDoc) {
+          pages.push(`data:image/png;base64,${Buffer.from(page).toString("base64")}`);
+          if (pages.length >= 3) break; // Máximo 3 páginas
+        }
+
+        if (pages.length > 0) {
+          const imageContent = pages.map(img => ({ type: "image" as const, image: img }));
+          const result = await generateText({
+            model: openai("gpt-4o"),
+            messages: [
+              { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContent] },
+            ],
+          });
+          analysisText = result.text;
+        } else {
+          throw new Error("No pages converted");
+        }
+      } catch (convErr) {
+        console.error("[docs] PDF to image conversion failed:", convErr instanceof Error ? convErr.message : convErr);
+        // Fallback: solo clasificar por nombre
+        const result = await generateText({
+          model: openai("gpt-4o-mini"),
+          messages: [
+            { role: "user" as const, content: `${prompt}\n\nEl archivo es un PDF escaneado llamado "${file.name}". No se pudo extraer texto ni convertir a imagen. Clasifica el tipo de documento por el nombre del archivo.` },
+          ],
+        });
+        analysisText = result.text;
+      }
     } else {
       const result = await generateText({
         model: openai("gpt-4o-mini"),
