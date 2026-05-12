@@ -236,7 +236,7 @@ export default function PrealertasPanel() {
             <div className="space-y-4 mt-3">
               {grupos.map((grupo) => (
                 <div key={grupo.nro_operacion} className="bg-base-200 rounded-lg overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-base-300">
                     <div className="flex items-center gap-3">
                       <span className="badge badge-primary badge-sm font-mono">Op. {grupo.nro_operacion}</span>
                       <span className="text-sm text-base-content/60">{grupo.documentos.length} documento{grupo.documentos.length !== 1 ? "s" : ""}</span>
@@ -252,8 +252,12 @@ export default function PrealertasPanel() {
                       Eliminar todo
                     </button>
                   </div>
-                  <div className="px-4 pb-4">
-                    <div className="overflow-x-auto">
+                  <details className="group" open>
+                    <summary className="px-4 py-2 cursor-pointer text-xs text-base-content/50 hover:text-base-content/70">
+                      {grupo.documentos.length > 0 ? "Ver documentos ▾" : ""}
+                    </summary>
+                    <div className="px-4 pb-4">
+                      <div className="overflow-x-auto">
                       <table className="table table-sm">
                         <thead>
                           <tr>
@@ -303,6 +307,7 @@ export default function PrealertasPanel() {
                       </table>
                     </div>
                   </div>
+                  </details>
                 </div>
               ))}
             </div>
