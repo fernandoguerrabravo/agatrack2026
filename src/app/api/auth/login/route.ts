@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { findUserByRut } from "@/lib/airtable";
+import { findUserByRut } from "@/lib/users";
 import { isValidRut, cleanRut } from "@/lib/rut";
 import { createSession } from "@/lib/session";
 
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordMatch) {
       return NextResponse.json(

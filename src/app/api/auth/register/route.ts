@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { findUserByRut, createUser } from "@/lib/airtable";
+import { findUserByRut, createUser } from "@/lib/users";
 import { isValidRut, cleanRut } from "@/lib/rut";
 
 export const runtime = "nodejs";
