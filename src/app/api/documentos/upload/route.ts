@@ -112,11 +112,16 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       });
       analysisText = result.text;
     } else if (isPdf) {
-      console.log("[docs] PDF without extractable text (scanned), file:", file.name);
+      // PDF escaneado: enviar como imagen a GPT-4o vision
+      console.log("[docs] PDF scanned, sending to GPT-4o vision, file:", file.name);
+      const dataUrl = `data:image/png;base64,${base64}`;
       const result = await generateText({
-        model: openai("gpt-4o-mini"),
+        model: openai("gpt-4o"),
         messages: [
-          { role: "user" as const, content: `${prompt}\n\nEl archivo es un PDF llamado "${file.name}" pero no se pudo extraer texto (posiblemente escaneado). Basándote en el nombre del archivo, indica el tipo probable de documento y deja datos_extraidos vacío.` },
+          { role: "user" as const, content: [
+            { type: "text" as const, text: prompt },
+            { type: "image" as const, image: dataUrl },
+          ]},
         ],
       });
       analysisText = result.text;
