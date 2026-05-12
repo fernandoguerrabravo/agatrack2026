@@ -235,14 +235,15 @@ export default function PrealertasPanel() {
           ) : (
             <div className="space-y-4 mt-3">
               {grupos.map((grupo) => (
-                <div key={grupo.nro_operacion} className="collapse collapse-arrow bg-base-200 rounded-lg">
-                  <input type="checkbox" defaultChecked />
-                  <div className="collapse-title font-medium flex items-center gap-3">
-                    <span className="badge badge-primary badge-sm font-mono">Op. {grupo.nro_operacion}</span>
-                    <span className="text-sm text-base-content/60">{grupo.documentos.length} documento{grupo.documentos.length !== 1 ? "s" : ""}</span>
+                <div key={grupo.nro_operacion} className="bg-base-200 rounded-lg overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="badge badge-primary badge-sm font-mono">Op. {grupo.nro_operacion}</span>
+                      <span className="text-sm text-base-content/60">{grupo.documentos.length} documento{grupo.documentos.length !== 1 ? "s" : ""}</span>
+                    </div>
                     <button
-                      className="btn btn-ghost btn-xs text-error ml-auto"
-                      onClick={(e) => { e.preventDefault(); handleDeleteOperacion(grupo.nro_operacion); }}
+                      className="btn btn-ghost btn-xs text-error"
+                      onClick={() => handleDeleteOperacion(grupo.nro_operacion)}
                       title="Eliminar operación completa"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -251,7 +252,7 @@ export default function PrealertasPanel() {
                       Eliminar todo
                     </button>
                   </div>
-                  <div className="collapse-content">
+                  <div className="px-4 pb-4">
                     <div className="overflow-x-auto">
                       <table className="table table-sm">
                         <thead>
