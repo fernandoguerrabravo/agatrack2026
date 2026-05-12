@@ -63,6 +63,7 @@ export async function POST(request: Request) {
     let documentText = "";
     if (isPdf) {
       documentText = await extractTextFromPdf(buffer);
+      console.log("[docs] Extracted text preview:", documentText.substring(0, 200));
     }
 
     const prompt = `Eres un experto en documentos de comercio exterior. Analiza el siguiente texto extraído de un documento y extrae TODOS los datos relevantes.
@@ -101,7 +102,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         ],
       });
       analysisText = result.text;
-    } else if (isPdf && documentText.length > 50) {
+    } else if (isPdf && documentText.length > 20) {
       // Para PDFs con texto extraíble: enviar el texto al LLM
       console.log("[docs] Analyzing PDF text with GPT-4o-mini, text length:", documentText.length);
       const result = await generateText({
