@@ -113,38 +113,55 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       });
       analysisText = result.text;
     } else if (isPdf) {
-      // PDF escaneado o con poco texto: convertir a imagen con pdf-to-img
-      console.log("[docs] PDF scanned, converting to image for GPT-4o vision, file:", file.name);
+      // PDF escaneado o con poco texto: convertir a PNG con pdftoppm y enviar a GPT-4o vision
+      console.log("[docs] PDF scanned, converting to PNG with pdftoppm, file:", file.name);
       let converted = false;
       try {
-        const { pdf: pdfToImg } = await import("pdf-to-img");
-        const pages: string[] = [];
-        const pdfDoc = await pdfToImg(buffer, { scale: 2 });
-        for await (const page of pdfDoc) {
-          const pageBase64 = Buffer.from(page).toString("base64");
-          pages.push(`data:image/png;base64,${pageBase64}`);
-          console.log("[docs] Converted page", pages.length, "size:", pageBase64.length);
-          if (pages.length >= 3) break;
-        }
+        const { execSync } = await import("child_process");
+        const { writeFileSync, readFileSync, unlinkSync, existsSync } = await import("fs");
+        const { join } = await import("path");
+        const os = await import("os");
 
-        if (pages.length > 0) {
-          console.log("[docs] Sending", pages.length, "page(s) to GPT-4o vision");
-          const imageContent = pages.map(img => ({ type: "image" as const, image: img }));
+        const tmpDir = os.tmpdir();
+        const tmpPdf = join(tmpDir, `upload_${Date.now()}.pdf`);
+        const tmpPng = join(tmpDir, `upload_${Date.now()}`);
+
+        writeFileSync(tmpPdf, buffer);
+
+        // Convertir primera página a PNG
+        execSync(`pdftoppm -png -f 1 -l 1 -r 200 "${tmpPdf}" "${tmpPng}"`, { timeout: 15000 });
+
+        // pdftoppm genera archivo con sufijo -1.png o -01.png
+        const possibleFiles = [`${tmpPng}-1.png`, `${tmpPng}-01.png`, `${tmpPng}-001.png`];
+        const pngFile = possibleFiles.find(f => existsSync(f));
+
+        if (pngFile) {
+          const pngBuffer = readFileSync(pngFile);
+          const pngBase64 = pngBuffer.toString("base64");
+          const dataUrl = `data:image/png;base64,${pngBase64}`;
+          console.log("[docs] PNG generated, size:", pngBase64.length, "sending to GPT-4o vision");
+
           const result = await generateText({
             model: openai("gpt-4o"),
             messages: [
-              { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContent] },
+              { role: "user" as const, content: [{ type: "text" as const, text: prompt }, { type: "image" as const, image: dataUrl }] },
             ],
           });
           analysisText = result.text;
           converted = true;
+
+          // Cleanup
+          unlinkSync(tmpPdf);
+          unlinkSync(pngFile);
+        } else {
+          unlinkSync(tmpPdf);
+          throw new Error("pdftoppm did not generate output file");
         }
       } catch (convErr) {
-        console.error("[docs] PDF to image conversion error:", convErr instanceof Error ? convErr.message : convErr);
+        console.error("[docs] PDF to PNG conversion error:", convErr instanceof Error ? convErr.message : convErr);
       }
 
       if (!converted) {
-        // Último fallback
         console.log("[docs] Fallback: classify by filename only");
         const result = await generateText({
           model: openai("gpt-4o-mini"),
