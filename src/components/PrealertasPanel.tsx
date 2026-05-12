@@ -11,13 +11,18 @@ type Documento = {
   created_at: string;
 };
 
+type OperacionGroup = {
+  nro_operacion: string;
+  documentos: Documento[];
+};
+
 export default function PrealertasPanel() {
   const [nroOperacion, setNroOperacion] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<Array<{ nombre: string; tipo: string; resumen: string; error?: string }>>([]);
-  const [documentos, setDocumentos] = useState<Documento[]>([]);
+  const [grupos, setGrupos] = useState<OperacionGroup[]>([]);
   const [filterOp, setFilterOp] = useState("");
 
   const fetchDocumentos = useCallback(async () => {
@@ -25,13 +30,32 @@ export default function PrealertasPanel() {
     const res = await fetch(`/api/documentos${params}`);
     if (res.ok) {
       const data = await res.json();
-      setDocumentos(data.documentos ?? []);
+      const docs: Documento[] = data.documentos ?? [];
+      // Agrupar por operación
+      const map = new Map<string, Documento[]>();
+      for (const doc of docs) {
+        const key = doc.nro_operacion;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(doc);
+      }
+      const grouped: OperacionGroup[] = Array.from(map.entries())
+        .map(([nro_operacion, documentos]) => ({ nro_operacion, documentos }))
+        .sort((a, b) => b.documentos[0].created_at.localeCompare(a.documentos[0].created_at));
+      setGrupos(grouped);
     }
   }, [filterOp]);
 
   useEffect(() => {
     fetchDocumentos();
   }, [fetchDocumentos]);
+
+  async function handleDelete(id: number) {
+    if (!confirm("¿Eliminar este documento?")) return;
+    const res = await fetch(`/api/documentos/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      fetchDocumentos();
+    }
+  }
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -184,11 +208,11 @@ export default function PrealertasPanel() {
         </div>
       )}
 
-      {/* Lista de documentos */}
+      {/* Documentos agrupados por operación */}
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <h2 className="card-title text-lg">Documentos Subidos</h2>
+            <h2 className="card-title text-lg">Documentos por Operación</h2>
             <input
               type="text"
               placeholder="Filtrar por Nro. Operación..."
@@ -198,39 +222,70 @@ export default function PrealertasPanel() {
             />
           </div>
 
-          {documentos.length === 0 ? (
+          {grupos.length === 0 ? (
             <p className="text-base-content/50 text-sm py-4">No hay documentos subidos.</p>
           ) : (
-            <div className="overflow-x-auto mt-3">
-              <table className="table table-sm table-zebra">
-                <thead>
-                  <tr>
-                    <th>Nro. Operación</th>
-                    <th>Archivo</th>
-                    <th>Tipo Documento</th>
-                    <th>Datos Extraídos</th>
-                    <th>Fecha</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documentos.map((doc) => (
-                    <tr key={doc.id}>
-                      <td className="font-mono">{doc.nro_operacion}</td>
-                      <td className="max-w-[200px] truncate">{doc.nombre_archivo}</td>
-                      <td><span className="badge badge-sm badge-primary badge-outline">{doc.tipo_documento}</span></td>
-                      <td className="max-w-[300px]">
-                        <details className="text-xs">
-                          <summary className="cursor-pointer text-primary">Ver datos</summary>
-                          <pre className="mt-1 p-2 bg-base-200 rounded text-[11px] overflow-auto max-h-40">
-                            {JSON.stringify(doc.datos_extraidos, null, 2)}
-                          </pre>
-                        </details>
-                      </td>
-                      <td className="text-xs">{new Date(doc.created_at).toLocaleDateString("es-CL")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-4 mt-3">
+              {grupos.map((grupo) => (
+                <div key={grupo.nro_operacion} className="collapse collapse-arrow bg-base-200 rounded-lg">
+                  <input type="checkbox" defaultChecked />
+                  <div className="collapse-title font-medium flex items-center gap-3">
+                    <span className="badge badge-primary badge-sm font-mono">Op. {grupo.nro_operacion}</span>
+                    <span className="text-sm text-base-content/60">{grupo.documentos.length} documento{grupo.documentos.length !== 1 ? "s" : ""}</span>
+                  </div>
+                  <div className="collapse-content">
+                    <div className="overflow-x-auto">
+                      <table className="table table-sm">
+                        <thead>
+                          <tr>
+                            <th>Archivo</th>
+                            <th>Tipo</th>
+                            <th>Datos Extraídos</th>
+                            <th>Fecha</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {grupo.documentos.map((doc) => (
+                            <tr key={doc.id}>
+                              <td className="max-w-[180px] truncate text-sm">{doc.nombre_archivo}</td>
+                              <td>
+                                <span className="badge badge-sm badge-outline">{doc.tipo_documento}</span>
+                              </td>
+                              <td className="max-w-[300px]">
+                                {Object.keys(doc.datos_extraidos).length > 0 ? (
+                                  <details className="text-xs">
+                                    <summary className="cursor-pointer text-primary">
+                                      {Object.keys(doc.datos_extraidos).length} campos
+                                    </summary>
+                                    <pre className="mt-1 p-2 bg-base-100 rounded text-[11px] overflow-auto max-h-40">
+                                      {JSON.stringify(doc.datos_extraidos, null, 2)}
+                                    </pre>
+                                  </details>
+                                ) : (
+                                  <span className="text-xs text-base-content/40">Sin datos</span>
+                                )}
+                              </td>
+                              <td className="text-xs">{new Date(doc.created_at).toLocaleDateString("es-CL")}</td>
+                              <td>
+                                <button
+                                  className="btn btn-ghost btn-xs text-error"
+                                  onClick={() => handleDelete(doc.id)}
+                                  title="Eliminar"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
