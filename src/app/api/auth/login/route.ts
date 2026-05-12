@@ -10,7 +10,26 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { rut, password } = body as { rut?: string; password?: string };
+    const { rut, password, turnstileToken } = body as { rut?: string; password?: string; turnstileToken?: string };
+
+    // Verificar Turnstile token
+    if (process.env.TURNSTILE_SECRET_KEY && turnstileToken) {
+      const turnstileRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          secret: process.env.TURNSTILE_SECRET_KEY,
+          response: turnstileToken,
+        }),
+      });
+      const turnstileData = await turnstileRes.json();
+      if (!turnstileData.success) {
+        return NextResponse.json(
+          { error: "Verificación de seguridad fallida. Intenta nuevamente." },
+          { status: 403 }
+        );
+      }
+    }
 
     if (!rut || !password) {
       return NextResponse.json(
