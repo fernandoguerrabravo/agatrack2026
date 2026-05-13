@@ -242,19 +242,22 @@ export default function PrealertasPanel() {
                       <span className="text-sm text-base-content/60">{grupo.documentos.length} documento{grupo.documentos.length !== 1 ? "s" : ""}</span>
                     </div>
                     <button
-                      className="btn btn-ghost btn-xs text-error"
+                      className="btn btn-error btn-xs"
                       onClick={() => handleDeleteOperacion(grupo.nro_operacion)}
                       title="Eliminar operación completa"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                       Eliminar todo
                     </button>
                   </div>
-                  <details className="group" open>
-                    <summary className="px-4 py-2 cursor-pointer text-xs text-base-content/50 hover:text-base-content/70">
-                      {grupo.documentos.length > 0 ? "Ver documentos ▾" : ""}
+                  <details className="group">
+                    <summary className="px-4 py-2 cursor-pointer text-xs text-primary hover:text-primary/80 list-none flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      Ver documentos
                     </summary>
                     <div className="px-4 pb-4">
                       <div className="overflow-x-auto">
