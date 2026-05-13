@@ -128,23 +128,32 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
 
         writeFileSync(tmpPdf, buffer);
 
-        // Convertir primera página a PNG
-        execSync(`pdftoppm -png -f 1 -l 1 -r 200 "${tmpPdf}" "${tmpPng}"`, { timeout: 15000 });
+        // Convertir TODAS las páginas a PNG
+        execSync(`pdftoppm -png -r 150 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
 
-        // pdftoppm genera archivo con sufijo -1.png o -01.png
-        const possibleFiles = [`${tmpPng}-1.png`, `${tmpPng}-01.png`, `${tmpPng}-001.png`];
-        const pngFile = possibleFiles.find(f => existsSync(f));
+        // Buscar todos los archivos PNG generados
+        const dirFiles = require("fs").readdirSync(tmpDir) as string[];
+        const baseName = tmpPng.split("/").pop()!;
+        const pngFiles = dirFiles
+          .filter((f: string) => f.startsWith(baseName) && f.endsWith(".png"))
+          .sort()
+          .map((f: string) => join(tmpDir, f));
 
-        if (pngFile) {
-          const pngBuffer = readFileSync(pngFile);
-          const pngBase64 = pngBuffer.toString("base64");
-          const dataUrl = `data:image/png;base64,${pngBase64}`;
-          console.log("[docs] PNG generated, size:", pngBase64.length, "sending to GPT-4o vision");
+        console.log("[docs] PNG pages generated:", pngFiles.length);
+
+        if (pngFiles.length > 0) {
+          // Enviar todas las páginas (máximo 10) a GPT-4o vision
+          const imageContents = pngFiles.slice(0, 10).map((pf: string) => {
+            const pngBuf = readFileSync(pf);
+            return { type: "image" as const, image: `data:image/png;base64,${pngBuf.toString("base64")}` };
+          });
+
+          console.log("[docs] Sending", imageContents.length, "page(s) to GPT-4o vision");
 
           const result = await generateText({
             model: openai("gpt-4o"),
             messages: [
-              { role: "user" as const, content: [{ type: "text" as const, text: prompt }, { type: "image" as const, image: dataUrl }] },
+              { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContents] },
             ],
           });
           analysisText = result.text;
@@ -152,10 +161,10 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
 
           // Cleanup
           unlinkSync(tmpPdf);
-          unlinkSync(pngFile);
+          pngFiles.forEach((f: string) => { try { unlinkSync(f); } catch {} });
         } else {
           unlinkSync(tmpPdf);
-          throw new Error("pdftoppm did not generate output file");
+          throw new Error("pdftoppm did not generate output files");
         }
       } catch (convErr) {
         console.error("[docs] PDF to PNG conversion error:", convErr instanceof Error ? convErr.message : convErr);
