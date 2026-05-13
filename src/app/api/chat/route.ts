@@ -100,6 +100,20 @@ async function getDbContext(rut: string, intents: string[]): Promise<string> {
   const placeholders = OPERACIONES_EXPORT.map(() => "?").join(",");
 
   try {
+    // SIEMPRE traer resumen histórico completo (desde primera fecha hasta hoy)
+    const [historico] = await query<Record<string, unknown>[]>(
+      `SELECT MIN(fecha_aceptacion) as primera_fecha, MAX(fecha_aceptacion) as ultima_fecha, COUNT(*) as total_ops, COALESCE(SUM(total_fob),0) as total_fob, COALESCE(SUM(total_cif),0) as total_cif, COALESCE(SUM(total_peso_bruto),0) as total_kilos FROM out_despacho_fguerra WHERE rut_cliente = ?`,
+      [rut]
+    );
+    results.push(`RESUMEN HISTÓRICO COMPLETO (toda la data disponible): ${JSON.stringify(historico)}`);
+
+    // Resumen por año (histórico completo)
+    const porAnio = await query<Record<string, unknown>[]>(
+      `SELECT YEAR(fecha_aceptacion) as anio, COUNT(*) as ops, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE rut_cliente = ? GROUP BY anio ORDER BY anio`,
+      [rut]
+    );
+    results.push(`OPERACIONES POR AÑO (histórico): ${JSON.stringify(porAnio)}`);
+
     if (intents.includes("resumen")) {
       const [row] = await query<Record<string, unknown>[]>(
         `SELECT COUNT(*) as total_ops, COALESCE(SUM(total_fob),0) as total_fob, COALESCE(SUM(total_cif),0) as total_cif, COALESCE(SUM(total_peso_bruto),0) as total_kilos FROM out_despacho_fguerra WHERE rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE()`,
@@ -109,77 +123,153 @@ async function getDbContext(rut: string, intents: string[]): Promise<string> {
     }
 
     if (intents.includes("exportaciones")) {
-      const rows = await query<Record<string, unknown>[]>(
+      // Año actual
+      const [expActual] = await query<Record<string, unknown>[]>(
         `SELECT COUNT(*) as cantidad, COALESCE(SUM(total_fob),0) as total_fob, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion IN (${placeholders}) AND rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE()`,
         [...OPERACIONES_EXPORT, rut]
       );
-      results.push(`EXPORTACIONES AÑO ACTUAL (hasta hoy): ${JSON.stringify(rows[0])}`);
+      results.push(`EXPORTACIONES AÑO ACTUAL (hasta hoy): ${JSON.stringify(expActual)}`);
 
-      const porPais = await query<Record<string, unknown>[]>(
-        `SELECT pais_destino, COUNT(*) as cantidad, COALESCE(SUM(total_fob),0) as fob FROM out_despacho_fguerra WHERE operacion IN (${placeholders}) AND rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE() GROUP BY pais_destino ORDER BY fob DESC LIMIT 10`,
+      // Histórico por año
+      const expAnual = await query<Record<string, unknown>[]>(
+        `SELECT YEAR(fecha_aceptacion) as anio, COUNT(*) as cantidad, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion IN (${placeholders}) AND rut_cliente = ? GROUP BY anio ORDER BY anio`,
         [...OPERACIONES_EXPORT, rut]
       );
-      results.push(`EXPORTACIONES POR PAÍS DESTINO: ${JSON.stringify(porPais)}`);
+      results.push(`EXPORTACIONES POR AÑO (histórico): ${JSON.stringify(expAnual)}`);
+
+      // Por país (histórico)
+      const porPais = await query<Record<string, unknown>[]>(
+        `SELECT pais_destino, COUNT(*) as cantidad, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion IN (${placeholders}) AND rut_cliente = ? GROUP BY pais_destino ORDER BY fob DESC LIMIT 10`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`EXPORTACIONES POR PAÍS DESTINO (histórico): ${JSON.stringify(porPais)}`);
+
+      // Por aduana (histórico)
+      const porAduana = await query<Record<string, unknown>[]>(
+        `SELECT aduana, COUNT(*) as cantidad, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion IN (${placeholders}) AND rut_cliente = ? GROUP BY aduana ORDER BY cantidad DESC`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`EXPORTACIONES POR ADUANA (histórico): ${JSON.stringify(porAduana)}`);
+
+      // Por mes año actual
+      const expMes = await query<Record<string, unknown>[]>(
+        `SELECT DATE_FORMAT(fecha_aceptacion,'%Y-%m') as mes, COUNT(*) as cantidad, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion IN (${placeholders}) AND rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') GROUP BY mes ORDER BY mes`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`EXPORTACIONES POR MES (año actual): ${JSON.stringify(expMes)}`);
     }
 
     if (intents.includes("importaciones")) {
-      const rows = await query<Record<string, unknown>[]>(
-        `SELECT COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as total_cif, COALESCE(SUM(total_fob),0) as total_fob, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE()`,
+      // Año actual
+      const [impActual] = await query<Record<string, unknown>[]>(
+        `SELECT COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as total_cif, COALESCE(SUM(total_fob),0) as total_fob, COALESCE(SUM(total_peso_bruto),0) as kilos, COALESCE(SUM(valor_flete),0) as flete, COALESCE(SUM(valor_seguro),0) as seguro FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE()`,
         [...OPERACIONES_EXPORT, rut]
       );
-      results.push(`IMPORTACIONES AÑO ACTUAL (hasta hoy): ${JSON.stringify(rows[0])}`);
+      results.push(`IMPORTACIONES AÑO ACTUAL (hasta hoy): ${JSON.stringify(impActual)}`);
 
-      const porPais = await query<Record<string, unknown>[]>(
-        `SELECT pais_origen_mercancias as pais, COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as cif FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE() GROUP BY pais_origen_mercancias ORDER BY cif DESC LIMIT 10`,
+      // Histórico por año
+      const impAnual = await query<Record<string, unknown>[]>(
+        `SELECT YEAR(fecha_aceptacion) as anio, COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? GROUP BY anio ORDER BY anio`,
         [...OPERACIONES_EXPORT, rut]
       );
-      results.push(`IMPORTACIONES POR PAÍS ORIGEN: ${JSON.stringify(porPais)}`);
+      results.push(`IMPORTACIONES POR AÑO (histórico): ${JSON.stringify(impAnual)}`);
+
+      // Por país origen (histórico)
+      const porPais = await query<Record<string, unknown>[]>(
+        `SELECT pais_origen_mercancias as pais, COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? GROUP BY pais_origen_mercancias ORDER BY cif DESC LIMIT 10`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`IMPORTACIONES POR PAÍS ORIGEN (histórico): ${JSON.stringify(porPais)}`);
+
+      // Por aduana (histórico)
+      const porAduana = await query<Record<string, unknown>[]>(
+        `SELECT aduana, COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? GROUP BY aduana ORDER BY cantidad DESC`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`IMPORTACIONES POR ADUANA (histórico): ${JSON.stringify(porAduana)}`);
+
+      // Por incoterms (histórico)
+      const porIncoterms = await query<Record<string, unknown>[]>(
+        `SELECT clausula_venta_incoterms as incoterm, COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? GROUP BY clausula_venta_incoterms ORDER BY cantidad DESC LIMIT 10`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`IMPORTACIONES POR INCOTERMS (histórico): ${JSON.stringify(porIncoterms)}`);
+
+      // Por mes año actual
+      const impMes = await query<Record<string, unknown>[]>(
+        `SELECT DATE_FORMAT(fecha_aceptacion,'%Y-%m') as mes, COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') GROUP BY mes ORDER BY mes`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`IMPORTACIONES POR MES (año actual): ${JSON.stringify(impMes)}`);
     }
 
     if (intents.includes("impuestos")) {
-      const [row] = await query<Record<string, unknown>[]>(
-        `SELECT COALESCE(SUM(iva),0) as total_iva, COALESCE(SUM(gravamenes_valor_1),0) as total_derechos FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE()`,
+      // Año actual
+      const [impuestos] = await query<Record<string, unknown>[]>(
+        `SELECT COALESCE(SUM(iva),0) as total_iva, COALESCE(SUM(gravamenes_valor_1),0) as total_derechos, COALESCE(SUM(total_cif),0) as total_cif FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE()`,
         [...OPERACIONES_EXPORT, rut]
       );
-      results.push(`IMPUESTOS IMPORTACIONES AÑO ACTUAL (hasta hoy): ${JSON.stringify(row)}`);
+      results.push(`IMPUESTOS IMPORTACIONES AÑO ACTUAL: ${JSON.stringify(impuestos)}`);
+
+      // Histórico por año
+      const impAnual = await query<Record<string, unknown>[]>(
+        `SELECT YEAR(fecha_aceptacion) as anio, COALESCE(SUM(iva),0) as iva, COALESCE(SUM(gravamenes_valor_1),0) as derechos, COALESCE(SUM(total_cif),0) as cif FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? GROUP BY anio ORDER BY anio`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`IMPUESTOS POR AÑO (histórico): ${JSON.stringify(impAnual)}`);
+
+      // Bien de capital
+      const [bk] = await query<Record<string, unknown>[]>(
+        `SELECT COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as cif_bk FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? AND regimen = 'GENERAL' AND gravamenes_valor_1 = 0 AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE()`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`BIEN DE CAPITAL AÑO ACTUAL (régimen GENERAL, derechos $0): ${JSON.stringify(bk)}`);
     }
 
     if (intents.includes("mensual")) {
       const rows = await query<Record<string, unknown>[]>(
-        `SELECT DATE_FORMAT(fecha_aceptacion,'%Y-%m') as mes, COUNT(*) as ops, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_cif),0) as cif FROM out_despacho_fguerra WHERE rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE() GROUP BY mes ORDER BY mes`,
+        `SELECT DATE_FORMAT(fecha_aceptacion,'%Y-%m') as mes, COUNT(*) as ops, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE() GROUP BY mes ORDER BY mes`,
         [rut]
       );
-      results.push(`OPERACIONES POR MES (AÑO ACTUAL hasta hoy): ${JSON.stringify(rows)}`);
+      results.push(`OPERACIONES POR MES (año actual): ${JSON.stringify(rows)}`);
     }
 
     if (intents.includes("transporte")) {
       const rows = await query<Record<string, unknown>[]>(
-        `SELECT emisor_docto_transporte as emisor, COUNT(*) as cantidad, COALESCE(SUM(total_peso_bruto),0) as kilos, COALESCE(SUM(valor_flete),0) as flete FROM out_despacho_fguerra WHERE rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE() GROUP BY emisor_docto_transporte ORDER BY cantidad DESC LIMIT 10`,
+        `SELECT emisor_docto_transporte as emisor, COUNT(*) as cantidad, COALESCE(SUM(total_peso_bruto),0) as kilos, COALESCE(SUM(valor_flete),0) as flete FROM out_despacho_fguerra WHERE rut_cliente = ? GROUP BY emisor_docto_transporte ORDER BY cantidad DESC LIMIT 10`,
         [rut]
       );
-      results.push(`TOP EMISORES TRANSPORTE: ${JSON.stringify(rows)}`);
+      results.push(`TOP EMISORES TRANSPORTE (histórico): ${JSON.stringify(rows)}`);
     }
 
     if (intents.includes("paises")) {
       const destino = await query<Record<string, unknown>[]>(
-        `SELECT pais_destino as pais, COUNT(*) as cantidad, COALESCE(SUM(total_fob),0) as fob FROM out_despacho_fguerra WHERE operacion IN (${placeholders}) AND rut_cliente = ? AND YEAR(fecha_aceptacion) >= YEAR(CURDATE())-1 GROUP BY pais_destino ORDER BY fob DESC LIMIT 10`,
+        `SELECT pais_destino as pais, COUNT(*) as cantidad, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion IN (${placeholders}) AND rut_cliente = ? GROUP BY pais_destino ORDER BY fob DESC LIMIT 10`,
         [...OPERACIONES_EXPORT, rut]
       );
-      results.push(`PAÍSES DESTINO EXPORTACIONES: ${JSON.stringify(destino)}`);
+      results.push(`PAÍSES DESTINO EXPORTACIONES (histórico): ${JSON.stringify(destino)}`);
 
       const origen = await query<Record<string, unknown>[]>(
-        `SELECT pais_origen_mercancias as pais, COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as cif FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? AND YEAR(fecha_aceptacion) >= YEAR(CURDATE())-1 GROUP BY pais_origen_mercancias ORDER BY cif DESC LIMIT 10`,
+        `SELECT pais_origen_mercancias as pais, COUNT(*) as cantidad, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? GROUP BY pais_origen_mercancias ORDER BY cif DESC LIMIT 10`,
         [...OPERACIONES_EXPORT, rut]
       );
-      results.push(`PAÍSES ORIGEN IMPORTACIONES: ${JSON.stringify(origen)}`);
+      results.push(`PAÍSES ORIGEN IMPORTACIONES (histórico): ${JSON.stringify(origen)}`);
     }
 
     if (intents.includes("anual")) {
       const rows = await query<Record<string, unknown>[]>(
-        `SELECT YEAR(fecha_aceptacion) as anio, COUNT(*) as ops, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE rut_cliente = ? AND YEAR(fecha_aceptacion) >= 2024 GROUP BY anio ORDER BY anio`,
+        `SELECT YEAR(fecha_aceptacion) as anio, COUNT(*) as ops, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE rut_cliente = ? GROUP BY anio ORDER BY anio`,
         [rut]
       );
-      results.push(`OPERACIONES POR AÑO: ${JSON.stringify(rows)}`);
+      results.push(`OPERACIONES POR AÑO (histórico completo): ${JSON.stringify(rows)}`);
+    }
+
+    if (intents.includes("aduanas")) {
+      const rows = await query<Record<string, unknown>[]>(
+        `SELECT aduana, COUNT(*) as cantidad, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE rut_cliente = ? GROUP BY aduana ORDER BY cantidad DESC`,
+        [rut]
+      );
+      results.push(`POR ADUANA (histórico): ${JSON.stringify(rows)}`);
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
