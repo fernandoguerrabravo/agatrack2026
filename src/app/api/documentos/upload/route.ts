@@ -74,7 +74,8 @@ INSTRUCCIONES IMPORTANTES:
 3. Para BL: identifica CADA contenedor por separado con su número, sello, contenido detallado (pallets, bolsas, peso por contenedor, volumen, descripción de mercancía, HS code)
 4. Incluye información del shipper, consignee, notify party con direcciones completas
 5. Incluye datos de flete, nave, viaje, puertos
-6. NO omitas ningún dato visible en el documento
+6. IMPORTANTE: Si hay correcciones de nave (vessel amendment/correction), incluir TANTO la nave original como la nave corregida. Campos: nave_original y nave_corregida
+7. NO omitas ningún dato visible en el documento
 
 Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este formato:
 {
@@ -84,7 +85,8 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     // TODOS los campos que encuentres. Ejemplos según tipo:
     // BL: numero_bl, fecha_emision, shipper (nombre y dirección completa), consignee (nombre y dirección completa), notify_party, puerto_embarque, puerto_destino, nave, viaje, naviera, 
     //     contenedores: array de objetos con { numero_contenedor, sello, tipo_contenedor, numero_bultos, tipo_bulto, descripcion_mercancia, peso_bruto, peso_bruto_unidad, volumen, volumen_unidad, marcas, hs_code, pallets, bolsas_por_pallet },
-    //     total_contenedores, total_bultos, peso_bruto_total, volumen_total, flete (monto y moneda), condicion_flete (prepaid/collect), bl_tipo (original/copy)
+    //     total_contenedores, total_bultos, peso_bruto_total, volumen_total, flete (monto y moneda), condicion_flete (prepaid/collect), bl_tipo (original/copy),
+    //     nave (nombre del buque actual), nave_original (si hubo corrección), nave_corregida (nuevo buque si aplica), viaje, naviera
     // Invoice: numero_factura, proveedor, comprador, fecha, moneda, monto_total, items (array con descripcion, cantidad, unidad, precio_unitario, total), incoterm, pais_origen, condiciones_pago
     // Póliza: numero_poliza, aseguradora, asegurado, monto_asegurado, prima, moneda, cobertura, vigencia_desde, vigencia_hasta
     // Packing List: total_bultos, tipo_embalaje, peso_bruto_total, peso_neto_total, volumen_total, items (array con descripcion, cantidad, peso_bruto, peso_neto, dimensiones)
