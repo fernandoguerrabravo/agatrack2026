@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { pgQuery } from "@/lib/postgres";
+import { uploadToSpaces } from "@/lib/spaces";
 import { openai } from "@ai-sdk/openai";
 import { generateText, embed } from "ai";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -221,6 +222,11 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       analysis.texto_completo = documentText;
     }
 
+    // Subir archivo a DigitalOcean Spaces
+    const fileKey = `documentos/${session.rut}/${nroOperacion}/${Date.now()}_${file.name}`;
+    const storageUrl = await uploadToSpaces(buffer, fileKey, mimeType);
+    console.log("[docs] File uploaded to Spaces:", storageUrl);
+
     // Generar embedding del texto para búsqueda semántica
     const textoParaEmbedding = `${analysis.tipo_documento} ${analysis.resumen} ${analysis.texto_completo ?? ""}`.substring(0, 8000);
 
@@ -233,9 +239,9 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     const embeddingStr = `[${embedding.join(",")}]`;
 
     const rows = await pgQuery(
-      `INSERT INTO documentos (rut_cliente, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, texto_completo, embedding)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::vector)
-       RETURNING id, tipo_documento, datos_extraidos, created_at`,
+      `INSERT INTO documentos (rut_cliente, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, texto_completo, embedding, storage_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::vector, $8)
+       RETURNING id, tipo_documento, datos_extraidos, storage_url, created_at`,
       [
         session.rut,
         nroOperacion,
@@ -244,6 +250,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         JSON.stringify(analysis.datos_extraidos),
         analysis.texto_completo ?? "",
         embeddingStr,
+        storageUrl,
       ]
     );
 

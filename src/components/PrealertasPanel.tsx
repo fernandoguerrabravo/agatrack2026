@@ -8,6 +8,7 @@ type Documento = {
   nombre_archivo: string;
   tipo_documento: string;
   datos_extraidos: Record<string, unknown>;
+  storage_url: string;
   created_at: string;
 };
 
@@ -274,7 +275,15 @@ export default function PrealertasPanel() {
                         <tbody>
                           {grupo.documentos.map((doc) => (
                             <tr key={doc.id}>
-                              <td className="max-w-[180px] truncate text-sm">{doc.nombre_archivo}</td>
+                              <td className="max-w-[180px] truncate text-sm">
+                                {doc.storage_url ? (
+                                  <a href={doc.storage_url} target="_blank" rel="noopener noreferrer" className="link link-primary hover:link-hover">
+                                    {doc.nombre_archivo}
+                                  </a>
+                                ) : (
+                                  doc.nombre_archivo
+                                )}
+                              </td>
                               <td>
                                 <span className="badge badge-sm badge-outline">{doc.tipo_documento}</span>
                               </td>
