@@ -5,7 +5,7 @@ import { DefaultChatTransport } from "ai";
 import { useRef, useEffect, useState } from "react";
 
 export default function ChatPanel() {
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, setMessages } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
   const [input, setInput] = useState("");
@@ -27,19 +27,37 @@ export default function ChatPanel() {
     sendMessage({ text });
   }
 
+  function handleReset() {
+    setMessages([]);
+  }
+
   return (
     <div className="bg-white rounded-lg flex flex-col h-[520px] max-w-2xl mx-auto w-full overflow-hidden shadow-sm">
       {/* Header */}
-      <div className="px-5 py-3.5 bg-[#1a2b4a] flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#e8a838]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
+      <div className="px-5 py-3.5 bg-[#1a2b4a] flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#e8a838]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-white">Asistente AGATrack</p>
+            <p className="text-[11px] text-white/50">Consultas sobre operaciones Comex</p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-medium text-white">Asistente AGATrack</p>
-          <p className="text-[11px] text-white/50">Consultas sobre operaciones Comex</p>
-        </div>
+        {messages.length > 0 && (
+          <button
+            onClick={handleReset}
+            className="btn btn-ghost btn-xs text-white/60 hover:text-white"
+            title="Nueva conversación"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Nuevo
+          </button>
+        )}
       </div>
 
       {/* Messages */}
@@ -57,6 +75,12 @@ export default function ChatPanel() {
               <Chip text="Países de destino" onClick={handleSuggestion} />
               <Chip text="Derechos de aduana" onClick={handleSuggestion} />
               <Chip text="Importaciones del mes" onClick={handleSuggestion} />
+              <Chip text="Comparar exportaciones 2024 vs 2025" onClick={handleSuggestion} />
+              <Chip text="¿Cuántos kilos importé este año?" onClick={handleSuggestion} />
+              <Chip text="Top países de origen" onClick={handleSuggestion} />
+              <Chip text="Evolución mensual de importaciones" onClick={handleSuggestion} />
+              <Chip text="¿Cuánto pagué de IVA?" onClick={handleSuggestion} />
+              <Chip text="Resumen general histórico" onClick={handleSuggestion} />
             </div>
           </div>
         )}
