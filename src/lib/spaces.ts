@@ -1,5 +1,5 @@
 import "server-only";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 const client = new S3Client({
   endpoint: process.env.DO_SPACES_ENDPOINT ?? "https://sfo3.digitaloceanspaces.com",
@@ -32,4 +32,51 @@ export async function uploadToSpaces(
   );
 
   return `https://${BUCKET}.${process.env.DO_SPACES_REGION ?? "sfo3"}.digitaloceanspaces.com/${key}`;
+}
+
+
+/**
+ * Elimina un archivo de DigitalOcean Spaces por su URL.
+ */
+export async function deleteFromSpaces(url: string): Promise<void> {
+  if (!url) return;
+  // Extraer el key de la URL
+  const bucket = process.env.DO_SPACES_BUCKET ?? "agatrack";
+  const region = process.env.DO_SPACES_REGION ?? "sfo3";
+  const prefix = `https://${bucket}.${region}.digitaloceanspaces.com/`;
+  const key = url.startsWith(prefix) ? url.slice(prefix.length) : url;
+
+  await client.send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    })
+  );
+}
+
+/**
+ * Elimina todos los archivos de una carpeta (prefix) en Spaces.
+ */
+export async function deleteFolderFromSpaces(prefix: string): Promise<void> {
+  const bucket = process.env.DO_SPACES_BUCKET ?? "agatrack";
+
+  const listResult = await client.send(
+    new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+    })
+  );
+
+  if (listResult.Contents && listResult.Contents.length > 0) {
+    for (const obj of listResult.Contents) {
+      if (obj.Key) {
+        await client.send(
+          new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: obj.Key,
+          })
+        );
+      }
+    }
+  }
 }

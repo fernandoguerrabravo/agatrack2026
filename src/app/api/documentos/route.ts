@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { pgQuery } from "@/lib/postgres";
+import { deleteFolderFromSpaces } from "@/lib/spaces";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +44,15 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Número de operación requerido." }, { status: 400 });
   }
 
+  // Borrar carpeta completa del bucket
+  try {
+    const folderPrefix = `documentos/${session.rut}/${nroOperacion}/`;
+    await deleteFolderFromSpaces(folderPrefix);
+  } catch (err) {
+    console.error("[docs] Error deleting folder from Spaces:", err);
+  }
+
+  // Borrar de la base de datos
   await pgQuery(
     "DELETE FROM documentos WHERE rut_cliente = $1 AND nro_operacion = $2",
     [session.rut, nroOperacion]
