@@ -42,7 +42,8 @@ REGLAS:
 6. Sé conciso y directo en tus respuestas.
 7. Si el usuario pregunta algo que no tiene relación con comercio exterior, indica amablemente que solo puedes ayudar con consultas sobre sus operaciones.
 8. Las exportaciones son operaciones como: EXPORTACION NORMAL, EXPORTACION DE SERVICIOS, etc.
-9. Las importaciones son todas las demás operaciones (que NO son exportaciones).`;
+9. Las importaciones son todas las demás operaciones (que NO son exportaciones).
+10. NO uses formato markdown (no uses **, ##, *, etc). Responde en texto plano sin formato.`;
 }
 
 function extractQueryIntent(message: string): string[] {
