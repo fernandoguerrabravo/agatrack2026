@@ -20,6 +20,7 @@ const TIPOS_DOCUMENTO = [
   "Certificado Fitosanitario",
   "Certificado de Calidad",
   "Documento de Transporte",
+  "Mandato",
   "Otro",
 ];
 
@@ -75,7 +76,8 @@ INSTRUCCIONES IMPORTANTES:
 4. Incluye información del shipper, consignee, notify party con direcciones completas
 5. Incluye datos de flete, nave, viaje, puertos
 6. IMPORTANTE: Si hay correcciones de nave (vessel amendment/correction), incluir TANTO la nave original como la nave corregida. Campos: nave_original y nave_corregida
-7. NO omitas ningún dato visible en el documento
+7. Para MANDATO: identificar fecha de firma y calcular fecha de vencimiento (1 año exacto desde la firma). Incluir mandante, mandatario, RUTs, notario y repertorio
+8. NO omitas ningún dato visible en el documento
 
 Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este formato:
 {
@@ -92,6 +94,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     // Packing List: total_bultos, tipo_embalaje, peso_bruto_total, peso_neto_total, volumen_total, items (array con descripcion, cantidad, peso_bruto, peso_neto, dimensiones)
     // Certificado de Origen: numero_certificado, pais_origen, exportador, importador, descripcion_mercancia, tratado_aplicable, partida_arancelaria, fecha_emision
     // Ficha Técnica: producto, marca, modelo, especificaciones_tecnicas, composicion, uso
+    // Mandato: mandante (quien otorga), mandatario (agente de aduanas), rut_mandante, rut_mandatario, fecha_firma, fecha_vencimiento (1 año desde la firma), alcance, notario, repertorio
   },
   "texto_completo": "el texto completo del documento tal como fue extraído"
 }`;
