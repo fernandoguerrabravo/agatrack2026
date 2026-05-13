@@ -66,6 +66,7 @@ export default function DashboardShell({ user, children }: Props) {
               width={160}
               height={50}
               priority
+              style={{ height: "auto" }}
             />
           </Link>
         </div>

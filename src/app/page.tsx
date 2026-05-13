@@ -117,6 +117,7 @@ export default function Home() {
               width={336}
               height={112}
               priority
+              style={{ height: "auto" }}
               className="mb-2"
             />
             <p className="text-base-content/70 text-sm text-center">
