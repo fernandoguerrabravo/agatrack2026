@@ -225,9 +225,16 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     }
 
     // Subir archivo a DigitalOcean Spaces
-    const fileKey = `documentos/${session.rut}/${nroOperacion}/${Date.now()}_${file.name}`;
-    const storageUrl = await uploadToSpaces(buffer, fileKey, mimeType);
-    console.log("[docs] File uploaded to Spaces:", storageUrl);
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const fileKey = `documentos/${session.rut}/${nroOperacion}/${Date.now()}_${safeFileName}`;
+    let storageUrl = "";
+    try {
+      storageUrl = await uploadToSpaces(buffer, fileKey, mimeType);
+      console.log("[docs] File uploaded to Spaces:", storageUrl);
+    } catch (spaceErr) {
+      console.error("[docs] Spaces upload error:", spaceErr instanceof Error ? spaceErr.message : spaceErr);
+      // Continuar sin URL de storage
+    }
 
     // Generar embedding del texto para búsqueda semántica
     const textoParaEmbedding = `${analysis.tipo_documento} ${analysis.resumen} ${analysis.texto_completo ?? ""}`.substring(0, 8000);
@@ -263,9 +270,9 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("Upload error:", message);
+    console.error("Upload error:", message, error);
     return NextResponse.json(
-      { error: "Error al procesar el documento." },
+      { error: `Error al procesar el documento: ${message}` },
       { status: 500 }
     );
   }
