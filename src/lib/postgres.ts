@@ -1,5 +1,8 @@
 import "server-only";
-import { Pool } from "pg";
+import { Pool, types } from "pg";
+
+// Forzar que DATE (OID 1082) se devuelva como string YYYY-MM-DD, sin convertir a Date
+types.setTypeParser(1082, (val: string) => val);
 
 const globalForPg = globalThis as unknown as { __pg?: Pool };
 
