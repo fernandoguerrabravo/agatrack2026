@@ -92,7 +92,7 @@ async function sync() {
         sync_id SERIAL,
         lbac_nid TEXT,
         operacion TEXT, despacho TEXT, resolucion TEXT, dus_tipo_envio TEXT,
-        aduana TEXT, referencia TEXT, nro_aceptacion TEXT PRIMARY KEY, fecha_aceptacion TEXT,
+        aduana TEXT, referencia TEXT, nro_aceptacion TEXT PRIMARY KEY, fecha_aceptacion DATE,
         fecha_vencto TEXT, aforo TEXT, autor_salida TEXT, eta TEXT, dus_observaciones TEXT,
         parcial TEXT, nro_parcial TEXT, total_parciales TEXT, total_itemes TEXT,
         total_bultos TEXT, total_peso_bruto TEXT, total_fob TEXT,
