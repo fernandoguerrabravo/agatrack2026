@@ -118,8 +118,8 @@ export default function DashboardShell({ user, children }: Props) {
                 <p className="text-sm font-medium leading-tight">
                   {user.nombre || "Empresa"}
                 </p>
-                <p className="text-xs text-base-content/60 font-mono">
-                  {user.rut}
+                <p className="text-xs text-base-content/60">
+                  {user.email}
                 </p>
               </div>
               <div className="avatar placeholder">
@@ -134,6 +134,9 @@ export default function DashboardShell({ user, children }: Props) {
               tabIndex={0}
               className="dropdown-content menu bg-base-100 rounded-box z-50 w-52 p-2 shadow-lg border border-base-300 mt-2"
             >
+              <li className="menu-title">
+                <span className="text-xs">{user.email}</span>
+              </li>
               <li className="menu-title">
                 <span className="font-mono text-xs">{user.rut}</span>
               </li>
