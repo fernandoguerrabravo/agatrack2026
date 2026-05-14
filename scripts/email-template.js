@@ -8,7 +8,7 @@ function getEmailTemplate({ nombre, rut, desde, hasta, rowCount, mesAnio }) {
 <div style="align-items:center;background:#f4f4f4;border:2px solid #d3d3d3;color:#000;display:flex;flex-direction:column;font-family:Arial, sans-serif;gap:24px;justify-content:center;max-width:fit-content;min-width:800px;overflow:clip">
   <!-- Header -->
   <div style="align-items:center;background:#1a2b4a;color:#fff;display:flex;justify-content:center;padding:16px;width:100%">
-    <img src="https://agatrack.agenciaguerra.com/logo_agatrack.png" alt="AGATrack" width="160" height="50" style="height:auto" />
+    <img src="https://agatrack.agenciaguerra.com/logo_agatrack.png" alt="AGATrack" width="240" height="75" style="height:auto" />
   </div>
 
   <!-- Contenido -->
