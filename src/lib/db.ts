@@ -24,15 +24,15 @@ export async function query<T = Record<string, unknown>[]>(
   pgSql = pgSql.replace(/YEAR\(CURDATE\(\)\)-(\d+)/g, "(EXTRACT(YEAR FROM CURRENT_DATE)::int - $1)");
   pgSql = pgSql.replace(/YEAR\(CURDATE\(\)\)/g, "EXTRACT(YEAR FROM CURRENT_DATE)::int");
 
-  // YEAR(fecha_aceptacion) → extraer año del texto
-  pgSql = pgSql.replace(/YEAR\(([^)]+)\)/g, "SUBSTRING($1, 1, 4)::int");
+  // YEAR(fecha_aceptacion) → extraer año (funciona con DATE y TEXT)
+  pgSql = pgSql.replace(/YEAR\(([^)]+)\)/g, "EXTRACT(YEAR FROM $1::date)::int");
 
   // DATE_FORMAT(campo, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') → mes actual
-  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y-%m'\)\s*=\s*DATE_FORMAT\(CURDATE\(\),\s*'%Y-%m'\)/g, "SUBSTRING($1, 1, 7) = TO_CHAR(CURRENT_DATE, 'YYYY-MM')");
+  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y-%m'\)\s*=\s*DATE_FORMAT\(CURDATE\(\),\s*'%Y-%m'\)/g, "TO_CHAR($1::date, 'YYYY-MM') = TO_CHAR(CURRENT_DATE, 'YYYY-MM')");
 
-  // DATE_FORMAT(campo, '%Y-%m') → primeros 7 chars
-  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y-%m'\)/g, "SUBSTRING($1, 1, 7)");
-  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y'\)/g, "SUBSTRING($1, 1, 4)");
+  // DATE_FORMAT(campo, '%Y-%m') → formato año-mes (funciona con DATE y TEXT)
+  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y-%m'\)/g, "TO_CHAR($1::date, 'YYYY-MM')");
+  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y'\)/g, "TO_CHAR($1::date, 'YYYY')");
 
   // CURDATE() restante
   pgSql = pgSql.replace(/CURDATE\(\)/g, "TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')");
