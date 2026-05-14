@@ -8,7 +8,9 @@ type Row = Record<string, unknown>;
 const PAGE_SIZE = 25;
 
 function getDefaultDesde(): string {
-  return `${new Date().getFullYear()}-01-01`;
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  return `${now.getFullYear()}-${mm}-01`;
 }
 
 function getDefaultHasta(): string {
