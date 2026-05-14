@@ -312,7 +312,7 @@ export default function ImportacionesStats() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={data.porOperacion}
+                    data={data.porOperacion.map(r => ({ ...r, cantidad: Number(r.cantidad) }))}
                     dataKey="cantidad"
                     nameKey="operacion"
                     cx="50%"
