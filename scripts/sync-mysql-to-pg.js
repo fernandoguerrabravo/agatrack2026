@@ -88,9 +88,9 @@ async function sync() {
     await pgPool.query(`
       CREATE TABLE IF NOT EXISTS despachos_replica (
         sync_id SERIAL,
-        lbac_nid TEXT PRIMARY KEY,
+        lbac_nid TEXT,
         operacion TEXT, despacho TEXT, resolucion TEXT, dus_tipo_envio TEXT,
-        aduana TEXT, referencia TEXT, nro_aceptacion TEXT, fecha_aceptacion TEXT,
+        aduana TEXT, referencia TEXT, nro_aceptacion TEXT PRIMARY KEY, fecha_aceptacion TEXT,
         fecha_vencto TEXT, aforo TEXT, autor_salida TEXT, eta TEXT, dus_observaciones TEXT,
         parcial TEXT, nro_parcial TEXT, total_parciales TEXT, total_itemes TEXT,
         total_bultos TEXT, total_peso_bruto TEXT, total_fob TEXT,
@@ -180,8 +180,8 @@ async function sync() {
         const result = await pgPool.query(
           `INSERT INTO despachos_replica (${colNames})
            VALUES (${placeholders})
-           ON CONFLICT (lbac_nid) DO UPDATE SET
-             ${columns.filter(c => c !== "lbac_nid").map(c => `"${c}" = EXCLUDED."${c}"`).join(",\n             ")},
+           ON CONFLICT (nro_aceptacion) DO UPDATE SET
+             ${columns.filter(c => c !== "nro_aceptacion").map(c => `"${c}" = EXCLUDED."${c}"`).join(",\n             ")},
              synced_at = NOW()
            RETURNING (xmax = 0) as is_insert`,
           values
@@ -191,7 +191,7 @@ async function sync() {
         else updated++;
       } catch (err) {
         errors++;
-        if (errors <= 5) console.error("[sync] Row error:", row.lbac_nid, err.message);
+        if (errors <= 5) console.error("[sync] Row error:", row.nro_aceptacion, err.message);
       }
 
       if ((inserted + updated) % 500 === 0) {
