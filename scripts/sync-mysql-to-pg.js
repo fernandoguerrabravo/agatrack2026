@@ -178,7 +178,10 @@ async function sync() {
           const val = row[c];
           if (val == null) return null;
           // Si es un objeto Date, convertir a ISO string
-          if (val instanceof Date) return val.toISOString().split("T")[0];
+          if (val instanceof Date) {
+            if (isNaN(val.getTime())) return null; // Fecha inválida
+            return val.toISOString().split("T")[0];
+          }
           return String(val);
         });
         const colNames = columns.map(c => `"${c}"`).join(", ");
