@@ -148,10 +148,15 @@ async function sync() {
     mysqlConn = await getMysqlConnection();
     console.log("[sync] MySQL connected");
 
-    // Query incremental
+    // Query incremental (con margen de 2 días para capturar modificaciones)
     let rows;
     if (lastDate) {
-      [rows] = await mysqlConn.query("SELECT * FROM out_despacho_fguerra WHERE fecha_carga_data > ?", [lastDate]);
+      // Restar 2 días al lastDate para capturar posibles actualizaciones
+      const marginDate = new Date(lastDate);
+      marginDate.setDate(marginDate.getDate() - 2);
+      const fromDate = marginDate.toISOString().split("T")[0];
+      console.log("[sync] Fetching from:", fromDate, "(2 days margin)");
+      [rows] = await mysqlConn.query("SELECT * FROM out_despacho_fguerra WHERE fecha_carga_data >= ?", [fromDate]);
     } else {
       [rows] = await mysqlConn.query("SELECT * FROM out_despacho_fguerra");
     }
@@ -176,11 +181,7 @@ async function sync() {
           `INSERT INTO despachos_replica (${colNames})
            VALUES (${placeholders})
            ON CONFLICT (lbac_nid) DO UPDATE SET
-             fecha_carga_data = EXCLUDED.fecha_carga_data,
-             total_fob = EXCLUDED.total_fob,
-             total_cif = EXCLUDED.total_cif,
-             total_peso_bruto = EXCLUDED.total_peso_bruto,
-             estado = EXCLUDED.estado,
+             ${columns.filter(c => c !== "lbac_nid").map(c => `"${c}" = EXCLUDED."${c}"`).join(",\n             ")},
              synced_at = NOW()
            RETURNING (xmax = 0) as is_insert`,
           values
