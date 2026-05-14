@@ -140,9 +140,10 @@ async function sync() {
     console.log("[sync] Table despachos_replica ready");
 
     // Obtener última fecha sincronizada
+    const forceFullSync = process.argv.includes("--full");
     const lastResult = await pgPool.query("SELECT MAX(fecha_carga_data) as last_date FROM despachos_replica");
-    const lastDate = lastResult.rows[0]?.last_date || null;
-    console.log("[sync] Last synced:", lastDate || "NONE (first sync)");
+    const lastDate = forceFullSync ? null : (lastResult.rows[0]?.last_date || null);
+    console.log("[sync] Last synced:", lastDate || "FULL SYNC");
 
     // Conectar MySQL
     mysqlConn = await getMysqlConnection();
@@ -177,10 +178,13 @@ async function sync() {
         const values = columns.map(c => {
           const val = row[c];
           if (val == null) return null;
-          // Si es un objeto Date, convertir a ISO string
+          // Si es un objeto Date, formatear como YYYY-MM-DD sin conversión UTC
           if (val instanceof Date) {
             if (isNaN(val.getTime())) return null; // Fecha inválida
-            return val.toISOString().split("T")[0];
+            const y = val.getFullYear();
+            const m = String(val.getMonth() + 1).padStart(2, "0");
+            const d = String(val.getDate()).padStart(2, "0");
+            return `${y}-${m}-${d}`;
           }
           return String(val);
         });
