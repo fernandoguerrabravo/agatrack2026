@@ -37,9 +37,9 @@ function getPgPool() {
 // Configuración de destinatarios por RUT
 const CLIENTES = [
   {
-    rut: "96691060-7",
-    nombre: "KSB CHILE S.A.",
-    emails: ["mauricio.munoz@ksb.com"], // Agregar más destinatarios aquí
+    rut: "88579800-4",
+    nombre: "MICROGEO INGENIERIA S.A.",
+    emails: ["patricio.hernandez@tecnoglobal.cl", "hernan.valenzuela@tecnoglobal.cl"],
   },
   // Agregar más clientes aquí
 ];
