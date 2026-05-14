@@ -39,6 +39,9 @@ export async function query<T = Record<string, unknown>[]>(
   pgSql = pgSql.replace(/AVG\(total_fob\)/g, "AVG(total_fob::numeric)");
   pgSql = pgSql.replace(/AVG\(total_cif\)/g, "AVG(total_cif::numeric)");
 
+  // Comparaciones numéricas con campos TEXT
+  pgSql = pgSql.replace(/gravamenes_valor_1\s*=\s*0/g, "(gravamenes_valor_1 = '0' OR gravamenes_valor_1 = '0.00' OR gravamenes_valor_1 IS NULL)");
+
   // Comparaciones de fecha (formato YYYY-MM-DD almacenado como TEXT)
   pgSql = pgSql.replace(/fecha_aceptacion::timestamp\s*>=\s*\$/g, "fecha_aceptacion >= $");
   pgSql = pgSql.replace(/fecha_aceptacion::timestamp\s*<=\s*\$/g, "fecha_aceptacion <= $");
