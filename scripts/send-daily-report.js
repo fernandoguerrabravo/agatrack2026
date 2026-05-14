@@ -14,6 +14,7 @@ const XLSX = require("xlsx");
 const { Resend } = require("resend");
 const fs = require("fs");
 const path = require("path");
+const { getEmailTemplate } = require("./email-template");
 
 // Cargar .env
 const envPath = path.join(__dirname, "..", ".env");
@@ -127,23 +128,26 @@ async function sendReport() {
       }
 
       const today = new Date().toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
+      const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+      const now = new Date();
+      const mesAnio = `${meses[now.getMonth()]} de ${now.getFullYear()}`;
+      const desdeFormatted = `${report.desde.split("-")[2]} de ${meses[parseInt(report.desde.split("-")[1])-1]} de ${report.desde.split("-")[0]}`;
+      const hastaFormatted = `${report.hasta.split("-")[2]} de ${meses[parseInt(report.hasta.split("-")[1])-1]} de ${report.hasta.split("-")[0]}`;
+
+      const htmlContent = getEmailTemplate({
+        nombre: cliente.nombre,
+        rut: cliente.rut,
+        desde: desdeFormatted,
+        hasta: hastaFormatted,
+        rowCount: report.rowCount,
+        mesAnio,
+      });
 
       const { data, error } = await resend.emails.send({
         from: process.env.RESEND_FROM || "AGATrack <reportes@agenciaguerra.com>",
         to: cliente.emails,
         subject: `Reporte Despachos ${cliente.nombre} - ${today}`,
-        html: `
-          <h2>Reporte de Despachos - ${cliente.nombre}</h2>
-          <p>Estimado cliente,</p>
-          <p>Adjunto encontrará el reporte de operaciones del período <strong>${report.desde}</strong> al <strong>${report.hasta}</strong>.</p>
-          <ul>
-            <li><strong>Total operaciones:</strong> ${report.rowCount}</li>
-            <li><strong>Período:</strong> Mes en curso</li>
-          </ul>
-          <p>Este reporte se genera automáticamente desde AGATrack.</p>
-          <br>
-          <p style="color: #666; font-size: 12px;">Agencia de Aduanas Guerra - Sistema AGATrack</p>
-        `,
+        html: htmlContent,
         attachments: [
           {
             filename: report.fileName,
