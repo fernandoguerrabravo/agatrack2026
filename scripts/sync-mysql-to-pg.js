@@ -45,7 +45,7 @@ async function getMysqlConnection() {
   }
 
   console.log("[sync] Opening SSH tunnel...");
-  const localPort = Number(process.env.DB_LOCAL_PORT || 3307);
+  const localPort = 3309; // Puerto diferente al de la app (3307)
   const keyPath = path.isAbsolute(process.env.DB_TUNNEL_PRIVATE_KEY_PATH)
     ? process.env.DB_TUNNEL_PRIVATE_KEY_PATH
     : path.join(__dirname, "..", process.env.DB_TUNNEL_PRIVATE_KEY_PATH);
