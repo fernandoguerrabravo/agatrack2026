@@ -166,10 +166,6 @@ export default function DespachosTable() {
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
-            <div className="badge badge-warning badge-sm gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              Por defecto se muestran las operaciones del mes en curso
-            </div>
             <label className="form-control">
               <div className="label py-0">
                 <span className="label-text text-xs">Fecha desde</span>
@@ -203,6 +199,10 @@ export default function DespachosTable() {
                 "Actualizar"
               )}
             </button>
+            <div className="badge badge-warning badge-sm gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Por defecto se muestran las operaciones del mes en curso
+            </div>
           </div>
         </div>
       </div>
