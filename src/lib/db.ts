@@ -20,11 +20,11 @@ export async function query<T = Record<string, unknown>[]>(
   let paramIndex = 0;
   pgSql = pgSql.replace(/\?/g, () => `$${++paramIndex}`);
 
-  // Convertir funciones MySQL a PostgreSQL
-  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y-%m'\)/g, "TO_CHAR($1::date, 'YYYY-MM')");
-  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y'\)/g, "TO_CHAR($1::date, 'YYYY')");
-  pgSql = pgSql.replace(/YEAR\(([^)]+)\)/g, "EXTRACT(YEAR FROM $1::date)::int");
-  pgSql = pgSql.replace(/CURDATE\(\)/g, "CURRENT_DATE");
+  // Convertir funciones MySQL a PostgreSQL (fechas almacenadas como TEXT 'YYYY-MM-DD')
+  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y-%m'\)/g, "SUBSTRING($1, 1, 7)");
+  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y'\)/g, "SUBSTRING($1, 1, 4)");
+  pgSql = pgSql.replace(/YEAR\(([^)]+)\)/g, "SUBSTRING($1, 1, 4)::int");
+  pgSql = pgSql.replace(/CURDATE\(\)/g, "TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')");
   pgSql = pgSql.replace(/CONCAT\(([^)]+)\)/g, "($1)");
   pgSql = pgSql.replace(/NOW\(\)/g, "NOW()");
 
@@ -39,11 +39,11 @@ export async function query<T = Record<string, unknown>[]>(
   pgSql = pgSql.replace(/AVG\(total_fob\)/g, "AVG(total_fob::numeric)");
   pgSql = pgSql.replace(/AVG\(total_cif\)/g, "AVG(total_cif::numeric)");
 
-  // Comparaciones de fecha: castear a date
-  pgSql = pgSql.replace(/fecha_aceptacion\s*>=\s*\$/g, "fecha_aceptacion::date >= $");
-  pgSql = pgSql.replace(/fecha_aceptacion\s*<=\s*\$/g, "fecha_aceptacion::date <= $");
-  pgSql = pgSql.replace(/fecha_aceptacion\s*>\s*\$/g, "fecha_aceptacion::date > $");
-  pgSql = pgSql.replace(/fecha_carga_data\s*>\s*\$/g, "fecha_carga_data::date > $");
+  // Comparaciones de fecha (formato YYYY-MM-DD almacenado como TEXT)
+  pgSql = pgSql.replace(/fecha_aceptacion::timestamp\s*>=\s*\$/g, "fecha_aceptacion >= $");
+  pgSql = pgSql.replace(/fecha_aceptacion::timestamp\s*<=\s*\$/g, "fecha_aceptacion <= $");
+  pgSql = pgSql.replace(/fecha_aceptacion::timestamp\s*>\s*\$/g, "fecha_aceptacion > $");
+  pgSql = pgSql.replace(/fecha_carga_data::timestamp\s*>\s*\$/g, "fecha_carga_data > $");
 
   const rows = await pgQuery<T extends Array<infer U> ? U : Record<string, unknown>>(pgSql, params as unknown[]);
   return rows as T;

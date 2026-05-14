@@ -173,7 +173,14 @@ async function sync() {
 
     for (const row of rows) {
       try {
-        const values = columns.map(c => row[c] != null ? String(row[c]) : null);
+        // Convertir fechas a formato ISO antes de guardar
+        const values = columns.map(c => {
+          const val = row[c];
+          if (val == null) return null;
+          // Si es un objeto Date, convertir a ISO string
+          if (val instanceof Date) return val.toISOString().split("T")[0];
+          return String(val);
+        });
         const colNames = columns.map(c => `"${c}"`).join(", ");
         const placeholders = columns.map((_, i) => `$${i + 1}`).join(", ");
 
