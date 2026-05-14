@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { findUserByRut } from "@/lib/users";
+import { findUserByRutAndEmail } from "@/lib/users";
 import { isValidRut, cleanRut } from "@/lib/rut";
 import { createSession } from "@/lib/session";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { rut, password, turnstileToken } = body as { rut?: string; password?: string; turnstileToken?: string };
+    const { rut, email, password, turnstileToken } = body as { rut?: string; email?: string; password?: string; turnstileToken?: string };
 
     // Verificar Turnstile token
     if (process.env.TURNSTILE_SECRET_KEY && turnstileToken) {
@@ -31,9 +31,9 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!rut || !password) {
+    if (!rut || !email || !password) {
       return NextResponse.json(
-        { error: "RUT y contraseña son requeridos." },
+        { error: "RUT, correo electrónico y contraseña son requeridos." },
         { status: 400 }
       );
     }
@@ -47,11 +47,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await findUserByRut(cleaned);
+    const user = await findUserByRutAndEmail(cleaned, email);
 
     if (!user) {
       return NextResponse.json(
-        { error: "Usuario no encontrado. Debe registrarse primero." },
+        { error: "Usuario no encontrado. Verifique RUT y correo electrónico." },
         { status: 401 }
       );
     }

@@ -21,7 +21,19 @@ async function ensureTable() {
 }
 
 /**
- * Busca un usuario por RUT.
+ * Busca un usuario por RUT y email.
+ */
+export async function findUserByRutAndEmail(rut: string, email: string): Promise<UserRecord | null> {
+  await ensureTable();
+  const rows = await pgQuery<UserRecord>(
+    "SELECT * FROM usuarios WHERE rut = $1 AND email = $2 LIMIT 1",
+    [rut, email.toLowerCase()]
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Busca un usuario por RUT (legacy, para compatibilidad).
  */
 export async function findUserByRut(rut: string): Promise<UserRecord | null> {
   await ensureTable();

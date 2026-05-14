@@ -37,11 +37,12 @@ export async function initUsersTable(): Promise<void> {
     CREATE TABLE IF NOT EXISTS usuarios (
       id SERIAL PRIMARY KEY,
       id_cliente VARCHAR(50) DEFAULT '',
-      rut VARCHAR(12) UNIQUE NOT NULL,
+      rut VARCHAR(12) NOT NULL,
       password_hash TEXT NOT NULL,
       nombre VARCHAR(255) DEFAULT '',
-      email VARCHAR(255) DEFAULT '',
-      created_at TIMESTAMP DEFAULT NOW()
+      email VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(rut, email)
     )
   `);
 }

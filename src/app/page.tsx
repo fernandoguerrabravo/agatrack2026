@@ -17,6 +17,7 @@ declare global {
 export default function Home() {
   const router = useRouter();
   const [rut, setRut] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -76,7 +77,7 @@ export default function Home() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rut: cleaned, password, turnstileToken }),
+        body: JSON.stringify({ rut: cleaned, email, password, turnstileToken }),
       });
 
       const data = await res.json();
@@ -146,6 +147,22 @@ export default function Home() {
                   Sin puntos, con guión y dígito verificador
                 </span>
               </div>
+            </label>
+
+            {/* Contraseña */}
+            <label className="form-control w-full">
+              <div className="label">
+                <span className="label-text">Correo electrónico</span>
+              </div>
+              <input
+                type="email"
+                placeholder="usuario@empresa.cl"
+                className="input input-bordered w-full"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
             </label>
 
             {/* Contraseña */}
