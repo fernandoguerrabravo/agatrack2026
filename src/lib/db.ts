@@ -4,6 +4,13 @@ import path from "node:path";
 import mysql from "mysql2/promise";
 import { createTunnel, type ForwardOptions, type ServerOptions, type SshOptions, type TunnelOptions } from "tunnel-ssh";
 
+/**
+ * Modo de conexión:
+ * - DB_DIRECT=true → conexión directa a MySQL (para el Droplet)
+ * - DB_DIRECT=false o no definido → usa túnel SSH (para desarrollo local)
+ */
+const isDirectConnection = process.env.DB_DIRECT === "true";
+
 type DbEnv = {
   DB_NAME: string;
   DB_HOST: string;
@@ -18,25 +25,21 @@ type DbEnv = {
 };
 
 function readEnv(): DbEnv {
-  const required = [
-    "DB_NAME",
-    "DB_HOST",
-    "DB_PORT",
-    "DB_USER",
-    "DB_PASSWORD",
-    "DB_TUNNEL_HOST",
-    "DB_TUNNEL_PORT",
-    "DB_TUNNEL_USER",
-  ] as const;
-
-  // DB_TUNNEL_PRIVATE_KEY_PATH es requerido solo si no existe DB_TUNNEL_PRIVATE_KEY
-  if (!process.env.DB_TUNNEL_PRIVATE_KEY && !process.env.DB_TUNNEL_PRIVATE_KEY_PATH) {
-    throw new Error("Missing required environment variable: DB_TUNNEL_PRIVATE_KEY or DB_TUNNEL_PRIVATE_KEY_PATH");
-  }
+  const required = ["DB_NAME", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD"] as const;
 
   for (const key of required) {
     if (!process.env[key]) {
       throw new Error(`Missing required environment variable: ${key}`);
+    }
+  }
+
+  // Validar túnel solo si no es conexión directa
+  if (!isDirectConnection) {
+    if (!process.env.DB_TUNNEL_HOST || !process.env.DB_TUNNEL_PORT || !process.env.DB_TUNNEL_USER) {
+      throw new Error("Missing tunnel environment variables (DB_TUNNEL_HOST, DB_TUNNEL_PORT, DB_TUNNEL_USER)");
+    }
+    if (!process.env.DB_TUNNEL_PRIVATE_KEY && !process.env.DB_TUNNEL_PRIVATE_KEY_PATH) {
+      throw new Error("Missing required environment variable: DB_TUNNEL_PRIVATE_KEY or DB_TUNNEL_PRIVATE_KEY_PATH");
     }
   }
 
@@ -46,16 +49,15 @@ function readEnv(): DbEnv {
     DB_PORT: Number(process.env.DB_PORT),
     DB_USER: process.env.DB_USER!,
     DB_PASSWORD: process.env.DB_PASSWORD!,
-    DB_TUNNEL_HOST: process.env.DB_TUNNEL_HOST!,
-    DB_TUNNEL_PORT: Number(process.env.DB_TUNNEL_PORT),
-    DB_TUNNEL_USER: process.env.DB_TUNNEL_USER!,
+    DB_TUNNEL_HOST: process.env.DB_TUNNEL_HOST ?? "",
+    DB_TUNNEL_PORT: Number(process.env.DB_TUNNEL_PORT ?? "22"),
+    DB_TUNNEL_USER: process.env.DB_TUNNEL_USER ?? "",
     DB_TUNNEL_PRIVATE_KEY_PATH: process.env.DB_TUNNEL_PRIVATE_KEY_PATH ?? "",
     DB_LOCAL_PORT: Number(process.env.DB_LOCAL_PORT ?? "3307"),
   };
 }
 
-// Reutilizamos el pool y el túnel entre invocaciones (evita abrir un túnel por request).
-// Usamos globalThis para que sobreviva al HMR de `next dev`.
+// Reutilizamos el pool y el túnel entre invocaciones.
 type Cached = {
   pool: mysql.Pool | null;
   tunnelReady: Promise<void> | null;
@@ -81,11 +83,8 @@ function parseKeyFromEnv(raw: string): string {
 }
 
 async function fetchKeyFromUrl(url: string): Promise<string> {
-  console.log("[db] Fetching private key from URL...");
   const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch private key from URL: ${res.status}`);
-  }
+  if (!res.ok) throw new Error(`Failed to fetch private key from URL: ${res.status}`);
   let key = await res.text();
   if (!key.endsWith("\n")) key += "\n";
   return key;
@@ -94,7 +93,6 @@ async function fetchKeyFromUrl(url: string): Promise<string> {
 async function openTunnel(env: DbEnv): Promise<void> {
   let privateKey: Buffer | string;
 
-  // Prioridad 1: Leer desde archivo (local y servidor con .pem en repo)
   if (env.DB_TUNNEL_PRIVATE_KEY_PATH) {
     const keyPath = path.isAbsolute(env.DB_TUNNEL_PRIVATE_KEY_PATH)
       ? env.DB_TUNNEL_PRIVATE_KEY_PATH
@@ -110,10 +108,8 @@ async function openTunnel(env: DbEnv): Promise<void> {
       throw new Error(`Private key file not found: ${keyPath}`);
     }
   } else if (process.env.DB_TUNNEL_PRIVATE_KEY) {
-    // Prioridad 2: Variable de entorno directa
     privateKey = parseKeyFromEnv(process.env.DB_TUNNEL_PRIVATE_KEY);
   } else if (process.env.DB_TUNNEL_PRIVATE_KEY_URL) {
-    // Prioridad 3: URL
     privateKey = await fetchKeyFromUrl(process.env.DB_TUNNEL_PRIVATE_KEY_URL);
   } else {
     throw new Error("No private key source available");
@@ -154,27 +150,45 @@ async function getPool(): Promise<mysql.Pool> {
 
   const env = readEnv();
 
-  if (!cached.tunnelReady) {
-    cached.tunnelReady = openTunnel(env).catch((err) => {
-      console.error("[db] SSH tunnel error:", err);
-      cached.tunnelReady = null;
-      throw err;
+  if (isDirectConnection) {
+    // Conexión directa sin túnel (Droplet → MySQL)
+    console.log("[db] Direct connection to:", env.DB_HOST, "port:", env.DB_PORT);
+    cached.pool = mysql.createPool({
+      host: env.DB_HOST,
+      port: env.DB_PORT,
+      user: env.DB_USER,
+      password: env.DB_PASSWORD,
+      database: env.DB_NAME,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      connectTimeout: 20000,
+    });
+  } else {
+    // Conexión vía túnel SSH (local → Droplet/Bastión → MySQL)
+    if (!cached.tunnelReady) {
+      cached.tunnelReady = openTunnel(env).catch((err) => {
+        console.error("[db] SSH tunnel error:", err);
+        cached.tunnelReady = null;
+        throw err;
+      });
+    }
+    await cached.tunnelReady;
+
+    cached.pool = mysql.createPool({
+      host: "127.0.0.1",
+      port: env.DB_LOCAL_PORT,
+      user: env.DB_USER,
+      password: env.DB_PASSWORD,
+      database: env.DB_NAME,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      connectTimeout: 20000,
     });
   }
-  await cached.tunnelReady;
-
-  cached.pool = mysql.createPool({
-    host: "127.0.0.1",
-    port: env.DB_LOCAL_PORT,
-    user: env.DB_USER,
-    password: env.DB_PASSWORD,
-    database: env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    enableKeepAlive: true,
-    connectTimeout: 20000,
-  });
 
   return cached.pool;
 }
@@ -189,9 +203,8 @@ export async function query<T = mysql.RowDataPacket[]>(
     return rows as T;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    // Si es timeout o conexión perdida, resetear y reintentar una vez
     if (message.includes("ETIMEDOUT") || message.includes("ECONNREFUSED") || message.includes("Connection lost")) {
-      console.log("[db] Connection lost, resetting tunnel and retrying...");
+      console.log("[db] Connection lost, resetting and retrying...");
       await resetConnection();
       const pool = await getPool();
       const [rows] = await pool.query(sql, params as unknown[] | undefined);
