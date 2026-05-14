@@ -42,6 +42,9 @@ export default function Home() {
   const [solLoading, setSolLoading] = useState(false);
   const [solError, setSolError] = useState("");
   const [solSuccess, setSolSuccess] = useState(false);
+  const [solTurnstileToken, setSolTurnstileToken] = useState("");
+  const solTurnstileRef = useRef<HTMLDivElement>(null);
+  const solWidgetIdRef = useRef<string>("");
 
   useEffect(() => {
     // Cargar script de Turnstile
@@ -65,6 +68,25 @@ export default function Home() {
       document.head.removeChild(script);
     };
   }, []);
+
+  // Render Turnstile en modal de solicitud cuando se abre
+  useEffect(() => {
+    if (showSolicitud && solTurnstileRef.current && window.turnstile) {
+      solWidgetIdRef.current = window.turnstile.render(solTurnstileRef.current, {
+        sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+        callback: (token: string) => setSolTurnstileToken(token),
+        "expired-callback": () => setSolTurnstileToken(""),
+        theme: "light",
+      });
+    }
+    return () => {
+      if (solWidgetIdRef.current && window.turnstile) {
+        try { window.turnstile.reset(solWidgetIdRef.current); } catch {}
+      }
+      setSolTurnstileToken("");
+      solWidgetIdRef.current = "";
+    };
+  }, [showSolicitud]);
 
   function handleRutChange(value: string) {
     const cleaned = value.replace(/\./g, "").replace(/\s/g, "").toUpperCase();
@@ -120,13 +142,19 @@ export default function Home() {
   async function handleSolicitud(e: React.FormEvent) {
     e.preventDefault();
     setSolError("");
+
+    if (!solTurnstileToken) {
+      setSolError("Por favor, completa la verificación de seguridad.");
+      return;
+    }
+
     setSolLoading(true);
 
     try {
       const res = await fetch("/api/solicitud-acceso", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rut: solRut, empresa: solEmpresa, email: solEmail, celular: solCelular, pais: solPais }),
+        body: JSON.stringify({ rut: solRut, empresa: solEmpresa, email: solEmail, celular: solCelular, pais: solPais, turnstileToken: solTurnstileToken }),
       });
 
       const data = await res.json();
@@ -390,10 +418,13 @@ export default function Home() {
                     </div>
                   )}
 
+                  {/* Turnstile Widget */}
+                  <div ref={solTurnstileRef} className="flex justify-center" />
+
                   <button
                     type="submit"
                     className={`btn btn-primary w-full ${solLoading ? "btn-disabled" : ""}`}
-                    disabled={solLoading}
+                    disabled={solLoading || !solTurnstileToken}
                   >
                     {solLoading && <span className="loading loading-spinner loading-sm" />}
                     Enviar Solicitud

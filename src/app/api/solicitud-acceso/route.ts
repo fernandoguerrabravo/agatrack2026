@@ -4,12 +4,37 @@ import { Resend } from "resend";
 
 export async function POST(req: NextRequest) {
   try {
-    const { rut, empresa, email, celular, pais } = await req.json();
+    const { rut, empresa, email, celular, pais, turnstileToken } = await req.json();
 
     if (!rut || !empresa || !email || !celular || !pais) {
       return NextResponse.json(
         { error: "Todos los campos son obligatorios." },
         { status: 400 }
+      );
+    }
+
+    // Verificar Turnstile token
+    if (!turnstileToken) {
+      return NextResponse.json(
+        { error: "Verificación de seguridad requerida." },
+        { status: 400 }
+      );
+    }
+
+    const turnstileRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        secret: process.env.TURNSTILE_SECRET_KEY || "",
+        response: turnstileToken,
+      }),
+    });
+    const turnstileData = await turnstileRes.json();
+
+    if (!turnstileData.success) {
+      return NextResponse.json(
+        { error: "Verificación de seguridad fallida. Intente nuevamente." },
+        { status: 403 }
       );
     }
 
