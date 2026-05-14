@@ -2,10 +2,11 @@
 
 /**
  * Script de sincronización INCREMENTAL: MySQL (aduananet) → PostgreSQL (DigitalOcean)
- * Solo agrega registros nuevos basándose en fecha_carga_data o fecha_aceptacion.
+ * Replica TODAS las columnas. Solo agrega registros nuevos (por fecha_carga_data).
+ * Usa lbac_nid como clave única para upsert.
  * 
  * Uso: node scripts/sync-mysql-to-pg.js
- * Cron: 0 2 * * * cd /opt/agatrack2026 && node scripts/sync-mysql-to-pg.js >> /var/log/agatrack-sync.log 2>&1
+ * Cron: 0 2 * * * cd /opt/agatrack2026 && /usr/bin/node scripts/sync-mysql-to-pg.js >> /var/log/agatrack-sync.log 2>&1
  */
 
 const mysql = require("mysql2/promise");
@@ -14,11 +15,10 @@ const { createTunnel } = require("tunnel-ssh");
 const fs = require("fs");
 const path = require("path");
 
-// Cargar .env manualmente
+// Cargar .env
 const envPath = path.join(__dirname, "..", ".env");
 if (fs.existsSync(envPath)) {
-  const envContent = fs.readFileSync(envPath, "utf-8");
-  envContent.split("\n").forEach((line) => {
+  fs.readFileSync(envPath, "utf-8").split("\n").forEach((line) => {
     const match = line.match(/^([^#=]+)=(.*)$/);
     if (match) {
       const key = match[1].trim();
@@ -33,7 +33,7 @@ const isDirect = process.env.DB_DIRECT === "true";
 
 async function getMysqlConnection() {
   if (isDirect) {
-    console.log("[sync] Connecting directly to MySQL...");
+    console.log("[sync] Direct MySQL connection...");
     return mysql.createConnection({
       host: process.env.DB_HOST,
       port: Number(process.env.DB_PORT),
@@ -49,28 +49,16 @@ async function getMysqlConnection() {
   const keyPath = path.isAbsolute(process.env.DB_TUNNEL_PRIVATE_KEY_PATH)
     ? process.env.DB_TUNNEL_PRIVATE_KEY_PATH
     : path.join(__dirname, "..", process.env.DB_TUNNEL_PRIVATE_KEY_PATH);
-
   const privateKey = fs.readFileSync(keyPath);
 
   await createTunnel(
     { autoClose: false, reconnectOnError: false },
     { host: "127.0.0.1", port: localPort },
-    {
-      host: process.env.DB_TUNNEL_HOST,
-      port: Number(process.env.DB_TUNNEL_PORT),
-      username: process.env.DB_TUNNEL_USER,
-      privateKey,
-      readyTimeout: 30000,
-    },
-    {
-      srcAddr: "127.0.0.1",
-      srcPort: localPort,
-      dstAddr: process.env.DB_HOST,
-      dstPort: Number(process.env.DB_PORT),
-    }
+    { host: process.env.DB_TUNNEL_HOST, port: Number(process.env.DB_TUNNEL_PORT), username: process.env.DB_TUNNEL_USER, privateKey, readyTimeout: 30000 },
+    { srcAddr: "127.0.0.1", srcPort: localPort, dstAddr: process.env.DB_HOST, dstPort: Number(process.env.DB_PORT) }
   );
 
-  console.log("[sync] Tunnel established");
+  console.log("[sync] Tunnel OK");
   return mysql.createConnection({
     host: "127.0.0.1",
     port: localPort,
@@ -83,145 +71,137 @@ async function getMysqlConnection() {
 
 function getPgPool() {
   const url = (process.env.POSTGRES_URL || "").replace(/[?&]sslmode=[^&]*/g, "");
-  return new Pool({
-    connectionString: url,
-    ssl: { rejectUnauthorized: false },
-    max: 3,
-  });
+  return new Pool({ connectionString: url, ssl: { rejectUnauthorized: false }, max: 3 });
 }
 
 async function sync() {
   const startTime = Date.now();
-  console.log("\n[sync] ===== Starting incremental sync at", new Date().toISOString(), "=====");
+  console.log("\n[sync] ===== Incremental sync started at", new Date().toISOString(), "=====");
 
   let mysqlConn;
   let pgPool;
 
   try {
-    // 1. Conectar a PostgreSQL
     pgPool = getPgPool();
 
-    // 2. Crear tabla si no existe
+    // Crear tabla replica con todas las columnas (TEXT para simplicidad)
     await pgPool.query(`
       CREATE TABLE IF NOT EXISTS despachos_replica (
-        sync_id SERIAL PRIMARY KEY,
-        lbac_nid TEXT,
-        fecha_aceptacion TEXT,
-        nro_aceptacion TEXT,
-        operacion TEXT,
-        aduana TEXT,
-        rut_cliente TEXT,
-        cliente TEXT,
-        consignante TEXT,
-        pais_destino TEXT,
-        pais_origen_mercancias TEXT,
-        pais_adquisicion_mercancias TEXT,
-        puerto_embarque TEXT,
-        puerto_desembarque TEXT,
-        via TEXT,
-        nave TEXT,
-        emisor_docto_transporte TEXT,
-        total_fob TEXT,
-        valor_flete TEXT,
-        valor_seguro TEXT,
-        total_cif TEXT,
-        total_peso_bruto TEXT,
-        total_peso_neto TEXT,
-        clausula_venta_incoterms TEXT,
-        regimen TEXT,
-        gravamenes_valor_1 TEXT,
-        iva TEXT,
-        referencias TEXT,
-        fecha_carga_data TEXT,
-        url_despacho TEXT,
-        synced_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(lbac_nid)
+        sync_id SERIAL,
+        lbac_nid TEXT PRIMARY KEY,
+        operacion TEXT, despacho TEXT, resolucion TEXT, dus_tipo_envio TEXT,
+        aduana TEXT, referencia TEXT, nro_aceptacion TEXT, fecha_aceptacion TEXT,
+        fecha_vencto TEXT, aforo TEXT, autor_salida TEXT, eta TEXT, dus_observaciones TEXT,
+        parcial TEXT, nro_parcial TEXT, total_parciales TEXT, total_itemes TEXT,
+        total_bultos TEXT, total_peso_bruto TEXT, total_fob TEXT,
+        seguro_teorico TEXT, valor_seguro TEXT, flete_teorico TEXT, valor_flete TEXT,
+        total_cif TEXT, identificacion_bultos TEXT, observaciones_bco_central TEXT,
+        signo_ajuste TEXT, total_ajuste TEXT, valor_exfabrica TEXT, gastos_hasta_fob TEXT,
+        paridad TEXT, total_peso_neto TEXT, estimacion_peso TEXT,
+        puerto_embarque TEXT, region_origen TEXT, tipo_carga TEXT, via TEXT,
+        puerto_desembarque TEXT, pais_destino TEXT, cia_transportadora TEXT,
+        pais_cia_transportadora TEXT, emisor_docto_transporte TEXT, nave TEXT, nro_viaje TEXT,
+        pais_adquisicion_mercancias TEXT, pais_origen_mercancias TEXT,
+        fecha_manifiesto TEXT, manifiesto_1 TEXT, manifiesto_2 TEXT,
+        almacenista TEXT, fecha_recepcion_almacenista TEXT, fecha_retiro_almacenista TEXT,
+        transbordo TEXT, documento_transporte TEXT, fecha_docto_transporte_din TEXT,
+        certificado_isp TEXT, certificado_sesma TEXT,
+        regla_vb_codigo TEXT, regla_vb_numero TEXT, regla_vb_agno TEXT,
+        registro_reconoc_parte1 TEXT, registro_reconoc_parte2 TEXT,
+        tipo_rut TEXT, rut_cliente TEXT, cliente TEXT, direccion_cliente TEXT, comuna TEXT,
+        representante_legal TEXT, representante_legal_rut TEXT,
+        consignante TEXT, consignante_direccion TEXT, pais_consignante TEXT,
+        nid_regimen_suspensivo TEXT, fecha_nid_reg_susp TEXT, aduana_reg_suspensivo TEXT,
+        plazo_vigencia_reg_sup TEXT, direccion_almacenamiento_reg_susp TEXT,
+        comuna_almacen_reg_susp TEXT, aduana_control_reg_susp TEXT,
+        moneda_export TEXT, valor_clausula_venta TEXT, modalidad_venta TEXT,
+        comisiones_exterior TEXT, clausula_venta_incoterms TEXT, otros_gtos_deducibles TEXT,
+        forma_pago_export TEXT, valor_liquido_retorno TEXT, forma_pago_gravamenes TEXT,
+        regimen TEXT, valor_ex_fabrica TEXT, gtos_hta_fob TEXT, moneda_import TEXT,
+        gravamenes_codigo_1 TEXT, gravamenes_valor_1 TEXT,
+        gravamenes_codigo_2 TEXT, gravamenes_valor_2 TEXT,
+        gravamenes_codigo_3 TEXT, gravamenes_valor_3 TEXT,
+        gravamenes_codigo_4 TEXT, gravamenes_valor_4 TEXT,
+        gravamenes_codigo_5 TEXT, gravamenes_valor_5 TEXT,
+        gravamenes_codigo_6 TEXT, gravamenes_valor_6 TEXT,
+        gravamenes_codigo_7 TEXT, gravamenes_valor_7 TEXT,
+        gravamenes_codigo_8 TEXT, gravamenes_valor_8 TEXT,
+        iva TEXT, total_gravamenes_uss TEXT, tipo_cambio TEXT, total_gravamenes_chs TEXT,
+        nro_item TEXT, descripcion_item_1 TEXT, codigo_arancel_tratado_item_1 TEXT,
+        codigo_arancel_item_2 TEXT, nro_secuencia TEXT,
+        nro_docto_transporte TEXT, fecha_docto_transporte TEXT,
+        fecha_hora_ingreso_despacho TEXT, estado TEXT, factura TEXT, anulado TEXT,
+        fecha_pago_gravamenes TEXT, nro_apertura_carpeta TEXT, guia_despacho TEXT,
+        factura_despacho TEXT, bulto_cod_tipo TEXT, bulto_cantidad TEXT, bulto_glosa TEXT,
+        url_dte TEXT, url_factura TEXT, url_despacho TEXT, fecha_carga_data TEXT,
+        synced_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    console.log("[sync] Table despachos_replica ready");
 
-    // 3. Obtener la última fecha sincronizada
-    const lastSyncResult = await pgPool.query(
-      "SELECT MAX(fecha_carga_data) as last_date FROM despachos_replica"
-    );
-    const lastDate = lastSyncResult.rows[0]?.last_date || null;
-    console.log("[sync] Last synced date:", lastDate || "NONE (first sync)");
+    // Obtener última fecha sincronizada
+    const lastResult = await pgPool.query("SELECT MAX(fecha_carga_data) as last_date FROM despachos_replica");
+    const lastDate = lastResult.rows[0]?.last_date || null;
+    console.log("[sync] Last synced:", lastDate || "NONE (first sync)");
 
-    // 4. Conectar a MySQL
+    // Conectar MySQL
     mysqlConn = await getMysqlConnection();
     console.log("[sync] MySQL connected");
 
-    // 5. Traer solo registros nuevos
-    let query;
-    let params;
-
+    // Query incremental
+    let rows;
     if (lastDate) {
-      // Incremental: solo registros con fecha_carga_data posterior
-      query = `SELECT * FROM out_despacho_fguerra WHERE fecha_carga_data > ? ORDER BY fecha_carga_data ASC`;
-      params = [lastDate];
+      [rows] = await mysqlConn.query("SELECT * FROM out_despacho_fguerra WHERE fecha_carga_data > ?", [lastDate]);
     } else {
-      // Primera vez: traer todo
-      query = `SELECT * FROM out_despacho_fguerra ORDER BY fecha_carga_data ASC`;
-      params = [];
+      [rows] = await mysqlConn.query("SELECT * FROM out_despacho_fguerra");
     }
-
-    const [rows] = await mysqlConn.query(query, params);
-    console.log("[sync] New rows from MySQL:", rows.length);
+    console.log("[sync] Rows to process:", rows.length);
 
     if (rows.length === 0) {
-      console.log("[sync] No new rows to sync. Done!");
+      console.log("[sync] Nothing to sync. Done!");
       return;
     }
 
-    // 6. Insertar en PostgreSQL (upsert por lbac_nid)
-    let inserted = 0;
-    let updated = 0;
+    // Insertar/actualizar
+    const columns = Object.keys(rows[0]);
+    let inserted = 0, updated = 0, errors = 0;
 
     for (const row of rows) {
       try {
+        const values = columns.map(c => row[c] != null ? String(row[c]) : null);
+        const colNames = columns.map(c => `"${c}"`).join(", ");
+        const placeholders = columns.map((_, i) => `$${i + 1}`).join(", ");
+
         const result = await pgPool.query(
-          `INSERT INTO despachos_replica (
-            lbac_nid, fecha_aceptacion, nro_aceptacion, operacion, aduana,
-            rut_cliente, cliente, consignante, pais_destino, pais_origen_mercancias,
-            pais_adquisicion_mercancias, puerto_embarque, puerto_desembarque, via, nave,
-            emisor_docto_transporte, total_fob, valor_flete, valor_seguro, total_cif,
-            total_peso_bruto, total_peso_neto, clausula_venta_incoterms, regimen,
-            gravamenes_valor_1, iva, referencias, fecha_carga_data, url_despacho
-          ) VALUES (
-            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29
-          )
-          ON CONFLICT (lbac_nid) DO UPDATE SET
-            fecha_aceptacion = EXCLUDED.fecha_aceptacion,
-            operacion = EXCLUDED.operacion,
-            total_fob = EXCLUDED.total_fob,
-            total_cif = EXCLUDED.total_cif,
-            total_peso_bruto = EXCLUDED.total_peso_bruto,
-            fecha_carga_data = EXCLUDED.fecha_carga_data,
-            synced_at = NOW()
-          RETURNING (xmax = 0) as is_insert`,
-          [
-            row.lbac_nid, row.fecha_aceptacion, row.nro_aceptacion, row.operacion, row.aduana,
-            row.rut_cliente, row.cliente, row.consignante, row.pais_destino, row.pais_origen_mercancias,
-            row.pais_adquisicion_mercancias, row.puerto_embarque, row.puerto_desembarque, row.via, row.nave,
-            row.emisor_docto_transporte, row.total_fob, row.valor_flete, row.valor_seguro, row.total_cif,
-            row.total_peso_bruto, row.total_peso_neto, row.clausula_venta_incoterms, row.regimen,
-            row.gravamenes_valor_1, row.iva, row.referencias, row.fecha_carga_data, row.url_despacho,
-          ].map(v => v != null ? String(v) : null)
+          `INSERT INTO despachos_replica (${colNames})
+           VALUES (${placeholders})
+           ON CONFLICT (lbac_nid) DO UPDATE SET
+             fecha_carga_data = EXCLUDED.fecha_carga_data,
+             total_fob = EXCLUDED.total_fob,
+             total_cif = EXCLUDED.total_cif,
+             total_peso_bruto = EXCLUDED.total_peso_bruto,
+             estado = EXCLUDED.estado,
+             synced_at = NOW()
+           RETURNING (xmax = 0) as is_insert`,
+          values
         );
 
-        if (result.rows[0]?.is_insert) {
-          inserted++;
-        } else {
-          updated++;
-        }
+        if (result.rows[0]?.is_insert) inserted++;
+        else updated++;
       } catch (err) {
-        console.error("[sync] Error inserting row lbac_nid:", row.lbac_nid, err.message);
+        errors++;
+        if (errors <= 5) console.error("[sync] Row error:", row.lbac_nid, err.message);
+      }
+
+      if ((inserted + updated) % 500 === 0) {
+        console.log(`[sync] Progress: ${inserted + updated}/${rows.length}`);
       }
     }
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`[sync] Sync completed! Inserted: ${inserted}, Updated: ${updated}, Total: ${rows.length} in ${elapsed}s`);
+    console.log(`[sync] DONE! Inserted: ${inserted}, Updated: ${updated}, Errors: ${errors}, Time: ${elapsed}s`);
   } catch (error) {
-    console.error("[sync] FATAL Error:", error.message || error);
+    console.error("[sync] FATAL:", error.message || error);
     process.exit(1);
   } finally {
     if (mysqlConn) await mysqlConn.end().catch(() => {});
