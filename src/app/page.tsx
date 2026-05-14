@@ -14,6 +14,12 @@ declare global {
   }
 }
 
+const PAISES = [
+  "Chile", "Argentina", "Perú", "Colombia", "México", "Brasil", "Ecuador",
+  "Bolivia", "Uruguay", "Paraguay", "Venezuela", "Panamá", "Costa Rica",
+  "Estados Unidos", "España", "Otro"
+];
+
 export default function Home() {
   const router = useRouter();
   const [rut, setRut] = useState("");
@@ -25,6 +31,17 @@ export default function Home() {
   const [turnstileToken, setTurnstileToken] = useState("");
   const turnstileRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string>("");
+
+  // Estado del modal de solicitud de acceso
+  const [showSolicitud, setShowSolicitud] = useState(false);
+  const [solRut, setSolRut] = useState("");
+  const [solEmpresa, setSolEmpresa] = useState("");
+  const [solEmail, setSolEmail] = useState("");
+  const [solCelular, setSolCelular] = useState("");
+  const [solPais, setSolPais] = useState("Chile");
+  const [solLoading, setSolLoading] = useState(false);
+  const [solError, setSolError] = useState("");
+  const [solSuccess, setSolSuccess] = useState(false);
 
   useEffect(() => {
     // Cargar script de Turnstile
@@ -98,6 +115,44 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSolicitud(e: React.FormEvent) {
+    e.preventDefault();
+    setSolError("");
+    setSolLoading(true);
+
+    try {
+      const res = await fetch("/api/solicitud-acceso", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rut: solRut, empresa: solEmpresa, email: solEmail, celular: solCelular, pais: solPais }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSolError(data.error ?? "Error al enviar solicitud.");
+        return;
+      }
+
+      setSolSuccess(true);
+    } catch {
+      setSolError("Error de conexión. Intenta nuevamente.");
+    } finally {
+      setSolLoading(false);
+    }
+  }
+
+  function closeSolicitudModal() {
+    setShowSolicitud(false);
+    setSolRut("");
+    setSolEmpresa("");
+    setSolEmail("");
+    setSolCelular("");
+    setSolPais("Chile");
+    setSolError("");
+    setSolSuccess(false);
   }
 
   return (
@@ -206,8 +261,150 @@ export default function Home() {
               Ingresar
             </button>
           </form>
+
+          {/* Solicite su Acceso */}
+          <div className="divider text-xs text-base-content/50">¿No tiene cuenta?</div>
+          <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-xl p-4 text-center">
+            <p className="text-sm font-medium text-base-content mb-2">
+              ¿Desea controlar sus operaciones de Comercio Exterior?
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm gap-2 shadow-md hover:shadow-lg transition-all"
+              onClick={() => setShowSolicitud(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              Solicite su Acceso
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Modal Solicitud de Acceso */}
+      {showSolicitud && (
+        <div className="modal modal-open z-50">
+          <div className="modal-box relative">
+            <button
+              className="btn btn-sm btn-circle absolute right-2 top-2"
+              onClick={closeSolicitudModal}
+            >
+              ✕
+            </button>
+
+            {solSuccess ? (
+              <div className="flex flex-col items-center gap-4 py-4">
+                <div className="text-success text-5xl">✓</div>
+                <h3 className="font-bold text-lg text-center">Solicitud Enviada</h3>
+                <p className="text-center text-sm text-base-content/70">
+                  Un ejecutivo de AGATrack se comunicará con usted a la brevedad.
+                </p>
+                <button className="btn btn-primary btn-sm" onClick={closeSolicitudModal}>
+                  Cerrar
+                </button>
+              </div>
+            ) : (
+              <>
+                <h3 className="font-bold text-lg mb-1">Solicite su Acceso</h3>
+                <p className="text-sm text-base-content/70 mb-4">
+                  Complete el formulario y un ejecutivo de AGATrack se comunicará con usted a la brevedad.
+                </p>
+
+                <form onSubmit={handleSolicitud} className="flex flex-col gap-3">
+                  <label className="form-control w-full">
+                    <div className="label">
+                      <span className="label-text">RUT Empresa</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Ej: 12345678-9"
+                      className="input input-bordered w-full"
+                      value={solRut}
+                      onChange={(e) => setSolRut(e.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <label className="form-control w-full">
+                    <div className="label">
+                      <span className="label-text">Nombre de la Empresa</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Ej: Mi Empresa S.A."
+                      className="input input-bordered w-full"
+                      value={solEmpresa}
+                      onChange={(e) => setSolEmpresa(e.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <label className="form-control w-full">
+                    <div className="label">
+                      <span className="label-text">Correo Electrónico</span>
+                    </div>
+                    <input
+                      type="email"
+                      placeholder="contacto@empresa.cl"
+                      className="input input-bordered w-full"
+                      value={solEmail}
+                      onChange={(e) => setSolEmail(e.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <label className="form-control w-full">
+                    <div className="label">
+                      <span className="label-text">Celular</span>
+                    </div>
+                    <input
+                      type="tel"
+                      placeholder="+56 9 1234 5678"
+                      className="input input-bordered w-full"
+                      value={solCelular}
+                      onChange={(e) => setSolCelular(e.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <label className="form-control w-full">
+                    <div className="label">
+                      <span className="label-text">País</span>
+                    </div>
+                    <select
+                      className="select select-bordered w-full"
+                      value={solPais}
+                      onChange={(e) => setSolPais(e.target.value)}
+                      required
+                    >
+                      {PAISES.map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  {solError && (
+                    <div className="alert alert-error text-sm">
+                      <span>{solError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className={`btn btn-primary w-full ${solLoading ? "btn-disabled" : ""}`}
+                    disabled={solLoading}
+                  >
+                    {solLoading && <span className="loading loading-spinner loading-sm" />}
+                    Enviar Solicitud
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+          <div className="modal-backdrop" onClick={closeSolicitudModal} />
+        </div>
+      )}
     </main>
   );
 }
