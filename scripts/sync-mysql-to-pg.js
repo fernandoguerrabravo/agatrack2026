@@ -41,6 +41,7 @@ async function getMysqlConnection() {
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       connectTimeout: 30000,
+      dateStrings: true,
     });
   }
 
@@ -66,6 +67,7 @@ async function getMysqlConnection() {
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     connectTimeout: 30000,
+    dateStrings: true,
   });
 }
 
