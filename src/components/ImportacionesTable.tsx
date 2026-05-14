@@ -108,13 +108,13 @@ export default function ImportacionesTable() {
 
   function formatDate(value: unknown): string {
     if (!value) return "";
-    const str = String(value);
-    const date = new Date(str);
-    if (isNaN(date.getTime())) return str;
-    const dd = String(date.getDate()).padStart(2, "0");
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const yyyy = date.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
+    const str = String(value).trim();
+    // Parsear directamente YYYY-MM-DD sin crear Date (evita offset timezone)
+    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
+    return str;
   }
 
   function formatDollar(value: unknown): string {
