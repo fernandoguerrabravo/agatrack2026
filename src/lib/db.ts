@@ -27,6 +27,9 @@ export async function query<T = Record<string, unknown>[]>(
   // YEAR(fecha_aceptacion) → extraer año del texto
   pgSql = pgSql.replace(/YEAR\(([^)]+)\)/g, "SUBSTRING($1, 1, 4)::int");
 
+  // DATE_FORMAT(campo, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m') → mes actual
+  pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y-%m'\)\s*=\s*DATE_FORMAT\(CURDATE\(\),\s*'%Y-%m'\)/g, "SUBSTRING($1, 1, 7) = TO_CHAR(CURRENT_DATE, 'YYYY-MM')");
+
   // DATE_FORMAT(campo, '%Y-%m') → primeros 7 chars
   pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y-%m'\)/g, "SUBSTRING($1, 1, 7)");
   pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y'\)/g, "SUBSTRING($1, 1, 4)");

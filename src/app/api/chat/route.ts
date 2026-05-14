@@ -80,7 +80,7 @@ function extractQueryIntent(message: string): string[] {
   if (msg.includes("flete") || msg.includes("transporte") || msg.includes("naviera") || msg.includes("emisor")) {
     queries.push("transporte");
   }
-  if (msg.includes("mes") || msg.includes("mensual") || msg.includes("tendencia") || msg.includes("evolución")) {
+  if (msg.includes("mes") || msg.includes("mensual") || msg.includes("tendencia") || msg.includes("evolución") || msg.includes("este mes") || msg.includes("del mes")) {
     queries.push("mensual");
   }
   if (msg.includes("2024") || msg.includes("2025") || msg.includes("2026") || msg.includes("año") || msg.includes("anual")) {
@@ -227,6 +227,28 @@ async function getDbContext(rut: string, intents: string[]): Promise<string> {
     }
 
     if (intents.includes("mensual")) {
+      // Mes actual
+      const [mesActual] = await query<Record<string, unknown>[]>(
+        `SELECT COUNT(*) as ops, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE rut_cliente = ? AND DATE_FORMAT(fecha_aceptacion, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')`,
+        [rut]
+      );
+      results.push(`OPERACIONES MES ACTUAL: ${JSON.stringify(mesActual)}`);
+
+      // Importaciones mes actual
+      const [impMesActual] = await query<Record<string, unknown>[]>(
+        `SELECT COUNT(*) as ops, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion NOT IN (${placeholders}) AND rut_cliente = ? AND DATE_FORMAT(fecha_aceptacion, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`IMPORTACIONES MES ACTUAL: ${JSON.stringify(impMesActual)}`);
+
+      // Exportaciones mes actual
+      const [expMesActual] = await query<Record<string, unknown>[]>(
+        `SELECT COUNT(*) as ops, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE operacion IN (${placeholders}) AND rut_cliente = ? AND DATE_FORMAT(fecha_aceptacion, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')`,
+        [...OPERACIONES_EXPORT, rut]
+      );
+      results.push(`EXPORTACIONES MES ACTUAL: ${JSON.stringify(expMesActual)}`);
+
+      // Por mes año actual
       const rows = await query<Record<string, unknown>[]>(
         `SELECT DATE_FORMAT(fecha_aceptacion,'%Y-%m') as mes, COUNT(*) as ops, COALESCE(SUM(total_fob),0) as fob, COALESCE(SUM(total_cif),0) as cif, COALESCE(SUM(total_peso_bruto),0) as kilos FROM out_despacho_fguerra WHERE rut_cliente = ? AND fecha_aceptacion >= CONCAT(YEAR(CURDATE()),'-01-01') AND fecha_aceptacion <= CURDATE() GROUP BY mes ORDER BY mes`,
         [rut]
