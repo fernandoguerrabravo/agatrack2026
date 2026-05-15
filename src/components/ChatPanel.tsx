@@ -22,16 +22,21 @@ type ChartData = {
   chart?: { type: "bar" | "line" | "pie"; data: { name: string; value: number }[]; title?: string };
 };
 
-function parseChartBlock(text: string): { chartData: ChartData | null; cleanText: string } {
-  const match = text.match(/<<<CHART\s*([\s\S]*?)\s*CHART>>>/);
-  if (!match) return { chartData: null, cleanText: text };
-  try {
-    const chartData = JSON.parse(match[1]) as ChartData;
-    const cleanText = text.replace(/<<<CHART[\s\S]*?CHART>>>\s*/, "").trim();
-    return { chartData, cleanText };
-  } catch {
-    return { chartData: null, cleanText: text };
+function parseChartBlock(text: string): { chartDataList: ChartData[]; cleanText: string } {
+  const chartDataList: ChartData[] = [];
+  let cleanText = text;
+  const regex = /<<<CHART\s*([\s\S]*?)\s*CHART>>>/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    try {
+      const chartData = JSON.parse(match[1]) as ChartData;
+      chartDataList.push(chartData);
+    } catch {
+      // JSON inválido, ignorar
+    }
   }
+  cleanText = text.replace(/<<<CHART[\s\S]*?CHART>>>\s*/g, "").trim();
+  return { chartDataList, cleanText };
 }
 
 function InlineChartInner({ data }: { data: ChartData }) {
@@ -109,7 +114,7 @@ const InlineChart = memo(InlineChartInner);
 
 function AssistantMessage({ text, isStreaming }: { text: string; isStreaming: boolean }) {
   const parsed = useMemo(() => {
-    if (isStreaming) return { chartData: null, cleanText: text };
+    if (isStreaming) return { chartDataList: [], cleanText: text };
     return parseChartBlock(text);
   }, [text, isStreaming]);
 
@@ -121,7 +126,9 @@ function AssistantMessage({ text, isStreaming }: { text: string; isStreaming: bo
 
   return (
     <>
-      {parsed.chartData && <InlineChart data={parsed.chartData} />}
+      {parsed.chartDataList.map((chartData, i) => (
+        <InlineChart key={i} data={chartData} />
+      ))}
       <span className="whitespace-pre-wrap">{parsed.cleanText}</span>
     </>
   );
