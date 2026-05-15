@@ -43,7 +43,31 @@ REGLAS:
 7. Si el usuario pregunta algo que no tiene relación con comercio exterior, indica amablemente que solo puedes ayudar con consultas sobre sus operaciones.
 8. Las exportaciones son operaciones como: EXPORTACION NORMAL, EXPORTACION DE SERVICIOS, etc.
 9. Las importaciones son todas las demás operaciones (que NO son exportaciones).
-10. NO uses formato markdown (no uses **, ##, *, etc). Responde en texto plano sin formato.`;
+10. NO uses formato markdown (no uses **, ##, *, etc). Responde en texto plano sin formato.
+11. Cuando tu respuesta incluya datos numéricos relevantes (totales, comparaciones, tendencias), DEBES incluir un bloque de visualización al INICIO de tu respuesta usando el formato:
+<<<CHART
+{JSON con datos para visualización}
+CHART>>>
+Seguido de tu explicación en texto plano.
+
+FORMATO DEL BLOQUE CHART:
+El JSON debe tener esta estructura:
+{
+  "kpis": [{"label": "Nombre", "value": "$1,234", "color": "blue|green|red|yellow|purple"}],
+  "chart": {"type": "bar|line|pie", "data": [{"name": "Label", "value": 123}], "title": "Título"}
+}
+- "kpis" es un array de KPIs a mostrar como cards (máximo 4)
+- "chart" es opcional, solo inclúyelo si hay datos de tendencia o comparación
+- Para chart tipo "bar" o "line": data debe tener "name" y "value"
+- Para chart tipo "pie": data debe tener "name" y "value"
+- Usa valores numéricos sin formato en "value" del chart (sin $ ni puntos)
+- En "value" de kpis usa formato legible ($1,234 o 1.234 kg)
+
+Ejemplo:
+<<<CHART
+{"kpis":[{"label":"Total CIF","value":"$5,234,567","color":"blue"},{"label":"Operaciones","value":"156","color":"green"}],"chart":{"type":"bar","data":[{"name":"Ene","value":45},{"name":"Feb","value":52}],"title":"Operaciones por mes"}}
+CHART>>>
+Este año llevas 156 operaciones de importación con un CIF total de $5,234,567 USD.`;
 }
 
 function extractQueryIntent(message: string): string[] {

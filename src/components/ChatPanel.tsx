@@ -3,6 +3,107 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useRef, useEffect, useState } from "react";
+import {
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+
+const CHART_COLORS = ["#4f46e5", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
+const KPI_COLORS: Record<string, { bg: string; text: string }> = {
+  blue: { bg: "bg-blue-50", text: "text-blue-700" },
+  green: { bg: "bg-emerald-50", text: "text-emerald-700" },
+  red: { bg: "bg-red-50", text: "text-red-700" },
+  yellow: { bg: "bg-amber-50", text: "text-amber-700" },
+  purple: { bg: "bg-purple-50", text: "text-purple-700" },
+};
+
+type ChartData = {
+  kpis?: { label: string; value: string; color?: string }[];
+  chart?: { type: "bar" | "line" | "pie"; data: { name: string; value: number }[]; title?: string };
+};
+
+function parseChartBlock(text: string): { chartData: ChartData | null; cleanText: string } {
+  const match = text.match(/<<<CHART\s*([\s\S]*?)\s*CHART>>>/);
+  if (!match) return { chartData: null, cleanText: text };
+  try {
+    const chartData = JSON.parse(match[1]) as ChartData;
+    const cleanText = text.replace(/<<<CHART[\s\S]*?CHART>>>\s*/, "").trim();
+    return { chartData, cleanText };
+  } catch {
+    return { chartData: null, cleanText: text };
+  }
+}
+
+function InlineChart({ data }: { data: ChartData }) {
+  return (
+    <div className="w-full space-y-3 mb-2">
+      {/* KPIs */}
+      {data.kpis && data.kpis.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {data.kpis.map((kpi, i) => {
+            const colors = KPI_COLORS[kpi.color || "blue"] || KPI_COLORS.blue;
+            return (
+              <div key={i} className={`${colors.bg} rounded-lg px-3 py-2 text-center`}>
+                <div className="text-[10px] text-gray-500 uppercase tracking-wide">{kpi.label}</div>
+                <div className={`text-sm font-bold ${colors.text}`}>{kpi.value}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Chart */}
+      {data.chart && data.chart.data.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-100 p-2">
+          {data.chart.title && (
+            <p className="text-[10px] text-gray-500 text-center mb-1">{data.chart.title}</p>
+          )}
+          <div className="h-32">
+            <ResponsiveContainer width="100%" height="100%">
+              {data.chart.type === "bar" ? (
+                <BarChart data={data.chart.data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 9 }} />
+                  <Tooltip contentStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="value" fill="#4f46e5" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              ) : data.chart.type === "line" ? (
+                <LineChart data={data.chart.data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 9 }} />
+                  <Tooltip contentStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey="value" stroke="#4f46e5" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              ) : (
+                <PieChart>
+                  <Pie
+                    data={data.chart.data}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={50}
+                    label={({ name, percent }: { name?: string; percent?: number }) =>
+                      `${String(name ?? "").substring(0, 10)} ${((percent ?? 0) * 100).toFixed(0)}%`
+                    }
+                    labelLine={false}
+                  >
+                    {data.chart.data.map((_, idx) => (
+                      <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ fontSize: 11 }} />
+                </PieChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ChatPanel() {
   const { messages, sendMessage, status, setMessages } = useChat({
@@ -105,8 +206,20 @@ export default function ChatPanel() {
               <div className="w-6 h-6 rounded-full bg-[#e8a838]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                 <span className="text-[10px] font-bold text-[#e8a838]">AI</span>
               </div>
-              <div className="bg-[#f8f9fb] rounded-2xl rounded-tl-sm px-4 py-2.5 max-w-[80%] text-[13px] leading-relaxed text-[#1a2b4a]/80 whitespace-pre-wrap">
-                {text}
+              <div className="bg-[#f8f9fb] rounded-2xl rounded-tl-sm px-4 py-2.5 max-w-[85%] text-[13px] leading-relaxed text-[#1a2b4a]/80">
+                {(() => {
+                  const fullText = msg.parts
+                    ?.filter((p) => p.type === "text")
+                    .map((p) => p.text)
+                    .join("") || "";
+                  const { chartData, cleanText } = parseChartBlock(fullText);
+                  return (
+                    <>
+                      {chartData && <InlineChart data={chartData} />}
+                      <span className="whitespace-pre-wrap">{cleanText}</span>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           );
