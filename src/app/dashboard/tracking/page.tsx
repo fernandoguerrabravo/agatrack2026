@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getCarrierName } from "@/lib/carriers";
 
 type TrackingEvent = {
   event_date: string;
@@ -136,7 +137,7 @@ export default function TrackingPage() {
                   <div>
                     <h2 className="text-2xl font-bold tracking-wider">{data.container.number}</h2>
                     <div className="flex items-center gap-3 mt-1">
-                      {data.scac && <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-medium">{data.scac}</span>}
+                      {data.scac && <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-medium">{getCarrierName(data.scac)}</span>}
                     </div>
                   </div>
                 </div>
