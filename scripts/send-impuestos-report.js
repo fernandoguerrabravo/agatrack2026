@@ -160,7 +160,7 @@ function buildEmailHtml(cliente, data) {
 
   <!-- Contenido -->
   <div style="padding:24px;background:#fff;">
-    <h1 style="font-size:18px;color:#1a2b4a;margin:0 0 8px 0;">Reporte de Eficiencia Arancelaria</h1>
+    <h1 style="font-size:18px;color:#1a2b4a;margin:0 0 8px 0;">Estadísticas de Comercio Exterior Agencia Guerra</h1>
     <p style="font-size:13px;color:#666;margin:0 0 20px 0;">${cliente.nombre} (${cliente.rut}) | Período: ${periodoTexto}</p>
 
     <!-- KPIs principales -->
@@ -247,7 +247,7 @@ function buildEmailHtml(cliente, data) {
   <!-- Disclaimer -->
   <div style="padding:16px 24px;">
     <div style="background:#1a2b4a;padding:16px;font-size:11px;color:#fff;border-radius:4px;">
-      <p style="margin:0 0 8px 0;">No solicitaremos información sensible por correo electrónico, <b>salvo expresa solicitud del cliente</b>.</p>
+      <p style="margin:0 0 8px 0;">Los datos presentados corresponden a operaciones tramitadas a través de Agencia Guerra. No solicitaremos información sensible por correo electrónico, <b>salvo expresa solicitud del cliente</b>.</p>
       <p style="margin:0;">Este es un correo automático. No es necesario responder.</p>
     </div>
   </div>
@@ -286,7 +286,7 @@ async function sendReports() {
       const { data: resData, error } = await resend.emails.send({
         from: process.env.RESEND_FROM || "AGATrack <reportes@agatrack.agenciaguerra.com>",
         to: cliente.emails,
-        subject: `Eficiencia Arancelaria ${cliente.nombre} - ${today}`,
+        subject: `Estadísticas de Comercio Exterior Agencia Guerra - ${cliente.nombre} - ${today}`,
         html,
       });
 
