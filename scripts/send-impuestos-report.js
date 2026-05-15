@@ -81,7 +81,11 @@ async function getImpuestosData(pgPool, rut) {
       COUNT(*) as total_operaciones,
       COALESCE(SUM(NULLIF(iva,'')::numeric), 0) as total_iva,
       COALESCE(SUM(NULLIF(gravamenes_valor_1,'')::numeric), 0) as total_derechos,
-      COALESCE(SUM(NULLIF(total_cif,'')::numeric), 0) as total_cif
+      COALESCE(SUM(NULLIF(total_cif,'')::numeric), 0) as total_cif,
+      COALESCE(SUM(NULLIF(total_fob,'')::numeric), 0) as total_fob,
+      COALESCE(SUM(NULLIF(total_peso_bruto,'')::numeric), 0) as total_kilos,
+      COALESCE(SUM(NULLIF(valor_flete,'')::numeric), 0) as total_flete,
+      COALESCE(SUM(NULLIF(valor_seguro,'')::numeric), 0) as total_seguro
     FROM despachos_replica 
     WHERE operacion NOT IN (${placeholders}) 
       AND rut_cliente = $${rutIdx} 
@@ -126,6 +130,10 @@ async function getImpuestosData(pgPool, rut) {
 
 function buildEmailHtml(cliente, data) {
   const cifTotal = Number(data.totals.total_cif);
+  const fobTotal = Number(data.totals.total_fob);
+  const kilosTotal = Number(data.totals.total_kilos);
+  const fleteTotal = Number(data.totals.total_flete);
+  const seguroTotal = Number(data.totals.total_seguro);
   const derechosTeoricos = cifTotal * 0.06;
   const derechosPagados = Number(data.totals.total_derechos);
   const ahorroBK = Number(data.bienCapital.total_cif_bk) * 0.06;
@@ -163,17 +171,56 @@ function buildEmailHtml(cliente, data) {
     <h1 style="font-size:18px;color:#1a2b4a;margin:0 0 8px 0;">Estadísticas de Comercio Exterior Agencia Guerra</h1>
     <p style="font-size:13px;color:#666;margin:0 0 20px 0;">${cliente.nombre} (${cliente.rut}) | Período: ${periodoTexto}</p>
 
-    <!-- KPIs principales -->
+    <!-- KPIs Estadísticas Generales de Importación -->
+    <h2 style="font-size:15px;color:#1a2b4a;border-bottom:2px solid #e8a838;padding-bottom:6px;margin:0 0 16px 0;">Estadísticas Generales de Importación</h2>
     <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
       <tr>
-        <td style="padding:12px;background:#f0f7ff;border-radius:4px;text-align:center;width:50%;">
-          <div style="font-size:12px;color:#666;">Total CIF Importaciones</div>
-          <div style="font-size:20px;font-weight:bold;color:#1a2b4a;">${formatUSD(cifTotal)}</div>
+        <td style="padding:10px;background:#f0f7ff;border-radius:4px;text-align:center;">
+          <div style="font-size:11px;color:#666;">Operaciones</div>
+          <div style="font-size:18px;font-weight:bold;color:#1a2b4a;">${data.totals.total_operaciones}</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:10px;background:#f0f7ff;border-radius:4px;text-align:center;">
+          <div style="font-size:11px;color:#666;">Total CIF (USD)</div>
+          <div style="font-size:18px;font-weight:bold;color:#1a2b4a;">${formatUSD(cifTotal)}</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:10px;background:#f0f7ff;border-radius:4px;text-align:center;">
+          <div style="font-size:11px;color:#666;">Total FOB (USD)</div>
+          <div style="font-size:18px;font-weight:bold;color:#1a2b4a;">${formatUSD(fobTotal)}</div>
+        </td>
+      </tr>
+      <tr><td colspan="5" style="height:6px;"></td></tr>
+      <tr>
+        <td style="padding:10px;background:#f0f7ff;border-radius:4px;text-align:center;">
+          <div style="font-size:11px;color:#666;">Peso Bruto (kg)</div>
+          <div style="font-size:18px;font-weight:bold;color:#1a2b4a;">${Math.round(kilosTotal).toLocaleString("es-CL")}</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:10px;background:#f0f7ff;border-radius:4px;text-align:center;">
+          <div style="font-size:11px;color:#666;">Flete (USD)</div>
+          <div style="font-size:18px;font-weight:bold;color:#1a2b4a;">${formatUSD(fleteTotal)}</div>
+        </td>
+        <td style="width:6px;"></td>
+        <td style="padding:10px;background:#f0f7ff;border-radius:4px;text-align:center;">
+          <div style="font-size:11px;color:#666;">Seguro (USD)</div>
+          <div style="font-size:18px;font-weight:bold;color:#1a2b4a;">${formatUSD(seguroTotal)}</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- KPIs principales -->
+    <h2 style="font-size:15px;color:#1a2b4a;border-bottom:2px solid #e8a838;padding-bottom:6px;margin:0 0 16px 0;">Impuestos Pagados</h2>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+      <tr>
+        <td style="padding:12px;background:#fef2f2;border-radius:4px;text-align:center;width:50%;">
+          <div style="font-size:12px;color:#991b1b;">IVA Pagado (USD)</div>
+          <div style="font-size:20px;font-weight:bold;color:#dc2626;">${formatUSD(Number(data.totals.total_iva))}</div>
         </td>
         <td style="width:8px;"></td>
-        <td style="padding:12px;background:#f0f7ff;border-radius:4px;text-align:center;width:50%;">
-          <div style="font-size:12px;color:#666;">Total Operaciones</div>
-          <div style="font-size:20px;font-weight:bold;color:#1a2b4a;">${data.totals.total_operaciones}</div>
+        <td style="padding:12px;background:#fef3c7;border-radius:4px;text-align:center;width:50%;">
+          <div style="font-size:12px;color:#92400e;">Derechos de Aduana (USD)</div>
+          <div style="font-size:20px;font-weight:bold;color:#d97706;">${formatUSD(derechosPagados)}</div>
         </td>
       </tr>
     </table>
