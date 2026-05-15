@@ -49,6 +49,11 @@ const OPERACIONES_EXPORT = [
 // Clientes que reciben este reporte
 const CLIENTES = [
   {
+    rut: "96691060-7",
+    nombre: "KSB CHILE S.A.",
+    emails: ["mauricio.munoz@ksb.com"],
+  },
+  {
     rut: "88579800-4",
     nombre: "MICROGEO INGENIERIA S.A.",
     emails: ["patricio.hernandez@tecnoglobal.cl", "hernan.valenzuela@tecnoglobal.cl"],
