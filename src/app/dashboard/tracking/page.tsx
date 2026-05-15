@@ -115,7 +115,6 @@ export default function TrackingPage() {
                   <div>
                     <h2 className="text-2xl font-bold tracking-wider">{data.container.number}</h2>
                     <div className="flex items-center gap-3 mt-1">
-                      {data.container.type && <span className="text-sm text-white/60">{data.container.type}</span>}
                       {data.scac && <span className="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-medium">{data.scac}</span>}
                     </div>
                   </div>
@@ -123,6 +122,34 @@ export default function TrackingPage() {
                 <div className={`px-4 py-2 rounded-xl text-sm font-bold ${data.container.completed ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"}`}>
                   {data.container.completed ? "✓ Entregado" : "⟳ En tránsito"}
                 </div>
+              </div>
+
+              {/* Vessel + Container type badges */}
+              <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-white/10">
+                {data.container.type && (
+                  <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
+                    <span className="text-base">📦</span>
+                    <div>
+                      <div className="text-[10px] text-white/50 uppercase">Tipo Contenedor</div>
+                      <div className="text-sm font-bold text-[#e8a838]">{data.container.type}</div>
+                    </div>
+                  </div>
+                )}
+                {(() => {
+                  const vesselEvt = data.events?.find(e => e.mode?.vessel?.vessel_name);
+                  const vesselName = vesselEvt?.mode?.vessel?.vessel_name;
+                  const voyageNr = vesselEvt?.mode?.vessel?.voyage_nr;
+                  if (!vesselName) return null;
+                  return (
+                    <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
+                      <span className="text-base">🚢</span>
+                      <div>
+                        <div className="text-[10px] text-white/50 uppercase">Nave / Viaje</div>
+                        <div className="text-sm font-bold text-white">{vesselName}{voyageNr ? ` · ${voyageNr}` : ""}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

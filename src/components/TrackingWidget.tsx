@@ -138,10 +138,27 @@ export default function TrackingWidget() {
               </span>
             </div>
 
-            {/* Container type */}
-            {data.container.type && (
-              <div className="text-[11px] text-gray-400">Tipo: {data.container.type}</div>
-            )}
+            {/* Container type + Vessel */}
+            <div className="flex gap-2 flex-wrap">
+              {data.container.type && (
+                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                  <span className="text-xs">📦</span>
+                  <span className="text-[11px] font-bold text-amber-700">{data.container.type}</span>
+                </div>
+              )}
+              {(() => {
+                const vesselEvt = data.events?.find(e => e.mode?.vessel?.vessel_name);
+                const vesselName = vesselEvt?.mode?.vessel?.vessel_name;
+                const voyageNr = vesselEvt?.mode?.vessel?.voyage_nr;
+                if (!vesselName) return null;
+                return (
+                  <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5">
+                    <span className="text-xs">🚢</span>
+                    <span className="text-[11px] font-bold text-blue-700">{vesselName}{voyageNr ? ` · ${voyageNr}` : ""}</span>
+                  </div>
+                );
+              })()}
+            </div>
 
             {/* Route visual */}
             <div className="bg-gradient-to-r from-[#1a2b4a]/5 to-emerald-50 rounded-xl p-3 border border-gray-100">
