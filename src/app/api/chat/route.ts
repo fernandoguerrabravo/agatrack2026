@@ -44,6 +44,7 @@ REGLAS:
 8. Las exportaciones son operaciones como: EXPORTACION NORMAL, EXPORTACION DE SERVICIOS, etc.
 9. Las importaciones son todas las demás operaciones (que NO son exportaciones).
 10. NO uses formato markdown (no uses **, ##, *, etc). Responde en texto plano sin formato.
+11. Si el contexto incluye TRACKING CONTENEDOR, presenta la información de forma clara: origen, destino, puerto de carga (POL), puerto de descarga (POD), ETA, estado del contenedor, naviera (SCAC), y los últimos eventos relevantes. Usa KPIs para mostrar los datos principales.
 11. Cuando tu respuesta incluya datos numéricos relevantes (totales, comparaciones, tendencias), DEBES incluir un bloque de visualización al INICIO de tu respuesta usando el formato:
 <<<CHART
 {JSON con datos para visualización}
@@ -73,6 +74,11 @@ Este año llevas 156 operaciones de importación con un CIF total de $5,234,567 
 function extractQueryIntent(message: string): string[] {
   const queries: string[] = [];
   const msg = message.toLowerCase();
+
+  // Detectar si es una consulta de tracking de contenedor
+  if (msg.match(/[a-z]{4}\d{7}/i) || msg.includes("contenedor") || msg.includes("container") || msg.includes("rastrear") || msg.includes("tracking") || msg.includes("track")) {
+    queries.push("tracking");
+  }
 
   // Siempre traer un resumen general
   queries.push("resumen");
@@ -119,11 +125,47 @@ function extractQueryIntent(message: string): string[] {
   return queries;
 }
 
-async function getDbContext(rut: string, intents: string[]): Promise<string> {
+async function fetchContainerTracking(containerNr: string): Promise<Record<string, unknown> | null> {
+  const apiKey = process.env.FINDTEU_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch(`https://api.findteu.com/container/${containerNr}`, {
+      method: "POST",
+      headers: {
+        "X-Authorization-ApiKey": apiKey,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: "",
+    });
+    const json = await res.json();
+    if (!json.success) return null;
+    return json.data;
+  } catch (error) {
+    console.error("[tracking] Error:", error);
+    return null;
+  }
+}
+
+async function getDbContext(rut: string, intents: string[], userMessage: string): Promise<string> {
   const results: string[] = [];
   const placeholders = OPERACIONES_EXPORT.map(() => "?").join(",");
 
   try {
+    // Si es tracking de contenedor, consultar FindTEU
+    if (intents.includes("tracking")) {
+      const containerMatch = userMessage.match(/[A-Z]{4}\d{7}/i);
+      if (containerMatch) {
+        const containerNr = containerMatch[0].toUpperCase();
+        const trackingData = await fetchContainerTracking(containerNr);
+        if (trackingData) {
+          results.push(`TRACKING CONTENEDOR ${containerNr}: ${JSON.stringify(trackingData)}`);
+        } else {
+          results.push(`TRACKING CONTENEDOR ${containerNr}: No se encontró información o error en la consulta.`);
+        }
+      }
+    }
+
     // SIEMPRE traer resumen histórico completo (desde primera fecha hasta hoy)
     const [historico] = await query<Record<string, unknown>[]>(
       `SELECT MIN(fecha_aceptacion) as primera_fecha, MAX(fecha_aceptacion) as ultima_fecha, COUNT(*) as total_ops, COALESCE(SUM(total_fob),0) as total_fob, COALESCE(SUM(total_cif),0) as total_cif, COALESCE(SUM(total_peso_bruto),0) as total_kilos FROM out_despacho_fguerra WHERE rut_cliente = ?`,
@@ -343,7 +385,7 @@ export async function POST(request: Request) {
 
     // Detectar intención y obtener datos relevantes
     const intents = extractQueryIntent(lastUserMessage);
-    const dbContext = await getDbContext(rut, intents);
+    const dbContext = await getDbContext(rut, intents, lastUserMessage);
 
     // Convertir mensajes del formato UI (parts) al formato que espera el modelo
     const convertedMessages = messages.map((msg: { role: string; content?: string; parts?: Array<{ type: string; text?: string }> }) => {
