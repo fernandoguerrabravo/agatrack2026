@@ -252,9 +252,10 @@ async function sync() {
     `);
     console.log("[sync] Table desembolsos_replica ready");
 
-    // Full sync (tabla no tiene fecha_carga_data para incremental)
-    const [desembolsoRows] = await mysqlConn.query("SELECT * FROM out_desembolso");
-    console.log("[sync] Desembolso rows to process:", desembolsoRows.length);
+    // Full sync (solo año actual)
+    const currentYear = new Date().getFullYear();
+    const [desembolsoRows] = await mysqlConn.query("SELECT * FROM out_desembolso WHERE agno = ?", [currentYear]);
+    console.log("[sync] Desembolso rows to process (año " + currentYear + "):", desembolsoRows.length);
 
     if (desembolsoRows.length > 0) {
       const desCols = Object.keys(desembolsoRows[0]);
