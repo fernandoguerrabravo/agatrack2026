@@ -326,38 +326,52 @@ async function getDbContext(rut: string, intents: string[]): Promise<string> {
 }
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session) {
-    return new Response(JSON.stringify({ error: "No autorizado." }), { status: 401 });
+  try {
+    const session = await getSession();
+    if (!session) {
+      return new Response(JSON.stringify({ error: "No autorizado." }), { status: 401 });
+    }
+
+    const { messages } = await request.json();
+    const rut = session.rut;
+
+    // Obtener la última pregunta del usuario
+    const lastMsg = messages[messages.length - 1];
+    const lastUserMessage = typeof lastMsg?.content === "string"
+      ? lastMsg.content
+      : lastMsg?.parts?.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("") ?? "";
+
+    // Detectar intención y obtener datos relevantes
+    const intents = extractQueryIntent(lastUserMessage);
+    const dbContext = await getDbContext(rut, intents);
+
+    // Convertir mensajes del formato UI (parts) al formato que espera el modelo
+    const convertedMessages = messages.map((msg: { role: string; content?: string; parts?: Array<{ type: string; text?: string }> }) => {
+      let content = "";
+      if (typeof msg.content === "string") {
+        content = msg.content;
+      } else if (msg.parts && Array.isArray(msg.parts)) {
+        content = msg.parts
+          .filter((p) => p.type === "text")
+          .map((p) => p.text ?? "")
+          .join("");
+      }
+      return {
+        role: msg.role as "user" | "assistant" | "system",
+        content,
+      };
+    });
+
+    // Generar respuesta con contexto de datos reales
+    const result = streamText({
+      model: openai("gpt-4o-mini"),
+      system: buildSystemPrompt(rut, dbContext),
+      messages: convertedMessages,
+    });
+
+    return result.toUIMessageStreamResponse();
+  } catch (error) {
+    console.error("[chat] POST error:", error);
+    return new Response(JSON.stringify({ error: "Error interno del chat." }), { status: 500 });
   }
-
-  const { messages } = await request.json();
-  const rut = session.rut;
-
-  // Obtener la última pregunta del usuario
-  const lastMsg = messages[messages.length - 1];
-  const lastUserMessage = typeof lastMsg?.content === "string"
-    ? lastMsg.content
-    : lastMsg?.parts?.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("") ?? "";
-
-  // Detectar intención y obtener datos relevantes
-  const intents = extractQueryIntent(lastUserMessage);
-  const dbContext = await getDbContext(rut, intents);
-
-  // Convertir mensajes del formato UI (parts) al formato que espera el modelo
-  const convertedMessages = messages.map((msg: { role: string; content?: string; parts?: Array<{ type: string; text?: string }> }) => ({
-    role: msg.role as "user" | "assistant" | "system",
-    content: typeof msg.content === "string"
-      ? msg.content
-      : msg.parts?.filter((p) => p.type === "text").map((p) => p.text ?? "").join("") ?? "",
-  }));
-
-  // Generar respuesta con contexto de datos reales
-  const result = streamText({
-    model: openai("gpt-4o-mini"),
-    system: buildSystemPrompt(rut, dbContext),
-    messages: convertedMessages,
-  });
-
-  return result.toUIMessageStreamResponse();
 }
