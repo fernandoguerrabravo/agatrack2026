@@ -7,7 +7,7 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { getCarrierName } from "@/lib/carriers";
+import TrackingResult from "./TrackingResult";
 
 const CHART_COLORS = ["#4f46e5", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 const KPI_COLORS: Record<string, { bg: string; text: string }> = {
@@ -121,127 +121,28 @@ function InlineChartInner({ data }: { data: ChartData }) {
         </div>
       )}
 
-      {/* Tracking Timeline */}
+      {/* Tracking */}
       {data.tracking && (
-        <InlineTracking tracking={data.tracking} />
-      )}
-    </div>
-  );
-}
-
-const COUNTRY_FLAGS_CHAT: Record<string, string> = {
-  "China": "🇨🇳", "Chile": "🇨🇱", "United States": "🇺🇸", "Japan": "🇯🇵",
-  "South Korea": "🇰🇷", "Germany": "🇩🇪", "Spain": "🇪🇸", "France": "🇫🇷",
-  "Italy": "🇮🇹", "Netherlands": "🇳🇱", "Belgium": "🇧🇪", "Brazil": "🇧🇷",
-  "Argentina": "🇦🇷", "Peru": "🇵🇪", "Colombia": "🇨🇴", "Mexico": "🇲🇽",
-  "India": "🇮🇳", "Singapore": "🇸🇬", "Taiwan": "🇹🇼", "Australia": "🇦🇺",
-  "Canada": "🇨🇦", "Panama": "🇵🇦", "Ecuador": "🇪🇨", "United Kingdom": "🇬🇧",
-};
-
-function getFlagChat(country?: string): string {
-  if (!country) return "📍";
-  return COUNTRY_FLAGS_CHAT[country] || "🌐";
-}
-
-function InlineTracking({ tracking }: { tracking: NonNullable<ChartData["tracking"]> }) {
-  const progress = (() => {
-    if (!tracking.events || tracking.events.length === 0) return 0;
-    const actual = tracking.events.filter(e => e.type === "actual").length;
-    if (tracking.completed) return 100;
-    return Math.round((actual / tracking.events.length) * 100);
-  })();
-
-  // Extract vessel from events
-  const vesselEvt = tracking.events?.find(e => e.location && e.type === "actual");
-  const lastVessel = tracking.events?.reverse().find(e => e.location)?.location || "";
-
-  return (
-    <div className="w-full bg-white rounded-xl border border-gray-200 p-3 shadow-sm space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="bg-[#1a2b4a] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg tracking-wider">
-            {tracking.container}
-          </div>
-          {tracking.scac && <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-semibold">{getCarrierName(tracking.scac)}</span>}
-        </div>
-        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${tracking.completed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-          {tracking.completed ? "✓ Entregado" : "⟳ En tránsito"}
-        </span>
-      </div>
-
-      {/* Type + Vessel badges */}
-      <div className="flex gap-2 flex-wrap">
-        {tracking.type && (
-          <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-            <span className="text-[10px]">📦</span>
-            <span className="text-[10px] font-bold text-amber-700">{tracking.type}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Route visual with progress */}
-      <div className="bg-gradient-to-r from-[#1a2b4a]/5 to-emerald-50 rounded-lg p-2.5 border border-gray-100">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="text-center flex-1">
-            <div className="text-[9px] text-gray-400 uppercase font-bold">Origen</div>
-            <div className="text-[10px] font-semibold text-[#1a2b4a]">{tracking.pol || "—"}</div>
-            {tracking.etd && <div className="text-[8px] text-gray-400">ETD: {tracking.etd}</div>}
-          </div>
-          <div className="flex-1 flex items-center px-2">
-            <div className="h-[2px] flex-1 bg-gradient-to-r from-[#1a2b4a] to-emerald-500 rounded relative">
-              <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `${progress}%` }}>
-                <div className="w-4 h-4 bg-[#e8a838] rounded-full flex items-center justify-center shadow -ml-2 border border-white">
-                  <span className="text-[7px]">🚢</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="text-center flex-1">
-            <div className="text-[9px] text-gray-400 uppercase font-bold">Destino</div>
-            <div className="text-[10px] font-semibold text-emerald-700">{tracking.pod || "—"}</div>
-            {tracking.eta && <div className="text-[8px] text-emerald-600 font-bold">ETA: {tracking.eta}</div>}
-          </div>
-        </div>
-        <div className="h-1 bg-gray-200 rounded-full overflow-hidden mt-1">
-          <div className="h-full bg-gradient-to-r from-[#1a2b4a] to-emerald-500 rounded-full" style={{ width: `${progress}%` }} />
-        </div>
-        <div className="text-[8px] text-gray-400 text-center mt-0.5">{progress}% completado</div>
-      </div>
-
-      {/* Events timeline */}
-      {tracking.events && tracking.events.length > 0 && (
-        <div className="space-y-0">
-          <div className="text-[9px] text-gray-400 uppercase font-bold tracking-wider mb-1.5">Eventos</div>
-          {tracking.events.map((evt, i) => {
-            const isLast = i === tracking.events!.length - 1;
-            const isActual = evt.type === "actual";
-            // Parse country from location string (format: "Port, Country")
-            const parts = evt.location?.split(", ") || [];
-            const country = parts.length > 1 ? parts[parts.length - 1] : "";
-            return (
-              <div key={i} className="flex items-stretch">
-                <div className="flex flex-col items-center w-4 mr-2">
-                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 border-2 ${isActual ? "bg-emerald-500 border-emerald-500" : "bg-white border-red-400"}`} />
-                  {!isLast && <div className={`w-0.5 flex-1 min-h-[14px] ${isActual ? "bg-emerald-200" : "bg-red-200"}`} />}
-                </div>
-                <div className={`pb-2 flex-1 ${!isActual ? "opacity-60" : ""}`}>
-                  <div className={`text-[10px] leading-tight ${!isActual ? "text-red-500 italic" : "text-gray-800"}`}>
-                    <span className="font-bold">{evt.date}</span>
-                    <span className="mx-1 text-gray-300">|</span>
-                    <span>{evt.action}</span>
-                  </div>
-                  {evt.location && (
-                    <div className={`text-[9px] mt-0.5 ${!isActual ? "text-red-400" : "text-gray-400"}`}>
-                      {getFlagChat(country)} {evt.location}
-                      {!isActual && <span className="ml-1 text-[8px] bg-red-50 text-red-500 px-1 rounded">pendiente</span>}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <TrackingResult
+          data={{
+            timestamp: "",
+            scac: data.tracking.scac || "",
+            origin: { port: "", country: "" },
+            destination: { port: data.tracking.destination || "", country: "" },
+            pol: { port: data.tracking.pol || "", country: "", etd_date: data.tracking.etd },
+            pod: { port: data.tracking.pod || "", country: "", eta_date: data.tracking.eta },
+            container: { number: data.tracking.container, type: data.tracking.type, completed: data.tracking.completed },
+            events: (data.tracking.events || []).map(e => ({
+              event_date: e.date,
+              location: { port: e.location?.split(", ")[0] || "", country: e.location?.split(", ").slice(1).join(", ") || "" },
+              action: { action_name: e.action },
+              mode: {},
+              event_type: e.type as "actual" | "expected",
+              event_recent: false,
+            })),
+          }}
+          compact
+        />
       )}
     </div>
   );

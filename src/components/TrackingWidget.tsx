@@ -1,43 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { getCarrierName } from "@/lib/carriers";
-
-type TrackingEvent = {
-  event_date: string;
-  location: { terminal?: string; port?: string; country?: string };
-  action: { action_name?: string };
-  mode?: { transport_mode?: string; vessel?: { vessel_name?: string; voyage_nr?: string } };
-  event_type: "actual" | "expected";
-  event_recent?: boolean;
-};
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  "China": "🇨🇳", "Chile": "🇨🇱", "United States": "🇺🇸", "USA": "🇺🇸",
-  "Japan": "🇯🇵", "South Korea": "🇰🇷", "Korea": "🇰🇷", "Germany": "🇩🇪",
-  "Spain": "🇪🇸", "France": "🇫🇷", "Italy": "🇮🇹", "Netherlands": "🇳🇱",
-  "Belgium": "🇧🇪", "United Kingdom": "🇬🇧", "Brazil": "🇧🇷",
-  "Argentina": "🇦🇷", "Peru": "🇵🇪", "Colombia": "🇨🇴", "Mexico": "🇲🇽",
-  "India": "🇮🇳", "Singapore": "🇸🇬", "Malaysia": "🇲🇾", "Taiwan": "🇹🇼",
-  "Australia": "🇦🇺", "Canada": "🇨🇦", "Panama": "🇵🇦", "Ecuador": "🇪🇨",
-  "Turkey": "🇹🇷", "South Africa": "🇿🇦", "Greece": "🇬🇷",
-};
-
-function getFlag(country?: string): string {
-  if (!country) return "📍";
-  return COUNTRY_FLAGS[country] || "🌐";
-}
-
-type TrackingData = {
-  timestamp: string;
-  scac: string;
-  origin: { port?: string; country?: string };
-  destination: { port?: string; country?: string };
-  pol: { port?: string; country?: string; etd_date?: string };
-  pod: { port?: string; country?: string; eta_date?: string };
-  container: { number: string; type?: string; completed?: boolean };
-  events: TrackingEvent[];
-};
+import TrackingResult from "./TrackingResult";
+import type { TrackingData } from "./TrackingResult";
 
 export default function TrackingWidget() {
   const [container, setContainer] = useState("");
@@ -72,15 +37,6 @@ export default function TrackingWidget() {
     } finally {
       setLoading(false);
     }
-  }
-
-  // Calculate progress percentage
-  function getProgress(): number {
-    if (!data?.events || data.events.length === 0) return 0;
-    const actualEvents = data.events.filter(e => e.event_type === "actual").length;
-    const totalEvents = data.events.length;
-    if (data.container.completed) return 100;
-    return Math.round((actualEvents / totalEvents) * 100);
   }
 
   return (
@@ -140,137 +96,7 @@ export default function TrackingWidget() {
           </div>
         )}
 
-        {data && (
-          <div className="space-y-3">
-            {/* Container badge + status */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="bg-[#1a2b4a] text-white text-xs font-bold px-3 py-1.5 rounded-lg tracking-wider">
-                  {data.container.number}
-                </div>
-                {data.scac && <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-semibold">{getCarrierName(data.scac)}</span>}
-              </div>
-              <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold ${data.container.completed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                {data.container.completed ? "✓ Entregado" : "⟳ En tránsito"}
-              </span>
-            </div>
-
-            {/* Container type + Vessel */}
-            <div className="flex gap-2 flex-wrap">
-              {data.container.type && (
-                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
-                  <span className="text-xs">📦</span>
-                  <span className="text-[11px] font-bold text-amber-700">{data.container.type}</span>
-                </div>
-              )}
-              {(() => {
-                const vesselEvt = data.events?.find(e => e.mode?.vessel?.vessel_name);
-                const vesselName = vesselEvt?.mode?.vessel?.vessel_name;
-                const voyageNr = vesselEvt?.mode?.vessel?.voyage_nr;
-                if (!vesselName) return null;
-                return (
-                  <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5">
-                    <span className="text-xs">🚢</span>
-                    <span className="text-[11px] font-bold text-blue-700">{vesselName}{voyageNr ? ` · ${voyageNr}` : ""}</span>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Route visual */}
-            <div className="bg-gradient-to-r from-[#1a2b4a]/5 to-emerald-50 rounded-xl p-3 border border-gray-100">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-center flex-1">
-                  <div className="text-[9px] text-gray-400 uppercase font-bold">Origen</div>
-                  <div className="text-[11px] font-semibold text-[#1a2b4a]">{data.pol.port || "—"}</div>
-                  <div className="text-[9px] text-gray-400">{data.pol.country}</div>
-                  {data.pol.etd_date && <div className="text-[9px] text-gray-500 mt-0.5">ETD: {data.pol.etd_date}</div>}
-                </div>
-
-                {/* Route line with ship icon */}
-                <div className="flex-1 flex items-center px-2">
-                  <div className="h-[2px] flex-1 bg-gradient-to-r from-[#1a2b4a] to-emerald-500 rounded relative">
-                    <div className="absolute top-1/2 -translate-y-1/2" style={{ left: `${getProgress()}%` }}>
-                      <div className="w-5 h-5 bg-[#e8a838] rounded-full flex items-center justify-center shadow-md -ml-2.5 border-2 border-white">
-                        <span className="text-[8px]">🚢</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-center flex-1">
-                  <div className="text-[9px] text-gray-400 uppercase font-bold">Destino</div>
-                  <div className="text-[11px] font-semibold text-emerald-700">{data.pod.port || "—"}</div>
-                  <div className="text-[9px] text-gray-400">{data.pod.country}</div>
-                  {data.pod.eta_date && <div className="text-[9px] text-emerald-600 font-bold mt-0.5">ETA: {data.pod.eta_date}</div>}
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              <div className="mt-2">
-                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#1a2b4a] to-emerald-500 rounded-full transition-all duration-500"
-                    style={{ width: `${getProgress()}%` }}
-                  />
-                </div>
-                <div className="text-[9px] text-gray-400 text-center mt-1">{getProgress()}% completado</div>
-              </div>
-            </div>
-
-            {/* Timeline */}
-            {data.events && data.events.length > 0 && (
-              <div>
-                <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">Historial de Eventos</div>
-                <div className="space-y-0 max-h-[180px] overflow-y-auto pr-1">
-                  {data.events.map((evt, i) => {
-                    const isLast = i === data.events.length - 1;
-                    const isActual = evt.event_type === "actual";
-                    const location = [evt.location.port, evt.location.country].filter(Boolean).join(", ");
-                    const vessel = evt.mode?.vessel?.vessel_name;
-
-                    return (
-                      <div key={i} className="flex items-stretch">
-                        <div className="flex flex-col items-center w-5 mr-3">
-                          <div className={`w-3 h-3 rounded-full flex-shrink-0 border-2 ${
-                            isActual
-                              ? evt.event_recent
-                                ? "bg-emerald-500 border-emerald-500 ring-2 ring-emerald-200"
-                                : "bg-emerald-500 border-emerald-500"
-                              : "bg-white border-red-400"
-                          }`} />
-                          {!isLast && (
-                            <div className={`w-0.5 flex-1 min-h-[16px] ${isActual ? "bg-emerald-200" : "bg-red-200"}`} />
-                          )}
-                        </div>
-                        <div className={`pb-2.5 flex-1 ${!isActual ? "opacity-60" : ""}`}>
-                          <div className={`text-[11px] leading-tight ${!isActual ? "text-red-500 italic" : "text-gray-800"}`}>
-                            <span className="font-bold">{evt.event_date}</span>
-                            <span className="mx-1.5 text-gray-300">|</span>
-                            <span className={isActual ? "font-medium" : ""}>{evt.action.action_name || "Evento"}</span>
-                          </div>
-                          <div className={`text-[10px] mt-0.5 flex items-center gap-1 ${!isActual ? "text-red-400" : "text-gray-400"}`}>
-                            {location && <span>{getFlag(evt.location.country)} {location}</span>}
-                            {!isActual && <span className="text-[8px] bg-red-50 text-red-500 px-1 py-0.5 rounded font-medium ml-1">pendiente</span>}
-                          </div>
-                          {vessel && (
-                            <div className="text-[10px] mt-0.5 flex items-center gap-1 bg-blue-50 rounded px-1.5 py-0.5 w-fit">
-                              <span>🚢</span> <span className="font-bold text-blue-700">{vessel}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="text-[9px] text-gray-300 text-right pt-1 border-t border-gray-50">
-              Última consulta: {data.timestamp}
-            </div>
-          </div>
-        )}
+        {data && <TrackingResult data={data} compact />}
       </div>
     </div>
   );
