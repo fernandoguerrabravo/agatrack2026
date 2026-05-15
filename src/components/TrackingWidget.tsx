@@ -11,6 +11,22 @@ type TrackingEvent = {
   event_recent?: boolean;
 };
 
+const COUNTRY_FLAGS: Record<string, string> = {
+  "China": "🇨🇳", "Chile": "🇨🇱", "United States": "🇺🇸", "USA": "🇺🇸",
+  "Japan": "🇯🇵", "South Korea": "🇰🇷", "Korea": "🇰🇷", "Germany": "🇩🇪",
+  "Spain": "🇪🇸", "France": "🇫🇷", "Italy": "🇮🇹", "Netherlands": "🇳🇱",
+  "Belgium": "🇧🇪", "United Kingdom": "🇬🇧", "Brazil": "🇧🇷",
+  "Argentina": "🇦🇷", "Peru": "🇵🇪", "Colombia": "🇨🇴", "Mexico": "🇲🇽",
+  "India": "🇮🇳", "Singapore": "🇸🇬", "Malaysia": "🇲🇾", "Taiwan": "🇹🇼",
+  "Australia": "🇦🇺", "Canada": "🇨🇦", "Panama": "🇵🇦", "Ecuador": "🇪🇨",
+  "Turkey": "🇹🇷", "South Africa": "🇿🇦", "Greece": "🇬🇷",
+};
+
+function getFlag(country?: string): string {
+  if (!country) return "📍";
+  return COUNTRY_FLAGS[country] || "🌐";
+}
+
 type TrackingData = {
   timestamp: string;
   scac: string;
@@ -233,10 +249,14 @@ export default function TrackingWidget() {
                             <span className={isActual ? "font-medium" : ""}>{evt.action.action_name || "Evento"}</span>
                           </div>
                           <div className={`text-[10px] mt-0.5 flex items-center gap-1 ${!isActual ? "text-red-400" : "text-gray-400"}`}>
-                            {location && <span>📍 {location}</span>}
-                            {vessel && <span className="text-gray-300">· 🚢 {vessel}</span>}
+                            {location && <span>{getFlag(evt.location.country)} {location}</span>}
                             {!isActual && <span className="text-[8px] bg-red-50 text-red-500 px-1 py-0.5 rounded font-medium ml-1">pendiente</span>}
                           </div>
+                          {vessel && (
+                            <div className="text-[10px] mt-0.5 flex items-center gap-1 bg-blue-50 rounded px-1.5 py-0.5 w-fit">
+                              <span>🚢</span> <span className="font-bold text-blue-700">{vessel}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

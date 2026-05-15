@@ -11,6 +11,27 @@ type TrackingEvent = {
   event_recent?: boolean;
 };
 
+// Country to flag emoji
+const COUNTRY_FLAGS: Record<string, string> = {
+  "China": "🇨🇳", "Chile": "🇨🇱", "United States": "🇺🇸", "USA": "🇺🇸",
+  "Japan": "🇯🇵", "South Korea": "🇰🇷", "Korea": "🇰🇷", "Germany": "🇩🇪",
+  "Spain": "🇪🇸", "France": "🇫🇷", "Italy": "🇮🇹", "Netherlands": "🇳🇱",
+  "Belgium": "🇧🇪", "United Kingdom": "🇬🇧", "UK": "🇬🇧", "Brazil": "🇧🇷",
+  "Argentina": "🇦🇷", "Peru": "🇵🇪", "Colombia": "🇨🇴", "Mexico": "🇲🇽",
+  "India": "🇮🇳", "Singapore": "🇸🇬", "Malaysia": "🇲🇾", "Thailand": "🇹🇭",
+  "Vietnam": "🇻🇳", "Indonesia": "🇮🇩", "Taiwan": "🇹🇼", "Philippines": "🇵🇭",
+  "Australia": "🇦🇺", "New Zealand": "🇳🇿", "Canada": "🇨🇦", "Panama": "🇵🇦",
+  "Ecuador": "🇪🇨", "Turkey": "🇹🇷", "Saudi Arabia": "🇸🇦", "UAE": "🇦🇪",
+  "South Africa": "🇿🇦", "Egypt": "🇪🇬", "Morocco": "🇲🇦", "Portugal": "🇵🇹",
+  "Greece": "🇬🇷", "Sweden": "🇸🇪", "Norway": "🇳🇴", "Denmark": "🇩🇰",
+  "Finland": "🇫🇮", "Poland": "🇵🇱", "Russia": "🇷🇺", "Israel": "🇮🇱",
+};
+
+function getFlag(country?: string): string {
+  if (!country) return "📍";
+  return COUNTRY_FLAGS[country] || "🌐";
+}
+
 type TrackingData = {
   timestamp: string;
   scac: string;
@@ -244,17 +265,21 @@ export default function TrackingPage() {
                             {evt.action.action_name || "Evento"}
                           </div>
                           {location && (
-                            <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                              <span>📍</span> {location}
+                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
+                              <span className="text-base">{getFlag(evt.location.country)}</span>
+                              <span>{evt.location.port}{evt.location.country ? `, ${evt.location.country}` : ""}</span>
+                              {evt.location.terminal && <span className="text-gray-300">· {evt.location.terminal}</span>}
                             </div>
                           )}
                           {vessel && (
-                            <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-                              <span>🚢</span> {vessel}{voyage ? ` · Viaje ${voyage}` : ""}
+                            <div className="text-xs mt-1 flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded px-2 py-1 w-fit">
+                              <span className="text-sm">🚢</span>
+                              <span className="font-bold text-blue-700">{vessel}</span>
+                              {voyage && <span className="text-blue-400">· Viaje {voyage}</span>}
                             </div>
                           )}
                           {transport && !vessel && (
-                            <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                            <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                               <span>🚛</span> {transport}
                             </div>
                           )}
