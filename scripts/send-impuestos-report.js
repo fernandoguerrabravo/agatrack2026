@@ -78,6 +78,11 @@ const CLIENTES = [
     nombre: "SOUTHERN TECHNOLOGY GROUP",
     emails: ["elba.rojas@stgchile.cl", "luzmira.leiva@stgchile.cl", "lily.lopez@stgchile.cl", "jimena.diaz@stgchile.cl"],
   },
+  {
+    rut: "78581570-K",
+    nombre: "BROTHER INT.DE CHILE LTDA.",
+    emails: ["salvarez@brother.cl", "earaya@brother.cl"],
+  },
 ];
 
 async function getImpuestosData(pgPool, rut) {
