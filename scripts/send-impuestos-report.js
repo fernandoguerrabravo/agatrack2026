@@ -73,6 +73,11 @@ const CLIENTES = [
     nombre: "PETROQUIMICA DOW S.A.",
     emails: ["VMartinezHerraez@dow.com", "LNuez@dow.com", "agiampieri@dow.com", "Felipe.Salas@psabdp.com", "Sara.Arcos@psabdp.com", "Yisel.Moraga@psabdp.com"],
   },
+  {
+    rut: "96979680-5",
+    nombre: "SOUTHERN TECHNOLOGY GROUP",
+    emails: ["elba.rojas@stgchile.cl", "luzmira.leiva@stgchile.cl", "lily.lopez@stgchile.cl", "jimena.diaz@stgchile.cl"],
+  },
 ];
 
 async function getImpuestosData(pgPool, rut) {
