@@ -68,6 +68,11 @@ const CLIENTES = [
     nombre: "NOVAGRI S.A.",
     emails: ["mjcandia@novagri.cl", "mariajose@novagri.cl", "paula@novagri.cl", "eduardo@novagri.org"],
   },
+  {
+    rut: "92933000-5",
+    nombre: "PETROQUIMICA DOW S.A.",
+    emails: ["VMartinezHerraez@dow.com", "LNuez@dow.com", "agiampieri@dow.com", "Felipe.Salas@psabdp.com", "Sara.Arcos@psabdp.com", "Yisel.Moraga@psabdp.com"],
+  },
 ];
 
 async function getImpuestosData(pgPool, rut) {
