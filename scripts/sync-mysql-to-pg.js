@@ -219,6 +219,10 @@ async function sync() {
     console.log(`[sync] DONE! Inserted: ${inserted}, Updated: ${updated}, Errors: ${errors}, Time: ${elapsed}s`);
 
     // ===== SYNC out_desembolso → desembolsos_replica =====
+    const syncDesembolsos = process.argv.includes("--with-desembolsos") || process.argv.includes("--full");
+    if (!syncDesembolsos) {
+      console.log("[sync] Skipping desembolsos (use --with-desembolsos or --full to include)");
+    } else {
     console.log("\n[sync] ===== Syncing out_desembolso =====");
 
     // Reconectar MySQL si se cerró
@@ -312,6 +316,7 @@ async function sync() {
 
       console.log(`[sync] Desembolso DONE! Inserted: ${desInserted}, Updated: ${desUpdated}, Errors: ${desErrors}`);
     }
+    } // end if syncDesembolsos
 
     const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`[sync] ALL DONE in ${totalElapsed}s`);
