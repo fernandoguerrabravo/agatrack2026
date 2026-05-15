@@ -221,6 +221,16 @@ async function sync() {
     // ===== SYNC out_desembolso → desembolsos_replica =====
     console.log("\n[sync] ===== Syncing out_desembolso =====");
 
+    // Reconectar MySQL si se cerró
+    try {
+      await mysqlConn.ping();
+    } catch {
+      console.log("[sync] MySQL connection lost, reconnecting...");
+      await mysqlConn.end().catch(() => {});
+      mysqlConn = await getMysqlConnection();
+      console.log("[sync] MySQL reconnected");
+    }
+
     await pgPool.query(`
       CREATE TABLE IF NOT EXISTS desembolsos_replica (
         sync_id SERIAL,
