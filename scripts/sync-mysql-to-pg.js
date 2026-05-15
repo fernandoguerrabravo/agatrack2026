@@ -217,6 +217,93 @@ async function sync() {
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`[sync] DONE! Inserted: ${inserted}, Updated: ${updated}, Errors: ${errors}, Time: ${elapsed}s`);
+
+    // ===== SYNC out_desembolso → desembolsos_replica =====
+    console.log("\n[sync] ===== Syncing out_desembolso =====");
+
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS desembolsos_replica (
+        sync_id SERIAL,
+        agno TEXT,
+        mes TEXT,
+        tipo TEXT,
+        "numeroComprobante" TEXT,
+        fecha TEXT,
+        glosa1 TEXT,
+        glosa2 TEXT,
+        "bancoEgreso" TEXT,
+        "lineaAsiento" TEXT,
+        debe TEXT,
+        haber TEXT,
+        "clienteRazonSocial" TEXT,
+        "clienteRut" TEXT,
+        "ProveedorRazonSocial" TEXT,
+        "ProveedoRut" TEXT,
+        despacho TEXT,
+        "documentoInterno" TEXT,
+        "documentoExterno" TEXT,
+        "Auxiliar" TEXT,
+        "folioFacturacion" TEXT,
+        "tipoFacturacion" TEXT,
+        "fechaFacturacion" TEXT,
+        synced_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(agno, mes, tipo, "numeroComprobante", "lineaAsiento")
+      )
+    `);
+    console.log("[sync] Table desembolsos_replica ready");
+
+    // Full sync (tabla no tiene fecha_carga_data para incremental)
+    const [desembolsoRows] = await mysqlConn.query("SELECT * FROM out_desembolso");
+    console.log("[sync] Desembolso rows to process:", desembolsoRows.length);
+
+    if (desembolsoRows.length > 0) {
+      const desCols = Object.keys(desembolsoRows[0]);
+      let desInserted = 0, desUpdated = 0, desErrors = 0;
+
+      for (const row of desembolsoRows) {
+        try {
+          const values = desCols.map(c => {
+            const val = row[c];
+            if (val == null) return null;
+            if (val instanceof Date) {
+              if (isNaN(val.getTime())) return null;
+              const y = val.getFullYear();
+              const m = String(val.getMonth() + 1).padStart(2, "0");
+              const d = String(val.getDate()).padStart(2, "0");
+              return `${y}-${m}-${d}`;
+            }
+            return String(val);
+          });
+          const colNames = desCols.map(c => `"${c}"`).join(", ");
+          const ph = desCols.map((_, i) => `$${i + 1}`).join(", ");
+
+          const result = await pgPool.query(
+            `INSERT INTO desembolsos_replica (${colNames})
+             VALUES (${ph})
+             ON CONFLICT (agno, mes, tipo, "numeroComprobante", "lineaAsiento") DO UPDATE SET
+               ${desCols.filter(c => !["agno","mes","tipo","numeroComprobante","lineaAsiento"].includes(c)).map(c => `"${c}" = EXCLUDED."${c}"`).join(",\n               ")},
+               synced_at = NOW()
+             RETURNING (xmax = 0) as is_insert`,
+            values
+          );
+
+          if (result.rows[0]?.is_insert) desInserted++;
+          else desUpdated++;
+        } catch (err) {
+          desErrors++;
+          if (desErrors <= 5) console.error("[sync] Desembolso row error:", err.message);
+        }
+
+        if ((desInserted + desUpdated) % 1000 === 0 && (desInserted + desUpdated) > 0) {
+          console.log(`[sync] Desembolso progress: ${desInserted + desUpdated}/${desembolsoRows.length}`);
+        }
+      }
+
+      console.log(`[sync] Desembolso DONE! Inserted: ${desInserted}, Updated: ${desUpdated}, Errors: ${desErrors}`);
+    }
+
+    const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[sync] ALL DONE in ${totalElapsed}s`);
   } catch (error) {
     console.error("[sync] FATAL:", error.message || error);
     process.exit(1);
