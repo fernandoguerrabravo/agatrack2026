@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, memo, useMemo } from "react";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -34,7 +34,7 @@ function parseChartBlock(text: string): { chartData: ChartData | null; cleanText
   }
 }
 
-function InlineChart({ data }: { data: ChartData }) {
+function InlineChartInner({ data }: { data: ChartData }) {
   return (
     <div className="w-full space-y-3 mb-2">
       {/* KPIs */}
@@ -102,6 +102,28 @@ function InlineChart({ data }: { data: ChartData }) {
         </div>
       )}
     </div>
+  );
+}
+
+const InlineChart = memo(InlineChartInner);
+
+function AssistantMessage({ text, isStreaming }: { text: string; isStreaming: boolean }) {
+  const parsed = useMemo(() => {
+    if (isStreaming) return { chartData: null, cleanText: text };
+    return parseChartBlock(text);
+  }, [text, isStreaming]);
+
+  // While streaming, just show raw text (hide the chart block markers)
+  if (isStreaming) {
+    const display = text.replace(/<<<CHART[\s\S]*?CHART>>>\s*/g, "").replace(/<<<CHART[\s\S]*/g, "");
+    return <span className="whitespace-pre-wrap">{display}</span>;
+  }
+
+  return (
+    <>
+      {parsed.chartData && <InlineChart data={parsed.chartData} />}
+      <span className="whitespace-pre-wrap">{parsed.cleanText}</span>
+    </>
   );
 }
 
@@ -207,19 +229,7 @@ export default function ChatPanel() {
                 <span className="text-[10px] font-bold text-[#e8a838]">AI</span>
               </div>
               <div className="bg-[#f8f9fb] rounded-2xl rounded-tl-sm px-4 py-2.5 max-w-[85%] text-[13px] leading-relaxed text-[#1a2b4a]/80">
-                {(() => {
-                  const fullText = msg.parts
-                    ?.filter((p) => p.type === "text")
-                    .map((p) => p.text)
-                    .join("") || "";
-                  const { chartData, cleanText } = parseChartBlock(fullText);
-                  return (
-                    <>
-                      {chartData && <InlineChart data={chartData} />}
-                      <span className="whitespace-pre-wrap">{cleanText}</span>
-                    </>
-                  );
-                })()}
+                <AssistantMessage text={msg.parts?.filter((p) => p.type === "text").map((p) => p.text).join("") || ""} isStreaming={isLoading && msg.id === messages[messages.length - 1]?.id} />
               </div>
             </div>
           );
