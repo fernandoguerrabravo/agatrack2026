@@ -63,6 +63,11 @@ const CLIENTES = [
     nombre: "ANGLO AMERICAN SUR S.A.",
     emails: ["sergio.llanos@angloamerican.com"],
   },
+  {
+    rut: "99505340-3",
+    nombre: "NOVAGRI S.A.",
+    emails: ["mjcandia@novagri.cl", "mariajose@novagri.cl", "paula@novagri.cl", "eduardo@novagri.org"],
+  },
 ];
 
 async function getImpuestosData(pgPool, rut) {
