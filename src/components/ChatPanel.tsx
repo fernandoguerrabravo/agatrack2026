@@ -53,7 +53,7 @@ function InlineChartInner({ data }: { data: ChartData }) {
       )}
 
       {/* Chart */}
-      {data.chart && data.chart.data.length > 0 && (
+      {data.chart && Array.isArray(data.chart.data) && data.chart.data.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-100 p-2">
           {data.chart.title && (
             <p className="text-[10px] text-gray-500 text-center mb-1">{data.chart.title}</p>
