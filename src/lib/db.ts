@@ -59,9 +59,10 @@ export async function query<T = Record<string, unknown>[]>(
   pgSql = pgSql.replace(/gravamenes_valor_1\s*=\s*0/g, "(NULLIF(gravamenes_valor_1,'')::numeric = 0 OR gravamenes_valor_1 IS NULL OR gravamenes_valor_1 = '')");
 
   // Comparaciones de fecha: castear parámetros a DATE cuando se comparan con fecha_aceptacion
-  pgSql = pgSql.replace(/fecha_aceptacion\s*>=\s*(\$\d+)/g, "fecha_aceptacion >= $1::date");
-  pgSql = pgSql.replace(/fecha_aceptacion\s*<=\s*(\$\d+)/g, "fecha_aceptacion <= $1::date");
-  pgSql = pgSql.replace(/fecha_aceptacion\s*=\s*(\$\d+)/g, "fecha_aceptacion = $1::date");
+  // Solo aplica a $N que NO tengan ya ::date
+  pgSql = pgSql.replace(/fecha_aceptacion\s*>=\s*(\$\d+)(?!::date)/g, "fecha_aceptacion >= $1::date");
+  pgSql = pgSql.replace(/fecha_aceptacion\s*<=\s*(\$\d+)(?!::date)/g, "fecha_aceptacion <= $1::date");
+  pgSql = pgSql.replace(/fecha_aceptacion\s*=\s*(\$\d+)(?!::date)/g, "fecha_aceptacion = $1::date");
 
   const rows = await pgQuery<T extends Array<infer U> ? U : Record<string, unknown>>(pgSql, params as unknown[]);
   return rows as T;
