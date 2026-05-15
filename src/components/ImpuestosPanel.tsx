@@ -134,17 +134,17 @@ export default function ImpuestosPanel() {
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="stat bg-base-100 rounded-lg shadow">
-          <div className="stat-title">IVA Pagado</div>
+          <div className="stat-title">IVA Pagado (USD)</div>
           <div className="stat-value text-error text-2xl">{formatUSD(Number(data.totals.total_iva))}</div>
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
-          <div className="stat-title">Derechos de Aduana Pagados</div>
+          <div className="stat-title">Derechos de Aduana Pagados (USD)</div>
           <div className="stat-value text-warning text-2xl">{formatUSD(Number(data.totals.total_derechos_aduana))}</div>
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
-          <div className="stat-title">Beneficios Arancelarios Aplicados</div>
+          <div className="stat-title">Beneficios Arancelarios Aplicados (USD)</div>
           <div className="stat-value text-success text-2xl">
             {formatUSD(Number(data.totals.total_cif) * 0.06 - Number(data.totals.total_derechos_aduana))}
           </div>
@@ -206,7 +206,7 @@ export default function ImpuestosPanel() {
       {/* Gráfico: IVA y Derechos por mes */}
       <div className="card bg-base-100 shadow">
         <div className="card-body">
-          <h2 className="card-title text-lg">IVA y Derechos de Aduana por Mes</h2>
+          <h2 className="card-title text-lg">IVA y Derechos de Aduana por Mes (USD)</h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.porMes}>
@@ -226,7 +226,7 @@ export default function ImpuestosPanel() {
       {/* Gráfico: Tendencia IVA y Derechos */}
       <div className="card bg-base-100 shadow">
         <div className="card-body">
-          <h2 className="card-title text-lg">Tendencia IVA y Derechos de Aduana por Mes</h2>
+          <h2 className="card-title text-lg">Tendencia IVA y Derechos de Aduana por Mes (USD)</h2>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.porMes}>
@@ -252,7 +252,7 @@ export default function ImpuestosPanel() {
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow w-fit">
-          <div className="stat-title">Ahorro Bien de Capital</div>
+          <div className="stat-title">Ahorro Bien de Capital (USD)</div>
           <div className="stat-value text-success text-2xl">{formatUSD(Number(data.bienCapital.total_cif_bk) * 0.06)}</div>
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
@@ -283,7 +283,7 @@ export default function ImpuestosPanel() {
 
         <div className="card bg-base-100 shadow">
           <div className="card-body">
-            <h2 className="card-title text-lg">Tendencia Ahorro Bien de Capital</h2>
+            <h2 className="card-title text-lg">Tendencia Ahorro Bien de Capital (USD)</h2>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.bienCapitalAnual.map((r) => ({ ...r, ahorro: Number(r.total_cif_bk) * 0.06 }))}>

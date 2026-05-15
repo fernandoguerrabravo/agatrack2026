@@ -134,7 +134,7 @@ export default function EstadisticasPanel() {
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
-          <div className="stat-title">Total FOB</div>
+          <div className="stat-title">Total FOB (USD)</div>
           <div className="stat-value text-success text-2xl">{formatUSD(Number(data.totals.total_fob_sum))}</div>
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
@@ -149,7 +149,7 @@ export default function EstadisticasPanel() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="card bg-base-100 shadow">
           <div className="card-body">
-            <h2 className="card-title text-lg">FOB por Mes</h2>
+            <h2 className="card-title text-lg">FOB por Mes (USD)</h2>
             <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -239,7 +239,7 @@ export default function EstadisticasPanel() {
         {/* Gráfico: Top 10 países destino */}
         <div className="card bg-base-100 shadow">
           <div className="card-body">
-            <h2 className="card-title text-lg">Top 10 Países Destino (FOB)</h2>
+            <h2 className="card-title text-lg">Top 10 Países Destino (FOB USD)</h2>
             <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
@@ -267,8 +267,8 @@ export default function EstadisticasPanel() {
                 <tr>
                   <th>País</th>
                   <th className="text-right">Operaciones</th>
-                  <th className="text-right">FOB Total</th>
-                  <th className="text-right">Peso Total</th>
+                  <th className="text-right">FOB Total (USD)</th>
+                  <th className="text-right">Peso Total (kg)</th>
                 </tr>
               </thead>
               <tbody>
@@ -297,8 +297,8 @@ export default function EstadisticasPanel() {
                 <tr>
                   <th>Aduana</th>
                   <th className="text-right">Operaciones</th>
-                  <th className="text-right">FOB Total</th>
-                  <th className="text-right">Peso Total</th>
+                  <th className="text-right">FOB Total (USD)</th>
+                  <th className="text-right">Peso Total (kg)</th>
                 </tr>
               </thead>
               <tbody>
@@ -327,8 +327,8 @@ export default function EstadisticasPanel() {
                 <tr>
                   <th>Operación</th>
                   <th className="text-right">Operaciones</th>
-                  <th className="text-right">FOB Total</th>
-                  <th className="text-right">Peso Total</th>
+                  <th className="text-right">FOB Total (USD)</th>
+                  <th className="text-right">Peso Total (kg)</th>
                 </tr>
               </thead>
               <tbody>

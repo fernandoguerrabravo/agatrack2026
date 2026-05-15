@@ -212,12 +212,12 @@ export default function ImportacionesStats() {
           <div className="stat-value text-primary">{data.totals.total_operaciones}</div>
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>        </div>
         <div className="stat bg-base-100 rounded-lg shadow">
-          <div className="stat-title">Total CIF</div>
+          <div className="stat-title">Total CIF (USD)</div>
           <div className="stat-value text-success text-2xl">{formatUSD(Number(data.totals.total_cif_sum))}</div>
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
-          <div className="stat-title">Total FOB</div>
+          <div className="stat-title">Total FOB (USD)</div>
           <div className="stat-value text-info text-2xl">{formatUSD(Number(data.totals.total_fob_sum))}</div>
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
@@ -227,17 +227,17 @@ export default function ImportacionesStats() {
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
-          <div className="stat-title">Total Flete</div>
+          <div className="stat-title">Total Flete (USD)</div>
           <div className="stat-value text-secondary text-2xl">{formatUSD(Number(data.totals.total_flete))}</div>
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
-          <div className="stat-title">Total Seguro</div>
+          <div className="stat-title">Total Seguro (USD)</div>
           <div className="stat-value text-accent text-2xl">{formatUSD(Number(data.totals.total_seguro))}</div>
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
         <div className="stat bg-base-100 rounded-lg shadow">
-          <div className="stat-title">Promedio CIF</div>
+          <div className="stat-title">Promedio CIF (USD)</div>
           <div className="stat-value text-base-content text-2xl">{formatUSD(Number(data.totals.promedio_cif))}</div>
           <div className="stat-desc">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</div>
         </div>
@@ -247,7 +247,7 @@ export default function ImportacionesStats() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="card bg-base-100 shadow">
           <div className="card-body">
-            <h2 className="card-title text-lg">CIF por Mes</h2>
+            <h2 className="card-title text-lg">CIF por Mes (USD)</h2>
             <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
@@ -337,7 +337,7 @@ export default function ImportacionesStats() {
         {/* Top 10 países origen */}
         <div className="card bg-base-100 shadow">
           <div className="card-body">
-            <h2 className="card-title text-lg">Top 10 Países Origen (CIF)</h2>
+            <h2 className="card-title text-lg">Top 10 Países Origen (CIF USD)</h2>
             <p className="text-xs text-base-content/50">{desde.split("-").reverse().join("-")} al {hasta.split("-").reverse().join("-")}</p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
@@ -366,7 +366,7 @@ export default function ImportacionesStats() {
                   <tr>
                     <th>Aduana</th>
                     <th className="text-right">Operaciones</th>
-                    <th className="text-right">CIF Total</th>
+                    <th className="text-right">CIF Total (USD)</th>
                     <th className="text-right">Peso Total</th>
                   </tr>
                 </thead>
@@ -396,7 +396,7 @@ export default function ImportacionesStats() {
                   <tr>
                     <th>Incoterm</th>
                     <th className="text-right">Operaciones</th>
-                    <th className="text-right">CIF Total</th>
+                    <th className="text-right">CIF Total (USD)</th>
                     <th className="text-right">Peso Total</th>
                   </tr>
                 </thead>
@@ -427,7 +427,7 @@ export default function ImportacionesStats() {
                 <tr>
                   <th>País</th>
                   <th className="text-right">Operaciones</th>
-                  <th className="text-right">CIF Total</th>
+                  <th className="text-right">CIF Total (USD)</th>
                   <th className="text-right">Peso Total</th>
                 </tr>
               </thead>
@@ -457,7 +457,7 @@ export default function ImportacionesStats() {
                 <tr>
                   <th>Operación</th>
                   <th className="text-right">Operaciones</th>
-                  <th className="text-right">CIF Total</th>
+                  <th className="text-right">CIF Total (USD)</th>
                   <th className="text-right">Peso Total</th>
                 </tr>
               </thead>
@@ -488,7 +488,7 @@ export default function ImportacionesStats() {
                   <th>Emisor</th>
                   <th className="text-right">Operaciones</th>
                   <th className="text-right">Kilos</th>
-                  <th className="text-right">Valor Flete</th>
+                  <th className="text-right">Valor Flete (USD)</th>
                 </tr>
               </thead>
               <tbody>
@@ -641,7 +641,7 @@ export default function ImportacionesStats() {
 
             <div className="card bg-base-100 shadow">
               <div className="card-body">
-                <h2 className="card-title text-lg">CIF por Mes</h2>
+                <h2 className="card-title text-lg">CIF por Mes (USD)</h2>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={(() => {
