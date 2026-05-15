@@ -18,7 +18,7 @@ export async function query<T = Record<string, unknown>[]>(
 
   // Reemplazar patrones MySQL complejos ANTES de convertir placeholders
   // CONCAT(YEAR(CURDATE()),'-01-01') → primer día del año actual
-  pgSql = pgSql.replace(/CONCAT\(YEAR\(CURDATE\(\)\),'-01-01'\)/g, "TO_CHAR(DATE_TRUNC('year', CURRENT_DATE), 'YYYY-MM-DD')");
+  pgSql = pgSql.replace(/CONCAT\(YEAR\(CURDATE\(\)\),'-01-01'\)/g, "DATE_TRUNC('year', CURRENT_DATE)::date");
   
   // YEAR(CURDATE())-1 → año anterior
   pgSql = pgSql.replace(/YEAR\(CURDATE\(\)\)-(\d+)/g, "(EXTRACT(YEAR FROM CURRENT_DATE)::int - $1)");
@@ -34,8 +34,8 @@ export async function query<T = Record<string, unknown>[]>(
   pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y-%m'\)/g, "TO_CHAR($1::date, 'YYYY-MM')");
   pgSql = pgSql.replace(/DATE_FORMAT\(([^,]+),\s*'%Y'\)/g, "TO_CHAR($1::date, 'YYYY')");
 
-  // CURDATE() restante
-  pgSql = pgSql.replace(/CURDATE\(\)/g, "TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')");
+  // CURDATE() restante → devolver como DATE (no TEXT)
+  pgSql = pgSql.replace(/CURDATE\(\)/g, "CURRENT_DATE");
 
   // CONCAT restante
   pgSql = pgSql.replace(/CONCAT\(([^)]+)\)/g, "($1)");
@@ -58,8 +58,10 @@ export async function query<T = Record<string, unknown>[]>(
   // Comparaciones numéricas con campos TEXT
   pgSql = pgSql.replace(/gravamenes_valor_1\s*=\s*0/g, "(NULLIF(gravamenes_valor_1,'')::numeric = 0 OR gravamenes_valor_1 IS NULL OR gravamenes_valor_1 = '')");
 
-  // Comparaciones de fecha (ya son TEXT 'YYYY-MM-DD', comparación lexicográfica funciona)
-  // No necesitan cast adicional
+  // Comparaciones de fecha: castear parámetros a DATE cuando se comparan con fecha_aceptacion
+  pgSql = pgSql.replace(/fecha_aceptacion\s*>=\s*(\$\d+)/g, "fecha_aceptacion >= $1::date");
+  pgSql = pgSql.replace(/fecha_aceptacion\s*<=\s*(\$\d+)/g, "fecha_aceptacion <= $1::date");
+  pgSql = pgSql.replace(/fecha_aceptacion\s*=\s*(\$\d+)/g, "fecha_aceptacion = $1::date");
 
   const rows = await pgQuery<T extends Array<infer U> ? U : Record<string, unknown>>(pgSql, params as unknown[]);
   return rows as T;
