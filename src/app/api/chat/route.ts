@@ -55,14 +55,17 @@ FORMATO DEL BLOQUE CHART:
 El JSON debe tener esta estructura:
 {
   "kpis": [{"label": "Nombre", "value": "$1,234", "color": "blue|green|red|yellow|purple"}],
-  "chart": {"type": "bar|line|pie", "data": [{"name": "Label", "value": 123}], "title": "Título"}
+  "chart": {"type": "bar|line|pie", "data": [{"name": "Label", "value": 123}], "title": "Título"},
+  "tracking": {"container": "XXXX1234567", "type": "40'HQ", "scac": "COSU", "origin": "Shanghai, China", "destination": "San Antonio, Chile", "pol": "Shanghai, China", "pod": "San Antonio, Chile", "eta": "2026-05-20", "etd": "2026-04-15", "completed": false, "events": [{"date": "2026-04-15", "action": "Cargado", "location": "Shanghai, China", "type": "actual"}]}
 }
 - "kpis" es un array de KPIs a mostrar como cards (máximo 4)
 - "chart" es opcional, solo inclúyelo si hay datos de tendencia o comparación
+- "tracking" es SOLO para respuestas de rastreo de contenedores. Incluye TODOS los eventos disponibles.
 - Para chart tipo "bar" o "line": data debe tener "name" y "value"
 - Para chart tipo "pie": data debe tener "name" y "value"
 - Usa valores numéricos sin formato en "value" del chart (sin $ ni puntos)
 - En "value" de kpis usa formato legible ($1,234 o 1.234 kg)
+- Para tracking events, "type" debe ser "actual" o "expected"
 
 Ejemplo:
 <<<CHART

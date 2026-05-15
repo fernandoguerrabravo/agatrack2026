@@ -20,6 +20,19 @@ const KPI_COLORS: Record<string, { bg: string; text: string }> = {
 type ChartData = {
   kpis?: { label: string; value: string; color?: string }[];
   chart?: { type: "bar" | "line" | "pie"; data: { name: string; value: number }[]; title?: string };
+  tracking?: {
+    container: string;
+    type?: string;
+    scac?: string;
+    origin?: string;
+    destination?: string;
+    pol?: string;
+    pod?: string;
+    eta?: string;
+    etd?: string;
+    completed?: boolean;
+    events?: { date: string; action: string; location: string; type: string }[];
+  };
 };
 
 function parseChartBlock(text: string): { chartDataList: ChartData[]; cleanText: string } {
@@ -104,6 +117,74 @@ function InlineChartInner({ data }: { data: ChartData }) {
               )}
             </ResponsiveContainer>
           </div>
+        </div>
+      )}
+
+      {/* Tracking Timeline */}
+      {data.tracking && (
+        <div className="w-full bg-white rounded-lg border border-gray-100 p-3">
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded bg-[#1a2b4a] flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-[#e8a838]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+            </div>
+            <div>
+              <span className="text-xs font-bold text-[#1a2b4a]">{data.tracking.container}</span>
+              {data.tracking.type && <span className="text-[10px] text-gray-400 ml-2">{data.tracking.type}</span>}
+              {data.tracking.scac && <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded ml-2">{data.tracking.scac}</span>}
+            </div>
+            {data.tracking.completed !== undefined && (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded ml-auto font-medium ${data.tracking.completed ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                {data.tracking.completed ? "Completado" : "En tránsito"}
+              </span>
+            )}
+          </div>
+
+          {/* Route info */}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {data.tracking.pol && (
+              <div className="bg-gray-50 rounded px-2 py-1.5">
+                <div className="text-[9px] text-gray-400 uppercase">Puerto Carga (POL)</div>
+                <div className="text-[11px] font-medium text-gray-700">{data.tracking.pol}</div>
+                {data.tracking.etd && <div className="text-[9px] text-gray-400">ETD: {data.tracking.etd}</div>}
+              </div>
+            )}
+            {data.tracking.pod && (
+              <div className="bg-gray-50 rounded px-2 py-1.5">
+                <div className="text-[9px] text-gray-400 uppercase">Puerto Descarga (POD)</div>
+                <div className="text-[11px] font-medium text-gray-700">{data.tracking.pod}</div>
+                {data.tracking.eta && <div className="text-[9px] text-emerald-600 font-medium">ETA: {data.tracking.eta}</div>}
+              </div>
+            )}
+          </div>
+
+          {/* Timeline events */}
+          {data.tracking.events && data.tracking.events.length > 0 && (
+            <div className="relative pl-4 border-l-2 border-[#1a2b4a]/20 space-y-2 ml-1">
+              {data.tracking.events.map((evt, i) => {
+                const isLast = i === data.tracking!.events!.length - 1;
+                const isExpected = evt.type === "expected";
+                return (
+                  <div key={i} className="relative">
+                    <div className={`absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 ${
+                      isLast && !isExpected ? "bg-[#e8a838] border-[#e8a838]" : 
+                      isExpected ? "bg-white border-dashed border-gray-300" : 
+                      "bg-[#1a2b4a] border-[#1a2b4a]"
+                    }`} />
+                    <div className={`text-[11px] ${isExpected ? "text-gray-400 italic" : "text-gray-700"}`}>
+                      <span className="font-medium">{evt.date}</span>
+                      <span className="mx-1">·</span>
+                      <span>{evt.action}</span>
+                      {evt.location && <span className="text-gray-400"> — {evt.location}</span>}
+                      {isExpected && <span className="text-[9px] ml-1 bg-gray-100 px-1 rounded">estimado</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
