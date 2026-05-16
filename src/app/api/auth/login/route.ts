@@ -12,8 +12,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { rut, email, password, turnstileToken } = body as { rut?: string; email?: string; password?: string; turnstileToken?: string };
 
-    // Verificar Turnstile token
-    if (process.env.TURNSTILE_SECRET_KEY && turnstileToken) {
+    // Verificar Turnstile token (saltar para app mobile)
+    const isMobile = turnstileToken === "mobile-app" || request.headers.get("x-platform") === "mobile";
+
+    if (!isMobile && process.env.TURNSTILE_SECRET_KEY && turnstileToken) {
       const turnstileRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -72,13 +74,27 @@ export async function POST(request: Request) {
       email: user.email ?? "",
     });
 
+    // Para mobile, devolver token en el body
+    let token: string | undefined;
+    if (isMobile) {
+      const { SignJWT } = await import("jose");
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET || "secret");
+      token = await new SignJWT({ rut: user.rut, nombre: user.nombre ?? "", email: user.email ?? "" })
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setExpirationTime("30d")
+        .sign(secret);
+    }
+
     return NextResponse.json({
       ok: true,
       user: {
         id: user.id,
         rut: user.rut,
         nombre: user.nombre,
+        email: user.email,
       },
+      ...(token && { token }),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

@@ -33,10 +33,23 @@ export async function createSession(payload: SessionPayload): Promise<string> {
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) return null;
+
+  // También buscar en header Authorization para mobile
+  let authToken: string | undefined;
+  if (!token) {
+    const { headers } = await import("next/headers");
+    const headerStore = await headers();
+    const authHeader = headerStore.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      authToken = authHeader.slice(7);
+    }
+  }
+
+  const finalToken = token || authToken;
+  if (!finalToken) return null;
 
   try {
-    const { payload } = await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(finalToken, SECRET);
     return {
       rut: payload.rut as string,
       nombre: payload.nombre as string,
