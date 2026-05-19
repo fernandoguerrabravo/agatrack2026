@@ -17,27 +17,36 @@ type MenuItem = {
   children?: { label: string; href: string }[];
 };
 
-const menuItems: MenuItem[] = [
-  { label: "Home", href: "/dashboard", icon: HomeIcon },
-  {
-    label: "Exportaciones",
-    href: "/dashboard/exportaciones",
-    icon: ExportIcon,
-    children: [
-      { label: "Estadísticas Generales", href: "/dashboard/exportaciones/estadisticas" },
-    ],
-  },
-  { label: "Importaciones", href: "/dashboard/importaciones", icon: ImportIcon, children: [
-    { label: "Estadísticas Generales", href: "/dashboard/importaciones/estadisticas" },
-    { label: "Impuestos Importaciones", href: "/dashboard/importaciones/impuestos" },
-  ] },
-  { label: "Prealertas", href: "/dashboard/prealertas", icon: DocIcon },
-  { label: "Rastrea tu Contenedor", href: "/dashboard/tracking", icon: TrackingIcon },
-];
+function getMenuItems(user: SessionPayload): MenuItem[] {
+  const items: MenuItem[] = [
+    { label: "Home", href: "/dashboard", icon: HomeIcon },
+    {
+      label: "Exportaciones",
+      href: "/dashboard/exportaciones",
+      icon: ExportIcon,
+      children: [
+        { label: "Estadísticas Generales", href: "/dashboard/exportaciones/estadisticas" },
+      ],
+    },
+    { label: "Importaciones", href: "/dashboard/importaciones", icon: ImportIcon, children: [
+      { label: "Estadísticas Generales", href: "/dashboard/importaciones/estadisticas" },
+      { label: "Impuestos Importaciones", href: "/dashboard/importaciones/impuestos" },
+    ] },
+  ];
+
+  if (user.rol_prealertas === 1) {
+    items.push({ label: "Prealertas", href: "/dashboard/prealertas", icon: DocIcon });
+  }
+
+  items.push({ label: "Rastrea tu Contenedor", href: "/dashboard/tracking", icon: TrackingIcon });
+
+  return items;
+}
 
 export default function DashboardShell({ user, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  const menuItems = getMenuItems(user);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });

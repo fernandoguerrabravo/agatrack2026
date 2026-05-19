@@ -9,6 +9,7 @@ export type UserRecord = {
   nombre: string;
   email: string;
   created_at: string;
+  rol_prealertas?: number;
 };
 
 let tableInitialized = false;

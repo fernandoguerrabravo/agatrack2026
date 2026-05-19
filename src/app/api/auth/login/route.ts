@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       rut: user.rut,
       nombre: user.nombre ?? "",
       email: user.email ?? "",
+      rol_prealertas: user.rol_prealertas ?? 0,
     });
 
     // Para mobile, devolver token en el body
