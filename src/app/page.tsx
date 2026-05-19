@@ -79,14 +79,34 @@ export default function Home() {
 
   // Render Turnstile en modal de solicitud cuando se abre
   useEffect(() => {
-    if (showSolicitud && solTurnstileRef.current && window.turnstile) {
-      solWidgetIdRef.current = window.turnstile.render(solTurnstileRef.current, {
-        sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-        callback: (token: string) => setSolTurnstileToken(token),
-        "expired-callback": () => setSolTurnstileToken(""),
-        theme: "light",
-      });
+    if (!showSolicitud) return;
+
+    // Esperar a que Turnstile esté disponible (puede tardar si viene de ?solicitud=true)
+    function tryRender() {
+      if (solTurnstileRef.current && window.turnstile) {
+        solWidgetIdRef.current = window.turnstile.render(solTurnstileRef.current, {
+          sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+          callback: (token: string) => setSolTurnstileToken(token),
+          "expired-callback": () => setSolTurnstileToken(""),
+          theme: "light",
+        });
+        return true;
+      }
+      return false;
     }
+
+    if (!tryRender()) {
+      // Reintentar cada 300ms hasta que el script cargue (máx 5s)
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (tryRender() || attempts > 16) {
+          clearInterval(interval);
+        }
+      }, 300);
+      return () => clearInterval(interval);
+    }
+
     return () => {
       if (solWidgetIdRef.current && window.turnstile) {
         try { window.turnstile.reset(solWidgetIdRef.current); } catch {}
@@ -217,6 +237,17 @@ export default function Home() {
             </p>
           </div>
 
+          {/* Solicite su Acceso - minimalista arriba */}
+          <div className="text-center mb-2">
+            <button
+              type="button"
+              className="text-xs text-primary hover:text-primary/80 hover:underline transition-all"
+              onClick={() => setShowSolicitud(true)}
+            >
+              ¿No tiene cuenta? <span className="font-semibold">Solicite su Acceso</span>
+            </button>
+          </div>
+
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* RUT */}
@@ -297,24 +328,6 @@ export default function Home() {
               Ingresar
             </button>
           </form>
-
-          {/* Solicite su Acceso */}
-          <div className="divider text-xs text-base-content/50">¿No tiene cuenta?</div>
-          <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 rounded-xl p-4 text-center">
-            <p className="text-sm font-medium text-base-content mb-2">
-              ¿Desea controlar sus operaciones de Comercio Exterior?
-            </p>
-            <button
-              type="button"
-              className="btn btn-primary btn-sm gap-2 shadow-md hover:shadow-lg transition-all"
-              onClick={() => setShowSolicitud(true)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-              Solicite su Acceso
-            </button>
-          </div>
         </div>
       </div>
 
