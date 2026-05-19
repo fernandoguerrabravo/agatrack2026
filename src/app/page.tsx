@@ -46,6 +46,14 @@ export default function Home() {
   const solTurnstileRef = useRef<HTMLDivElement>(null);
   const solWidgetIdRef = useRef<string>("");
 
+  // Auto-abrir modal si viene con ?solicitud=true
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("solicitud") === "true") {
+      setShowSolicitud(true);
+    }
+  }, []);
+
   useEffect(() => {
     // Cargar script de Turnstile
     const script = document.createElement("script");
