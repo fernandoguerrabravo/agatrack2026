@@ -161,10 +161,10 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             return { type: "image" as const, image: `data:image/png;base64,${pngBuf.toString("base64")}` };
           });
 
-          console.log("[docs] Sending", imageContents.length, "page(s) to GPT-4o vision");
+          console.log("[docs] Sending", imageContents.length, "page(s) to GPT-4o-mini vision");
 
           const result = await generateText({
-            model: openai("gpt-4o"),
+            model: openai("gpt-4o-mini"),
             messages: [
               { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContents] },
             ],
