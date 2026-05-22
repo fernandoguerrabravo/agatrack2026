@@ -77,7 +77,7 @@ INSTRUCCIONES IMPORTANTES:
 4. Incluye información del shipper, consignee, notify party con direcciones completas
 5. Incluye datos de flete, nave, viaje, puertos
 6. IMPORTANTE: Si hay correcciones de nave (vessel amendment/correction), incluir TANTO la nave original como la nave corregida. Campos: nave_original y nave_corregida
-7. IMPORTANTE: Si el puerto de destino fue corregido o cambiado, incluir puerto_destino_original y puerto_destino_corregido. Si hay puerto de transbordo (transhipment), SIEMPRE incluirlo como puerto_transbordo
+7. IMPORTANTE: Si el puerto de destino fue corregido o cambiado, incluir puerto_destino_original y puerto_destino_corregido. Si hay puerto de transbordo (transhipment), SIEMPRE incluirlo como puerto_transbordo. Si el número de viaje fue corregido, incluir viaje_original y viaje_corregido
 8. Para MANDATO: identificar fecha de firma y calcular fecha de vencimiento (1 año exacto desde la firma). Incluir mandante, mandatario, RUTs, notario y repertorio
 9. NO omitas ningún dato visible en el documento
 
@@ -90,7 +90,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     // BL: numero_bl, fecha_emision, shipper (nombre y dirección completa), consignee (nombre y dirección completa), notify_party, puerto_embarque, puerto_destino, nave, viaje, naviera, 
     //     contenedores: array de objetos con { numero_contenedor, sello, tipo_contenedor, numero_bultos, tipo_bulto, descripcion_mercancia, peso_bruto, peso_bruto_unidad, volumen, volumen_unidad, marcas, hs_code, pallets, bolsas_por_pallet },
     //     total_contenedores, total_bultos, peso_bruto_total, volumen_total, flete (monto y moneda), condicion_flete (prepaid/collect), bl_tipo (original/copy),
-    //     nave (nombre del buque actual), nave_original (si hubo corrección), nave_corregida (nuevo buque si aplica), viaje, naviera,
+    //     nave (nombre del buque actual), nave_original (si hubo corrección), nave_corregida (nuevo buque si aplica), viaje, viaje_original (si hubo corrección), viaje_corregido (nuevo viaje si aplica), naviera,
     //     puerto_destino, puerto_destino_original (si fue corregido), puerto_destino_corregido (si aplica), puerto_transbordo (si existe transbordo)
     // Invoice: numero_factura, proveedor, comprador, fecha, moneda, monto_total, items (array con descripcion, cantidad, unidad, precio_unitario, total), incoterm, pais_origen, condiciones_pago
     // Póliza: numero_poliza, aseguradora, asegurado, monto_asegurado, prima, moneda, cobertura, vigencia_desde, vigencia_hasta
