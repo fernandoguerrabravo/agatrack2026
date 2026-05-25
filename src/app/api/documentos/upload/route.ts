@@ -276,9 +276,18 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     // Parsear respuesta
     let analysis;
     try {
-      const cleaned = analysisText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      // Limpiar respuesta: quitar markdown, texto antes/después del JSON
+      let cleaned = analysisText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      // Si hay texto antes del JSON, buscar el primer {
+      const jsonStart = cleaned.indexOf("{");
+      const jsonEnd = cleaned.lastIndexOf("}");
+      if (jsonStart >= 0 && jsonEnd > jsonStart) {
+        cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+      }
       analysis = JSON.parse(cleaned);
-    } catch {
+    } catch (parseErr) {
+      console.error("[docs] JSON parse error:", parseErr instanceof Error ? parseErr.message : parseErr);
+      console.error("[docs] Raw response (first 500):", analysisText.substring(0, 500));
       analysis = {
         tipo_documento: "Otro",
         resumen: "No se pudo analizar el documento",
