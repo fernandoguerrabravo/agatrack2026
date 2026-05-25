@@ -105,11 +105,11 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     let analysisText: string = "";
 
     if (isImage) {
-      // Para imágenes: usar GPT-4o vision
+      // Para imágenes: usar GPT-4o vision (mejor para detalles visuales)
       const dataUrl = `data:${mimeType};base64,${base64}`;
       console.log("[docs] Analyzing image with GPT-4o vision...");
       const result = await generateText({
-        model: openai("gpt-4o-mini"),
+        model: openai("gpt-4o"),
         messages: [
           { role: "user" as const, content: [{ type: "text" as const, text: prompt }, { type: "image" as const, image: dataUrl }] },
         ],
@@ -161,10 +161,10 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             return { type: "image" as const, image: `data:image/png;base64,${pngBuf.toString("base64")}` };
           });
 
-          console.log("[docs] Sending", imageContents.length, "page(s) to GPT-4o-mini vision");
+          console.log("[docs] Sending", imageContents.length, "page(s) to GPT-4o vision");
 
           const result = await generateText({
-            model: openai("gpt-4o-mini"),
+            model: openai("gpt-4o"),
             messages: [
               { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContents] },
             ],
