@@ -288,18 +288,21 @@ export default function PrealertasPanel() {
                                 <span className="badge badge-sm badge-outline">{doc.tipo_documento}</span>
                               </td>
                               <td className="max-w-[300px]">
-                                {Object.keys(doc.datos_extraidos).length > 0 ? (
+                                {(() => {
+                                  const datos = typeof doc.datos_extraidos === "string" ? JSON.parse(doc.datos_extraidos || "{}") : (doc.datos_extraidos || {});
+                                  return Object.keys(datos).length > 0 ? (
                                   <details className="text-xs">
                                     <summary className="cursor-pointer text-primary">
-                                      {Object.keys(doc.datos_extraidos).length} campos
+                                      {Object.keys(datos).length} campos
                                     </summary>
                                     <pre className="mt-1 p-2 bg-base-100 rounded text-[11px] overflow-auto max-h-40">
-                                      {JSON.stringify(doc.datos_extraidos, null, 2)}
+                                      {JSON.stringify(datos, null, 2)}
                                     </pre>
                                   </details>
                                 ) : (
                                   <span className="text-xs text-base-content/40">Sin datos</span>
-                                )}
+                                );
+                                })()}
                               </td>
                               <td className="text-xs">{new Date(doc.created_at).toLocaleDateString("es-CL")}</td>
                               <td>
