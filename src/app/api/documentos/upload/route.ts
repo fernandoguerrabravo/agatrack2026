@@ -116,15 +116,66 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       });
       analysisText = result.text;
     } else if (isPdf && documentText.length > 20) {
-      // Para PDFs con texto extraíble: enviar el texto al LLM
-      console.log("[docs] Analyzing PDF text with GPT-4o-mini, text length:", documentText.length);
-      const result = await generateText({
-        model: openai("gpt-4o-mini"),
-        messages: [
-          { role: "user" as const, content: `${prompt}\n\n--- TEXTO DEL DOCUMENTO (${file.name}) ---\n\n${documentText.substring(0, 15000)}` },
-        ],
-      });
-      analysisText = result.text;
+      // Para PDFs con texto extraíble: TAMBIÉN usar visión para detectar correcciones visuales
+      // Intentar convertir a PNG primero para capturar detalles visuales
+      console.log("[docs] PDF with text, trying vision first for visual corrections, text length:", documentText.length);
+      let usedVision = false;
+      try {
+        const { execSync } = await import("child_process");
+        const { writeFileSync, readFileSync, unlinkSync } = await import("fs");
+        const { join } = await import("path");
+        const os = await import("os");
+
+        const tmpDir = os.tmpdir();
+        const tmpPdf = join(tmpDir, `upload_${Date.now()}.pdf`);
+        const tmpPng = join(tmpDir, `upload_${Date.now()}`);
+
+        writeFileSync(tmpPdf, buffer);
+        execSync(`pdftoppm -png -r 150 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
+
+        const dirFiles = require("fs").readdirSync(tmpDir) as string[];
+        const baseName = tmpPng.split("/").pop()!;
+        const pngFiles = dirFiles
+          .filter((f: string) => f.startsWith(baseName) && f.endsWith(".png"))
+          .sort()
+          .map((f: string) => join(tmpDir, f));
+
+        if (pngFiles.length > 0) {
+          const imageContents = pngFiles.slice(0, 10).map((pf: string) => {
+            const pngBuf = readFileSync(pf);
+            return { type: "image" as const, image: `data:image/png;base64,${pngBuf.toString("base64")}` };
+          });
+
+          console.log("[docs] Sending", imageContents.length, "page(s) to GPT-4o vision (text+visual)");
+          const result = await generateText({
+            model: openai("gpt-4o"),
+            messages: [
+              { role: "user" as const, content: [{ type: "text" as const, text: prompt + `\n\nTEXTO EXTRAÍDO DEL PDF (referencia adicional):\n${documentText.substring(0, 5000)}` }, ...imageContents] },
+            ],
+          });
+          analysisText = result.text;
+          usedVision = true;
+
+          unlinkSync(tmpPdf);
+          pngFiles.forEach((f: string) => { try { unlinkSync(f); } catch {} });
+        } else {
+          unlinkSync(tmpPdf);
+        }
+      } catch (err) {
+        console.log("[docs] Vision fallback failed, using text-only:", err instanceof Error ? err.message : err);
+      }
+
+      if (!usedVision) {
+        // Fallback a texto si no se pudo convertir a imagen
+        console.log("[docs] Fallback: analyzing PDF text with GPT-4o-mini");
+        const result = await generateText({
+          model: openai("gpt-4o-mini"),
+          messages: [
+            { role: "user" as const, content: `${prompt}\n\n--- TEXTO DEL DOCUMENTO (${file.name}) ---\n\n${documentText.substring(0, 15000)}` },
+          ],
+        });
+        analysisText = result.text;
+      }
     } else if (isPdf) {
       // PDF escaneado o con poco texto: convertir a PNG con pdftoppm y enviar a GPT-4o vision
       console.log("[docs] PDF scanned, converting to PNG with pdftoppm, file:", file.name);
