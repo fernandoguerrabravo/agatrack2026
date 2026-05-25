@@ -78,6 +78,23 @@ INSTRUCCIONES IMPORTANTES:
 5. Incluye datos de flete, nave, viaje, puertos
 6. IMPORTANTE NAVES: Si aparecen DOS nombres de nave/vessel en el BL (ya sea tachado, sobreescrito, impreso o en cualquier formato), la PRIMERA es la nave original (nave_original) y la SEGUNDA es la nave corregida/actual (nave_corregida). No necesariamente están en manuscrito, pueden estar ambas impresas. REVISAR ESPECIALMENTE el campo "INITIAL CARRIAGE" o "PRE-CARRIAGE" en la primera página donde suelen aparecer ambas naves con sus viajes (formato: NAVE VIAJE). Si hay dos líneas en ese campo, son dos naves distintas. Ejemplo: "ZIM BALTIMORE 347/S" y "MYD SHENZHEN 68/S" significa nave_original=ZIM BALTIMORE, viaje_original=347/S, nave_corregida=MYD SHENZHEN, viaje_corregido=68/S.
 7. IMPORTANTE PUERTOS: Si aparecen DOS puertos de descarga en el BL (en cualquier formato, no necesariamente manuscrito), el PRIMERO es el puerto de descarga final (puerto_desembarque) y el SEGUNDO es el puerto de transbordo (puerto_transbordo). SIEMPRE revisar si hay dos puertos o dos naves. Si el número de viaje fue corregido, incluir viaje_original y viaje_corregido.
+
+EJEMPLO REAL DE EXTRACCIÓN CORRECTA (BL ZIM con corrección de nave):
+Input: BL con INITIAL CARRIAGE mostrando "ZIM BALTIMORE 347/S" en primera línea y "MYD SHENZHEN 68/S" en segunda línea. PORT OF LOADING: "HOUSTON, TX // CALLAO". PORT OF DESTINATION: "SAN ANTONIO PORT".
+Output esperado:
+{
+  "nave": "MYD SHENZHEN",
+  "nave_original": "ZIM BALTIMORE",
+  "nave_corregida": "MYD SHENZHEN",
+  "viaje": "68/S",
+  "viaje_original": "347/S",
+  "viaje_corregido": "68/S",
+  "puerto_embarque": "HOUSTON, TX",
+  "puerto_transbordo": "CALLAO",
+  "puerto_desembarque": "SAN ANTONIO PORT",
+  "naviera": "ZIM Integrated Shipping Services"
+}
+Nota: "HOUSTON, TX // CALLAO" significa puerto de carga HOUSTON TX con transbordo en CALLAO. El "//" separa el puerto de carga del puerto de transbordo.
 8. Para MANDATO: identificar fecha de firma y calcular fecha de vencimiento (1 año exacto desde la firma). Incluir mandante, mandatario, RUTs, notario y repertorio
 9. NO omitas ningún dato visible en el documento
 
