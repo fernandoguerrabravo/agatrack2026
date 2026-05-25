@@ -76,8 +76,8 @@ INSTRUCCIONES IMPORTANTES:
 3. Para BL: identifica CADA contenedor por separado con su número, sello, contenido detallado (pallets, bolsas, peso por contenedor, volumen, descripción de mercancía, HS code)
 4. Incluye información del shipper, consignee, notify party con direcciones completas
 5. Incluye datos de flete, nave, viaje, puertos
-6. IMPORTANTE: Si hay correcciones de nave (vessel amendment/correction), incluir TANTO la nave original como la nave corregida. Campos: nave_original y nave_corregida
-7. IMPORTANTE: Si el puerto de destino fue corregido o cambiado, incluir puerto_destino_original y puerto_destino_corregido. Si hay puerto de transbordo (transhipment), SIEMPRE incluirlo como puerto_transbordo. Si el número de viaje fue corregido, incluir viaje_original y viaje_corregido
+6. IMPORTANTE: Si hay correcciones de nave (vessel amendment/correction), incluir TANTO la nave original como la nave corregida. Campos: nave_original y nave_corregida. Las correcciones pueden estar tachadas, sobreescritas o anotadas sobre el mismo BL (texto tachado = valor original, texto nuevo = valor corregido)
+7. IMPORTANTE: Si el puerto de destino fue corregido o cambiado, incluir puerto_destino_original y puerto_destino_corregido. Si hay puerto de transbordo (transhipment), SIEMPRE incluirlo como puerto_transbordo. Si el puerto de transbordo fue corregido sobre el mismo BL, incluir puerto_transbordo_original y puerto_transbordo_corregido. Si el número de viaje fue corregido, incluir viaje_original y viaje_corregido
 8. Para MANDATO: identificar fecha de firma y calcular fecha de vencimiento (1 año exacto desde la firma). Incluir mandante, mandatario, RUTs, notario y repertorio
 9. NO omitas ningún dato visible en el documento
 
