@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 INSTRUCCIONES IMPORTANTES:
 1. Identifica el tipo de documento
 2. Extrae ABSOLUTAMENTE TODOS los datos visibles: números, fechas, nombres, direcciones, montos, pesos, medidas, códigos
-3. Para BL: identifica CADA contenedor por separado con su número, sello, contenido detallado (pallets, bolsas, peso por contenedor, volumen, descripción de mercancía, HS code)
+3. Para BL: identifica CADA contenedor por separado con su número, sello, contenido detallado (pallets, bolsas, peso por contenedor, volumen, descripción de mercancía, HS code). IMPORTANTE: lee con PRECISIÓN cada número de contenedor (4 letras + 7 dígitos). Si hay una sección "per container" o "per cntr" al final del listado, esos detalles aplican a TODOS los contenedores listados arriba. Indicar SIEMPRE el número de pallets por contenedor si aparece.
 4. Incluye información del shipper, consignee, notify party con direcciones completas
 5. Incluye datos de flete, nave, viaje, puertos
 6. IMPORTANTE NAVES: Si aparecen DOS nombres de nave/vessel en el BL (ya sea tachado, sobreescrito, impreso o en cualquier formato), la PRIMERA es la nave original (nave_original) y la SEGUNDA es la nave corregida/actual (nave_corregida). No necesariamente están en manuscrito, pueden estar ambas impresas. REVISAR ESPECIALMENTE el campo "INITIAL CARRIAGE" o "PRE-CARRIAGE" en la primera página donde suelen aparecer ambas naves con sus viajes (formato: NAVE VIAJE). Si hay dos líneas en ese campo, son dos naves distintas. Ejemplo: "ZIM BALTIMORE 347/S" y "MYD SHENZHEN 68/S" significa nave_original=ZIM BALTIMORE, viaje_original=347/S, nave_corregida=MYD SHENZHEN, viaje_corregido=68/S.
@@ -98,7 +98,7 @@ Nota: "HOUSTON, TX // CALLAO" significa puerto de carga HOUSTON TX con transbord
 8. Para MANDATO: identificar fecha de firma y calcular fecha de vencimiento (1 año exacto desde la firma). Incluir mandante, mandatario, RUTs, notario y repertorio
 9. NO omitas ningún dato visible en el documento
 
-Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este formato:
+Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este formato. IMPORTANTE: el JSON debe estar COMPLETO, no lo cortes. Si hay muchos contenedores, usa formato compacto (una línea por contenedor en el array):
 {
   "tipo_documento": "uno de: ${TIPOS_DOCUMENTO.join(", ")}",
   "resumen": "resumen de 1-2 líneas del documento",
@@ -127,6 +127,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       console.log("[docs] Analyzing image with GPT-4o vision...");
       const result = await generateText({
         model: openai("gpt-4o"),
+        maxTokens: 16000,
         messages: [
           { role: "user" as const, content: [{ type: "text" as const, text: prompt }, { type: "image" as const, image: dataUrl }] },
         ],
@@ -166,6 +167,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
           console.log("[docs] Sending", imageContents.length, "page(s) to GPT-4o vision (text+visual)");
           const result = await generateText({
             model: openai("gpt-4o"),
+            maxTokens: 16000,
             messages: [
               { role: "user" as const, content: [{ type: "text" as const, text: prompt + `\n\nTEXTO EXTRAÍDO DEL PDF (referencia adicional):\n${documentText.substring(0, 5000)}` }, ...imageContents] },
             ],
@@ -187,6 +189,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         console.log("[docs] Fallback: analyzing PDF text with GPT-4o-mini");
         const result = await generateText({
           model: openai("gpt-4o-mini"),
+          maxTokens: 16000,
           messages: [
             { role: "user" as const, content: `${prompt}\n\n--- TEXTO DEL DOCUMENTO (${file.name}) ---\n\n${documentText.substring(0, 15000)}` },
           ],
@@ -233,6 +236,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
 
           const result = await generateText({
             model: openai("gpt-4o"),
+            maxTokens: 16000,
             messages: [
               { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContents] },
             ],
@@ -255,6 +259,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         console.log("[docs] Fallback: classify by filename only");
         const result = await generateText({
           model: openai("gpt-4o-mini"),
+          maxTokens: 16000,
           messages: [
             { role: "user" as const, content: `${prompt}\n\nEl archivo es un PDF escaneado llamado "${file.name}". No se pudo procesar. Clasifica el tipo de documento por el nombre.` },
           ],
@@ -264,6 +269,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     } else {
       const result = await generateText({
         model: openai("gpt-4o-mini"),
+        maxTokens: 16000,
         messages: [
           { role: "user" as const, content: `${prompt}\n\n[Archivo: ${file.name}]` },
         ],
