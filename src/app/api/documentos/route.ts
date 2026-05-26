@@ -18,12 +18,12 @@ export async function GET(request: Request) {
   let rows;
   if (nroOperacion) {
     rows = await pgQuery(
-      "SELECT id, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, storage_url, created_at FROM documentos WHERE rut_cliente = $1 AND nro_operacion = $2 ORDER BY created_at DESC",
+      "SELECT id, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, storage_url, created_at FROM documentos WHERE rut_cliente = $1 AND nro_operacion = $2 ORDER BY created_at DESC",
       [session.rut, nroOperacion]
     );
   } else {
     rows = await pgQuery(
-      "SELECT id, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, storage_url, created_at FROM documentos WHERE rut_cliente = $1 ORDER BY created_at DESC LIMIT 50",
+      "SELECT id, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, storage_url, created_at FROM documentos WHERE rut_cliente = $1 ORDER BY created_at DESC LIMIT 50",
       [session.rut]
     );
   }
