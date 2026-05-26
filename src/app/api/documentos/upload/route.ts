@@ -306,7 +306,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         console.log("[docs] Claude response length:", claudeAnalysisText.length);
       }
     } catch (claudeErr) {
-      console.error("[docs] Claude error:", claudeErr instanceof Error ? claudeErr.message : claudeErr);
+      console.error("[docs] Claude error:", claudeErr instanceof Error ? claudeErr.message : JSON.stringify(claudeErr));
     }
 
     // Parsear respuesta Claude
