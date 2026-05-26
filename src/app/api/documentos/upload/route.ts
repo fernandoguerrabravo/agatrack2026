@@ -296,7 +296,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         }
 
         const claudeResult = await generateText({
-          model: anthropic("claude-3-5-sonnet-latest"),
+          model: anthropic("claude-sonnet-4-20250514"),
           maxOutputTokens: 16000,
           messages: [
             { role: "user" as const, content: claudePromptContent },
