@@ -99,7 +99,7 @@ Nota: "HOUSTON, TX // CALLAO" significa puerto de carga HOUSTON TX con transbord
 8. Para MANDATO: identificar fecha de firma y calcular fecha de vencimiento (1 año exacto desde la firma). Incluir mandante, mandatario, RUTs, notario y repertorio
 9. NO omitas ningún dato visible en el documento
 
-Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este formato. IMPORTANTE: el JSON debe estar COMPLETO, no lo cortes. Si hay muchos contenedores, usa formato compacto (una línea por contenedor en el array):
+Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este formato. IMPORTANTE: el JSON debe estar COMPLETO, no lo cortes. Si hay muchos contenedores, usa formato compacto (una línea por contenedor en el array). NO incluyas el campo "texto_completo" si el documento tiene más de 1 página — solo incluye tipo_documento, resumen y datos_extraidos:
 {
   "tipo_documento": "uno de: ${TIPOS_DOCUMENTO.join(", ")}",
   "resumen": "resumen de 1-2 líneas del documento",
