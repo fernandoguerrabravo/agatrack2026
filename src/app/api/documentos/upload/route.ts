@@ -282,29 +282,97 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
 
     // Llamada paralela a Claude para comparación
     let claudeAnalysisText = "";
+    // Guardar imágenes PNG para Claude vision
+    let pngBase64Images: string[] = [];
     try {
       if (process.env.ANTHROPIC_API_KEY) {
-        console.log("[docs] Calling Claude in parallel...");
+        console.log("[docs] Calling Claude in parallel with vision...");
 
-        // Claude siempre recibe el texto extraído del documento
-        let claudeContent = prompt;
-        if (documentText.length > 20) {
-          claudeContent = `${prompt}\n\n--- TEXTO DEL DOCUMENTO (${file.name}) ---\n\n${documentText.substring(0, 15000)}`;
-        } else if (analysisText) {
-          // Si no hay texto extraído, pasar el texto completo que GPT extrajo
-          claudeContent = `${prompt}\n\n--- TEXTO EXTRAÍDO POR OCR DEL DOCUMENTO (${file.name}) ---\n\n${analysisText.substring(0, 15000)}`;
-        } else {
-          claudeContent = `${prompt}\n\n[Archivo: ${file.name} - No se pudo extraer texto]`;
+        // Si es imagen directa
+        if (isImage) {
+          const claudeResult = await generateText({
+            model: anthropic("claude-sonnet-4-5"),
+            maxOutputTokens: 16000,
+            messages: [
+              { role: "user" as const, content: [
+                { type: "text" as const, text: prompt },
+                { type: "image" as const, image: `data:${mimeType};base64,${base64}` },
+              ]},
+            ],
+          });
+          claudeAnalysisText = claudeResult.text;
+        } else if (isPdf) {
+          // Para PDFs: convertir a PNG y enviar imágenes a Claude
+          try {
+            const { execSync } = await import("child_process");
+            const { writeFileSync, readFileSync, unlinkSync, readdirSync } = await import("fs");
+            const { join } = await import("path");
+            const os = await import("os");
+
+            const tmpDir = os.tmpdir();
+            const tmpPdf = join(tmpDir, `claude_${Date.now()}.pdf`);
+            const tmpPng = join(tmpDir, `claude_${Date.now()}`);
+
+            writeFileSync(tmpPdf, buffer);
+            execSync(`pdftoppm -png -r 300 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
+
+            const dirFiles = readdirSync(tmpDir) as string[];
+            const baseName = tmpPng.split("/").pop()!;
+            const pngFiles = dirFiles
+              .filter((f: string) => f.startsWith(baseName) && f.endsWith(".png"))
+              .sort()
+              .map((f: string) => join(tmpDir, f));
+
+            if (pngFiles.length > 0) {
+              const imageContents = pngFiles.slice(0, 10).map((pf: string) => {
+                const pngBuf = readFileSync(pf);
+                return { type: "image" as const, image: `data:image/png;base64,${pngBuf.toString("base64")}` };
+              });
+
+              console.log("[docs] Sending", imageContents.length, "page(s) to Claude vision");
+              const claudeResult = await generateText({
+                model: anthropic("claude-sonnet-4-5"),
+                maxOutputTokens: 16000,
+                messages: [
+                  { role: "user" as const, content: [
+                    { type: "text" as const, text: prompt },
+                    ...imageContents,
+                  ]},
+                ],
+              });
+              claudeAnalysisText = claudeResult.text;
+
+              // Cleanup
+              unlinkSync(tmpPdf);
+              pngFiles.forEach((f: string) => { try { unlinkSync(f); } catch {} });
+            } else {
+              unlinkSync(tmpPdf);
+              // Fallback a texto
+              const claudeContent = documentText.length > 20
+                ? `${prompt}\n\n--- TEXTO DEL DOCUMENTO ---\n\n${documentText.substring(0, 15000)}`
+                : `${prompt}\n\n[Archivo: ${file.name}]`;
+              const claudeResult = await generateText({
+                model: anthropic("claude-sonnet-4-5"),
+                maxOutputTokens: 16000,
+                messages: [{ role: "user" as const, content: claudeContent }],
+              });
+              claudeAnalysisText = claudeResult.text;
+            }
+          } catch (convErr) {
+            console.error("[docs] Claude PNG conversion error:", convErr instanceof Error ? convErr.message : convErr);
+            // Fallback a texto
+            const claudeContent = documentText.length > 20
+              ? `${prompt}\n\n--- TEXTO DEL DOCUMENTO ---\n\n${documentText.substring(0, 15000)}`
+              : `${prompt}\n\n[Archivo: ${file.name}]`;
+            const claudeResult = await generateText({
+              model: anthropic("claude-sonnet-4-5"),
+              maxOutputTokens: 16000,
+              messages: [{ role: "user" as const, content: claudeContent }],
+            });
+            claudeAnalysisText = claudeResult.text;
+          }
         }
 
-        const claudeResult = await generateText({
-          model: anthropic("claude-sonnet-4-5"),
-          maxOutputTokens: 16000,
-          messages: [
-            { role: "user" as const, content: claudeContent },
-          ],
-        });
-        claudeAnalysisText = claudeResult.text;
         console.log("[docs] Claude response length:", claudeAnalysisText.length);
       }
     } catch (claudeErr) {
