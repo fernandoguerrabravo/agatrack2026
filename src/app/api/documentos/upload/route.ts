@@ -322,16 +322,41 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         const parsed = JSON.parse(cleanedClaude);
         claudeAnalysis = parsed.datos_extraidos || parsed;
       } catch (e) {
-        console.error("[docs] Claude JSON parse error:", e instanceof Error ? e.message : e);
+        // Intentar reparar JSON cortado de Claude
+        try {
+          let cleanedClaude = claudeAnalysisText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+          const jsonStartC = cleanedClaude.indexOf("{");
+          if (jsonStartC >= 0) {
+            cleanedClaude = cleanedClaude.substring(jsonStartC);
+            let openBraces = 0, openBrackets = 0, inString = false;
+            for (let i = 0; i < cleanedClaude.length; i++) {
+              const c = cleanedClaude[i];
+              if (c === '"' && cleanedClaude[i-1] !== '\\') inString = !inString;
+              if (!inString) {
+                if (c === '{') openBraces++;
+                if (c === '}') openBraces--;
+                if (c === '[') openBrackets++;
+                if (c === ']') openBrackets--;
+              }
+            }
+            if (inString) cleanedClaude += '"';
+            for (let i = 0; i < openBrackets; i++) cleanedClaude += "]";
+            for (let i = 0; i < openBraces; i++) cleanedClaude += "}";
+            const parsed = JSON.parse(cleanedClaude);
+            claudeAnalysis = parsed.datos_extraidos || parsed;
+            console.log("[docs] Claude JSON repaired successfully");
+          }
+        } catch {
+          console.error("[docs] Claude JSON parse error:", e instanceof Error ? e.message : e);
+        }
       }
     }
 
     // Parsear respuesta
+    // Parsear respuesta GPT
     let analysis;
     try {
-      // Limpiar respuesta: quitar markdown, texto antes/después del JSON
       let cleaned = analysisText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      // Si hay texto antes del JSON, buscar el primer {
       const jsonStart = cleaned.indexOf("{");
       const jsonEnd = cleaned.lastIndexOf("}");
       if (jsonStart >= 0 && jsonEnd > jsonStart) {
@@ -339,14 +364,44 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       }
       analysis = JSON.parse(cleaned);
     } catch (parseErr) {
+      // Si el JSON está cortado, intentar repararlo
       console.error("[docs] JSON parse error:", parseErr instanceof Error ? parseErr.message : parseErr);
       console.error("[docs] Raw response (first 500):", analysisText.substring(0, 500));
-      analysis = {
-        tipo_documento: "Otro",
-        resumen: "No se pudo analizar el documento",
-        datos_extraidos: {},
-        texto_completo: documentText || analysisText,
-      };
+      try {
+        let cleaned = analysisText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        const jsonStart = cleaned.indexOf("{");
+        if (jsonStart >= 0) {
+          cleaned = cleaned.substring(jsonStart);
+          // Cerrar strings, arrays y objetos abiertos
+          let openBraces = 0, openBrackets = 0, inString = false;
+          for (let i = 0; i < cleaned.length; i++) {
+            const c = cleaned[i];
+            if (c === '"' && cleaned[i-1] !== '\\') inString = !inString;
+            if (!inString) {
+              if (c === '{') openBraces++;
+              if (c === '}') openBraces--;
+              if (c === '[') openBrackets++;
+              if (c === ']') openBrackets--;
+            }
+          }
+          // Si estamos dentro de un string, cerrarlo
+          if (inString) cleaned += '"';
+          // Cerrar brackets y braces abiertos
+          for (let i = 0; i < openBrackets; i++) cleaned += "]";
+          for (let i = 0; i < openBraces; i++) cleaned += "}";
+          analysis = JSON.parse(cleaned);
+          console.log("[docs] JSON repaired successfully");
+        } else {
+          throw new Error("No JSON found");
+        }
+      } catch {
+        analysis = {
+          tipo_documento: "Otro",
+          resumen: "JSON incompleto - documento procesado parcialmente",
+          datos_extraidos: {},
+          texto_completo: documentText || analysisText,
+        };
+      }
     }
 
     // Si el PDF tenía texto, usarlo como texto_completo
