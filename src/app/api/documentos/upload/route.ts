@@ -296,7 +296,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         }
 
         const claudeResult = await generateText({
-          model: anthropic("claude-sonnet-4-20250514"),
+          model: anthropic("claude-3-5-sonnet-20241022"),
           maxOutputTokens: 16000,
           messages: [
             { role: "user" as const, content: claudePromptContent },
@@ -379,7 +379,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
 
     const rows = await pgQuery(
       `INSERT INTO documentos (rut_cliente, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, texto_completo, embedding, storage_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::vector, $8, $9)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::vector, $9)
        RETURNING id, tipo_documento, datos_extraidos, datos_extraidos_claude, storage_url, created_at`,
       [
         session.rut,
