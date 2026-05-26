@@ -286,20 +286,22 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       if (process.env.ANTHROPIC_API_KEY) {
         console.log("[docs] Calling Claude in parallel...");
 
-        let claudePromptContent: string;
-        if (isImage) {
-          claudePromptContent = `${prompt}\n\n[Imagen adjunta del documento ${file.name}]`;
-        } else if (isPdf && documentText.length > 20) {
-          claudePromptContent = `${prompt}\n\n--- TEXTO DEL DOCUMENTO (${file.name}) ---\n\n${documentText.substring(0, 15000)}`;
+        // Claude siempre recibe el texto extraído del documento
+        let claudeContent = prompt;
+        if (documentText.length > 20) {
+          claudeContent = `${prompt}\n\n--- TEXTO DEL DOCUMENTO (${file.name}) ---\n\n${documentText.substring(0, 15000)}`;
+        } else if (analysisText) {
+          // Si no hay texto extraído, pasar el texto completo que GPT extrajo
+          claudeContent = `${prompt}\n\n--- TEXTO EXTRAÍDO POR OCR DEL DOCUMENTO (${file.name}) ---\n\n${analysisText.substring(0, 15000)}`;
         } else {
-          claudePromptContent = `${prompt}\n\n[Archivo: ${file.name}]`;
+          claudeContent = `${prompt}\n\n[Archivo: ${file.name} - No se pudo extraer texto]`;
         }
 
         const claudeResult = await generateText({
           model: anthropic("claude-sonnet-4-5"),
           maxOutputTokens: 16000,
           messages: [
-            { role: "user" as const, content: claudePromptContent },
+            { role: "user" as const, content: claudeContent },
           ],
         });
         claudeAnalysisText = claudeResult.text;
