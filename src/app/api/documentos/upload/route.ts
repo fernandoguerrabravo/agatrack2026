@@ -150,7 +150,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         const tmpPng = join(tmpDir, `upload_${Date.now()}`);
 
         writeFileSync(tmpPdf, buffer);
-        execSync(`pdftoppm -png -r 150 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
+        execSync(`pdftoppm -png -r 300 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
 
         const dirFiles = require("fs").readdirSync(tmpDir) as string[];
         const baseName = tmpPng.split("/").pop()!;
@@ -214,7 +214,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         writeFileSync(tmpPdf, buffer);
 
         // Convertir TODAS las páginas a PNG
-        execSync(`pdftoppm -png -r 150 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
+        execSync(`pdftoppm -png -r 300 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
 
         // Buscar todos los archivos PNG generados
         const dirFiles = require("fs").readdirSync(tmpDir) as string[];
