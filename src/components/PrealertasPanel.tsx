@@ -369,25 +369,65 @@ export default function PrealertasPanel() {
                                               <table className="w-full border-collapse border border-gray-200">
                                                 <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200">#</th><th className="p-1 text-left border border-gray-200">🟢 GPT</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 text-left border border-gray-200">🚢 ShipsGo</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
                                                 <tbody>
-                                                  {Array.from({ length: Math.max(gptContainers.length, claudeContainers.length, shipsgoContainers.length) }).map((_, i) => {
-                                                    const gptNr = (gptContainers[i] as Record<string, unknown>)?.numero_contenedor || "—";
-                                                    const claudeNr = (claudeContainers[i] as Record<string, unknown>)?.numero_contenedor || "—";
-                                                    const sgNr = shipsgoContainers[i]?.number || "—";
-                                                    const allMatch = gptNr === claudeNr && claudeNr === sgNr && sgNr !== "—";
-                                                    const sgMatch = sgNr !== "—" && (gptNr === sgNr || claudeNr === sgNr);
-                                                    return (
-                                                      <tr key={i} className={allMatch ? "bg-green-50" : sgMatch ? "bg-blue-50" : "bg-red-50"}>
-                                                        <td className="p-1 border border-gray-200">{i + 1}</td>
-                                                        <td className="p-1 border border-gray-200 font-mono">{String(gptNr)}</td>
-                                                        <td className="p-1 border border-gray-200 font-mono">{String(claudeNr)}</td>
-                                                        <td className="p-1 border border-gray-200 font-mono font-bold">{String(sgNr)}</td>
-                                                        <td className="p-1 text-center border border-gray-200">{allMatch ? "✅" : sgNr !== "—" ? "🚢" : "❌"}</td>
-                                                      </tr>
-                                                    );
-                                                  })}
+                                                  {(() => {
+                                                    // Match por similitud: para cada contenedor de ShipsGo, buscar el más similar en GPT y Claude
+                                                    const sgList = shipsgoContainers.map(c => String(c.number || ""));
+                                                    const gptList = (gptContainers as Array<Record<string, unknown>>).map(c => String(c.numero_contenedor || ""));
+                                                    const claudeList = (claudeContainers as Array<Record<string, unknown>>).map(c => String(c.numero_contenedor || ""));
+                                                    const maxLen = Math.max(sgList.length, gptList.length, claudeList.length);
+
+                                                    // Función de similitud (caracteres en común)
+                                                    const similarity = (a: string, b: string) => {
+                                                      if (!a || !b) return 0;
+                                                      let match = 0;
+                                                      for (let i = 0; i < Math.min(a.length, b.length); i++) { if (a[i] === b[i]) match++; }
+                                                      return match / Math.max(a.length, b.length);
+                                                    };
+
+                                                    // Usar ShipsGo como base si tiene datos, sino usar el más largo
+                                                    const baseList = sgList.length > 0 ? sgList : (claudeList.length >= gptList.length ? claudeList : gptList);
+
+                                                    return Array.from({ length: maxLen }).map((_, i) => {
+                                                      const baseNr = baseList[i] || "—";
+                                                      // Buscar mejor match en GPT
+                                                      let bestGpt = gptList[i] || "—";
+                                                      if (baseNr !== "—" && bestGpt !== baseNr) {
+                                                        const found = gptList.find(g => similarity(g, baseNr) > 0.7);
+                                                        if (found) bestGpt = found;
+                                                      }
+                                                      // Buscar mejor match en Claude
+                                                      let bestClaude = claudeList[i] || "—";
+                                                      if (baseNr !== "—" && bestClaude !== baseNr) {
+                                                        const found = claudeList.find(c => similarity(c, baseNr) > 0.7);
+                                                        if (found) bestClaude = found;
+                                                      }
+                                                      // Buscar mejor match en ShipsGo
+                                                      const sgNr = sgList.length > 0 ? (sgList[i] || "—") : "—";
+
+                                                      const allMatch = bestGpt === bestClaude && bestClaude === sgNr && sgNr !== "—";
+                                                      const sgExists = sgNr !== "—";
+                                                      const claudeMatchSg = bestClaude === sgNr;
+                                                      const gptMatchSg = bestGpt === sgNr;
+
+                                                      return (
+                                                        <tr key={i} className={allMatch ? "bg-green-50" : sgExists ? (claudeMatchSg || gptMatchSg ? "bg-blue-50" : "bg-yellow-50") : "bg-gray-50"}>
+                                                          <td className="p-1 border border-gray-200">{i + 1}</td>
+                                                          <td className={`p-1 border border-gray-200 font-mono ${gptMatchSg ? "text-green-700" : sgExists ? "text-red-500" : ""}`}>{bestGpt}</td>
+                                                          <td className={`p-1 border border-gray-200 font-mono ${claudeMatchSg ? "text-green-700" : sgExists ? "text-red-500" : ""}`}>{bestClaude}</td>
+                                                          <td className="p-1 border border-gray-200 font-mono font-bold text-blue-700">{sgNr}</td>
+                                                          <td className="p-1 text-center border border-gray-200">{allMatch ? "✅" : sgExists ? "🚢" : (bestGpt === bestClaude ? "🤝" : "⚠️")}</td>
+                                                        </tr>
+                                                      );
+                                                    });
+                                                  })()}
                                                 </tbody>
                                               </table>
-                                              <div className="mt-1 text-[9px] text-gray-500">🚢 = ShipsGo es fuente de verdad</div>
+                                              <div className="mt-1 flex gap-2 text-[9px] text-gray-500">
+                                                <span>✅ = todos coinciden</span>
+                                                <span>🚢 = ShipsGo es verdad</span>
+                                                <span>🤝 = GPT y Claude coinciden</span>
+                                                <span>⚠️ = todos difieren</span>
+                                              </div>
                                             </div>
                                           )}
                                         </div>
