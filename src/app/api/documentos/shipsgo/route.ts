@@ -40,6 +40,15 @@ export async function POST(req: NextRequest) {
     if (createRes.status === 200 || createRes.status === 409) {
       shipsgoId = createJson.shipment?.id;
       await pgQuery("UPDATE documentos SET shipsgo_id = $1 WHERE id = $2", [shipsgoId, docId]);
+
+      // Guardar el MBL final enviado a ShipsGo en todos los JSONs
+      const datosUpdate = typeof docs[0].datos_extraidos === "string" ? JSON.parse(docs[0].datos_extraidos) : docs[0].datos_extraidos;
+      datosUpdate.mbl_shipsgo = blNumber;
+      await pgQuery("UPDATE documentos SET datos_extraidos = $1 WHERE id = $2", [JSON.stringify(datosUpdate), docId]);
+
+      const claudeUpdate = typeof docs[0].datos_extraidos_claude === "string" ? JSON.parse(docs[0].datos_extraidos_claude || "{}") : (docs[0].datos_extraidos_claude || {});
+      (claudeUpdate as Record<string, unknown>).mbl_shipsgo = blNumber;
+      await pgQuery("UPDATE documentos SET datos_extraidos_claude = $1 WHERE id = $2", [JSON.stringify(claudeUpdate), docId]);
     } else {
       return NextResponse.json({ error: createJson.message || "Error ShipsGo." }, { status: 400 });
     }
