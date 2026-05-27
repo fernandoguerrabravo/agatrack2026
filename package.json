@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.79",
     "@ai-sdk/openai": "^3.0.63",
     "@ai-sdk/react": "^3.0.179",
     "@aws-sdk/client-s3": "^3.1045.0",

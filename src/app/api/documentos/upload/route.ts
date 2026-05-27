@@ -3,7 +3,6 @@ import { getSession } from "@/lib/session";
 import { pgQuery } from "@/lib/postgres";
 import { uploadToSpaces } from "@/lib/spaces";
 import { openai } from "@ai-sdk/openai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateText, embed } from "ai";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require("pdf-parse");
@@ -150,7 +149,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         const tmpPng = join(tmpDir, `upload_${Date.now()}`);
 
         writeFileSync(tmpPdf, buffer);
-        execSync(`pdftoppm -png -r 500 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
+        execSync(`pdftoppm -png -r 600 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
 
         const dirFiles = require("fs").readdirSync(tmpDir) as string[];
         const baseName = tmpPng.split("/").pop()!;
@@ -214,7 +213,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         writeFileSync(tmpPdf, buffer);
 
         // Convertir TODAS las páginas a PNG
-        execSync(`pdftoppm -png -r 500 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
+        execSync(`pdftoppm -png -r 600 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
 
         // Buscar todos los archivos PNG generados
         const dirFiles = require("fs").readdirSync(tmpDir) as string[];
@@ -281,148 +280,6 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     console.log("[docs] GPT response length:", analysisText.length, "first 200:", analysisText.substring(0, 200));
 
     // Llamada paralela a Claude para comparación
-    let claudeAnalysisText = "";
-    // Guardar imágenes PNG para Claude vision
-    let pngBase64Images: string[] = [];
-    try {
-      if (process.env.ANTHROPIC_API_KEY) {
-        console.log("[docs] Calling Claude in parallel with vision...");
-
-        // Si es imagen directa
-        if (isImage) {
-          const claudeResult = await generateText({
-            model: anthropic("claude-sonnet-4-5"),
-            maxOutputTokens: 16000,
-            messages: [
-              { role: "user" as const, content: [
-                { type: "text" as const, text: prompt },
-                { type: "image" as const, image: `data:${mimeType};base64,${base64}` },
-              ]},
-            ],
-          });
-          claudeAnalysisText = claudeResult.text;
-        } else if (isPdf) {
-          // Para PDFs: convertir a PNG y enviar imágenes a Claude
-          try {
-            const { execSync } = await import("child_process");
-            const { writeFileSync, readFileSync, unlinkSync, readdirSync } = await import("fs");
-            const { join } = await import("path");
-            const os = await import("os");
-
-            const tmpDir = os.tmpdir();
-            const claudeId = `claude_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-            const tmpPdf = join(tmpDir, `${claudeId}.pdf`);
-            const tmpPng = join(tmpDir, claudeId);
-
-            writeFileSync(tmpPdf, buffer);
-            execSync(`pdftoppm -png -r 350 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
-
-            const dirFiles = readdirSync(tmpDir) as string[];
-            const pngFiles = dirFiles
-              .filter((f: string) => f.startsWith(claudeId) && f.endsWith(".png"))
-              .sort()
-              .map((f: string) => join(tmpDir, f));
-
-            if (pngFiles.length > 0) {
-              const imageContents = pngFiles.slice(0, 10).map((pf: string) => {
-                const pngBuf = readFileSync(pf);
-                return { type: "image" as const, image: `data:image/png;base64,${pngBuf.toString("base64")}` };
-              });
-
-              console.log("[docs] Sending", imageContents.length, "page(s) to Claude vision");
-              const claudeResult = await generateText({
-                model: anthropic("claude-sonnet-4-5"),
-                maxOutputTokens: 16000,
-                messages: [
-                  { role: "user" as const, content: [
-                    { type: "text" as const, text: prompt },
-                    ...imageContents,
-                  ]},
-                ],
-              });
-              claudeAnalysisText = claudeResult.text;
-
-              // Cleanup
-              unlinkSync(tmpPdf);
-              pngFiles.forEach((f: string) => { try { unlinkSync(f); } catch {} });
-            } else {
-              unlinkSync(tmpPdf);
-              // Fallback a texto
-              const claudeContent = documentText.length > 20
-                ? `${prompt}\n\n--- TEXTO DEL DOCUMENTO ---\n\n${documentText.substring(0, 15000)}`
-                : `${prompt}\n\n[Archivo: ${file.name}]`;
-              const claudeResult = await generateText({
-                model: anthropic("claude-sonnet-4-5"),
-                maxOutputTokens: 16000,
-                messages: [{ role: "user" as const, content: claudeContent }],
-              });
-              claudeAnalysisText = claudeResult.text;
-            }
-          } catch (convErr) {
-            console.error("[docs] Claude PNG conversion error:", convErr instanceof Error ? convErr.message : convErr);
-            // Fallback a texto
-            const claudeContent = documentText.length > 20
-              ? `${prompt}\n\n--- TEXTO DEL DOCUMENTO ---\n\n${documentText.substring(0, 15000)}`
-              : `${prompt}\n\n[Archivo: ${file.name}]`;
-            const claudeResult = await generateText({
-              model: anthropic("claude-sonnet-4-5"),
-              maxOutputTokens: 16000,
-              messages: [{ role: "user" as const, content: claudeContent }],
-            });
-            claudeAnalysisText = claudeResult.text;
-          }
-        }
-
-        console.log("[docs] Claude response length:", claudeAnalysisText.length);
-      }
-    } catch (claudeErr) {
-      console.error("[docs] Claude error:", claudeErr instanceof Error ? claudeErr.message : JSON.stringify(claudeErr));
-    }
-
-    // Parsear respuesta Claude
-    let claudeAnalysis = {};
-    if (claudeAnalysisText) {
-      try {
-        let cleanedClaude = claudeAnalysisText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-        const jsonStartC = cleanedClaude.indexOf("{");
-        const jsonEndC = cleanedClaude.lastIndexOf("}");
-        if (jsonStartC >= 0 && jsonEndC > jsonStartC) {
-          cleanedClaude = cleanedClaude.substring(jsonStartC, jsonEndC + 1);
-        }
-        const parsed = JSON.parse(cleanedClaude);
-        claudeAnalysis = parsed.datos_extraidos || parsed;
-      } catch (e) {
-        // Intentar reparar JSON cortado de Claude
-        try {
-          let cleanedClaude = claudeAnalysisText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          const jsonStartC = cleanedClaude.indexOf("{");
-          if (jsonStartC >= 0) {
-            cleanedClaude = cleanedClaude.substring(jsonStartC);
-            let openBraces = 0, openBrackets = 0, inString = false;
-            for (let i = 0; i < cleanedClaude.length; i++) {
-              const c = cleanedClaude[i];
-              if (c === '"' && cleanedClaude[i-1] !== '\\') inString = !inString;
-              if (!inString) {
-                if (c === '{') openBraces++;
-                if (c === '}') openBraces--;
-                if (c === '[') openBrackets++;
-                if (c === ']') openBrackets--;
-              }
-            }
-            if (inString) cleanedClaude += '"';
-            for (let i = 0; i < openBrackets; i++) cleanedClaude += "]";
-            for (let i = 0; i < openBraces; i++) cleanedClaude += "}";
-            const parsed = JSON.parse(cleanedClaude);
-            claudeAnalysis = parsed.datos_extraidos || parsed;
-            console.log("[docs] Claude JSON repaired successfully");
-          }
-        } catch {
-          console.error("[docs] Claude JSON parse error:", e instanceof Error ? e.message : e);
-        }
-      }
-    }
-
-    // Parsear respuesta
     // Parsear respuesta GPT
     let analysis;
     try {
@@ -503,16 +360,15 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     const embeddingStr = `[${embedding.join(",")}]`;
 
     const rows = await pgQuery(
-      `INSERT INTO documentos (rut_cliente, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, texto_completo, embedding, storage_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::vector, $9)
-       RETURNING id, tipo_documento, datos_extraidos, datos_extraidos_claude, storage_url, created_at`,
+      `INSERT INTO documentos (rut_cliente, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, texto_completo, embedding, storage_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::vector, $8)
+       RETURNING id, tipo_documento, datos_extraidos, storage_url, created_at`,
       [
         session.rut,
         nroOperacion,
         file.name,
         analysis.tipo_documento,
         JSON.stringify(analysis.datos_extraidos),
-        JSON.stringify(claudeAnalysis),
         analysis.texto_completo ?? "",
         embeddingStr,
         storageUrl,
