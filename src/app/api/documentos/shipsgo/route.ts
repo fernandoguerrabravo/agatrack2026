@@ -109,6 +109,34 @@ export async function POST(req: NextRequest) {
         await pgQuery("UPDATE documentos SET datos_extraidos_claude = $1 WHERE id = $2", [JSON.stringify(datosClaude), docId]);
       }
     }
+
+    // Corregir puerto de transbordo con ShipsGo
+    const sgShipment = shipsgoData as Record<string, unknown>;
+    const sgRoute = sgShipment.route as Record<string, unknown> | undefined;
+    if (sgRoute && Number(sgRoute.ts_count) > 0) {
+      const firstContainer = sgContainers[0] as unknown as Record<string, unknown>;
+      const movements = ((firstContainer as Record<string, unknown>)?.movements || []) as Array<Record<string, unknown>>;
+      const tsMovement = movements.find(m => m.event === "DSCH" || m.event === "LOAD");
+      const tsLoc = tsMovement?.location as Record<string, unknown> | undefined;
+      const sgTransbordoPort = tsLoc?.name ? String(tsLoc.name) : "";
+
+      if (sgTransbordoPort) {
+        // Corregir en GPT
+        if (datos.puerto_transbordo && String(datos.puerto_transbordo).toUpperCase() !== sgTransbordoPort.toUpperCase()) {
+          datos.puerto_transbordo_original = datos.puerto_transbordo;
+          datos.puerto_transbordo = sgTransbordoPort;
+          datos._transbordo_corregido_shipsgo = true;
+          await pgQuery("UPDATE documentos SET datos_extraidos = $1 WHERE id = $2", [JSON.stringify(datos), docId]);
+        }
+        // Corregir en Claude
+        if ((datosClaude as Record<string, unknown>).puerto_transbordo && String((datosClaude as Record<string, unknown>).puerto_transbordo).toUpperCase() !== sgTransbordoPort.toUpperCase()) {
+          (datosClaude as Record<string, unknown>).puerto_transbordo_original = (datosClaude as Record<string, unknown>).puerto_transbordo;
+          (datosClaude as Record<string, unknown>).puerto_transbordo = sgTransbordoPort;
+          (datosClaude as Record<string, unknown>)._transbordo_corregido_shipsgo = true;
+          await pgQuery("UPDATE documentos SET datos_extraidos_claude = $1 WHERE id = $2", [JSON.stringify(datosClaude), docId]);
+        }
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, shipsgo: shipsgoData });

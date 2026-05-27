@@ -305,6 +305,21 @@ export default function PrealertasPanel() {
                                   const gptFleteTotal = datos.flete_total_prepaid || datos.flete_total || null;
                                   const claudeFleteTotal = datosClaude.flete_total_prepaid || datosClaude.flete_total || null;
 
+                                  // Puertos de transbordo
+                                  const gptTransbordo = datos.puerto_transbordo || "";
+                                  const claudeTransbordo = datosClaude.puerto_transbordo || "";
+                                  const sgRoute = sgRaw.route as Record<string, unknown> | undefined;
+                                  const sgTransbordo = sgRoute?.ts_count && Number(sgRoute.ts_count) > 0
+                                    ? ((() => {
+                                        // Buscar puerto de transbordo en movimientos del primer contenedor
+                                        const firstContainer = (sgRaw.containers || [])[0] as Record<string, unknown> | undefined;
+                                        const movements = (firstContainer?.movements || []) as Array<Record<string, unknown>>;
+                                        const tsMovement = movements.find(m => m.event === "DSCH" || m.event === "LOAD");
+                                        const loc = tsMovement?.location as Record<string, unknown> | undefined;
+                                        return loc?.name || "";
+                                      })())
+                                    : "";
+
                                   return Object.keys(datos).length > 0 || Object.keys(datosClaude).length > 0 ? (
                                   <div>
                                     {/* Comparador rápido: Contenedores + Flete */}
@@ -393,6 +408,28 @@ export default function PrealertasPanel() {
                                               </table>
                                             )}
                                           </div>
+                                          {/* Puerto de Transbordo */}
+                                          {(gptTransbordo || claudeTransbordo || sgTransbordo) && (
+                                            <div>
+                                              <div className="font-bold text-[11px] mb-1 text-warning">⚓ PUERTO DE TRANSBORDO</div>
+                                              <table className="w-full border-collapse border border-gray-200">
+                                                <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200">🟢 GPT</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 text-left border border-gray-200">🚢 ShipsGo</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
+                                                <tbody>
+                                                  <tr className={
+                                                    sgTransbordo && (String(gptTransbordo).toUpperCase() === String(sgTransbordo).toUpperCase() || String(claudeTransbordo).toUpperCase() === String(sgTransbordo).toUpperCase())
+                                                      ? "bg-green-50" : sgTransbordo ? "bg-yellow-50" : gptTransbordo === claudeTransbordo ? "bg-green-50" : "bg-yellow-50"
+                                                  }>
+                                                    <td className={`p-1 border border-gray-200 ${sgTransbordo && String(gptTransbordo).toUpperCase() === String(sgTransbordo).toUpperCase() ? "text-green-700" : sgTransbordo ? "text-red-500" : ""}`}>{String(gptTransbordo || "—")}</td>
+                                                    <td className={`p-1 border border-gray-200 ${sgTransbordo && String(claudeTransbordo).toUpperCase() === String(sgTransbordo).toUpperCase() ? "text-green-700" : sgTransbordo ? "text-red-500" : ""}`}>{String(claudeTransbordo || "—")}</td>
+                                                    <td className="p-1 border border-gray-200 font-bold text-blue-700">{String(sgTransbordo || "—")}</td>
+                                                    <td className="p-1 text-center border border-gray-200">{
+                                                      sgTransbordo ? "🚢" : (gptTransbordo === claudeTransbordo && gptTransbordo ? "🤝" : "⚠️")
+                                                    }</td>
+                                                  </tr>
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          )}
                                           {/* Contenedores */}
                                           {(Array.isArray(gptContainers) && gptContainers.length > 0) && (
                                             <div>
