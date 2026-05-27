@@ -292,8 +292,74 @@ export default function PrealertasPanel() {
                                 {(() => {
                                   const datos = typeof doc.datos_extraidos === "string" ? JSON.parse(doc.datos_extraidos || "{}") : (doc.datos_extraidos || {});
                                   const datosClaude = typeof doc.datos_extraidos_claude === "string" ? JSON.parse(doc.datos_extraidos_claude || "{}") : (doc.datos_extraidos_claude || {});
+                                  const hasBoth = Object.keys(datos).length > 0 && Object.keys(datosClaude).length > 0;
+
+                                  // Extraer contenedores y flete para comparación
+                                  const gptContainers = datos.contenedores || [];
+                                  const claudeContainers = datosClaude.contenedores || [];
+                                  const gptFlete = datos.flete_detalle || datos.flete || null;
+                                  const claudeFlete = datosClaude.flete_detalle || datosClaude.flete || null;
+                                  const gptFleteTotal = datos.flete_total_prepaid || datos.flete_total || null;
+                                  const claudeFleteTotal = datosClaude.flete_total_prepaid || datosClaude.flete_total || null;
+
                                   return Object.keys(datos).length > 0 || Object.keys(datosClaude).length > 0 ? (
                                   <div>
+                                    {/* Comparador rápido: Contenedores + Flete */}
+                                    {hasBoth && (Array.isArray(gptContainers) || gptFlete || claudeFlete) && (
+                                      <details className="text-xs mb-1">
+                                        <summary className="cursor-pointer text-warning font-semibold">
+                                          ⚡ Comparar Contenedores & Flete
+                                        </summary>
+                                        <div className="mt-1 p-2 bg-base-100 rounded text-[10px] overflow-auto max-h-60 space-y-3">
+                                          {/* Flete */}
+                                          <div>
+                                            <div className="font-bold text-[11px] mb-1 text-warning">💰 FLETE</div>
+                                            <table className="w-full border-collapse border border-gray-200">
+                                              <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200">Campo</th><th className="p-1 text-left border border-gray-200">🟢 GPT-4o</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
+                                              <tbody>
+                                                <tr className={gptFleteTotal === claudeFleteTotal ? "bg-green-50" : "bg-yellow-50"}>
+                                                  <td className="p-1 font-semibold border border-gray-200">Total Prepaid</td>
+                                                  <td className="p-1 border border-gray-200">{JSON.stringify(gptFleteTotal ?? "—")}</td>
+                                                  <td className="p-1 border border-gray-200">{JSON.stringify(claudeFleteTotal ?? "—")}</td>
+                                                  <td className="p-1 text-center border border-gray-200">{gptFleteTotal === claudeFleteTotal ? "✅" : "❌"}</td>
+                                                </tr>
+                                                <tr>
+                                                  <td className="p-1 font-semibold border border-gray-200">Detalle</td>
+                                                  <td className="p-1 border border-gray-200 break-all">{JSON.stringify(gptFlete ?? "—").substring(0, 100)}</td>
+                                                  <td className="p-1 border border-gray-200 break-all">{JSON.stringify(claudeFlete ?? "—").substring(0, 100)}</td>
+                                                  <td className="p-1 text-center border border-gray-200">{JSON.stringify(gptFlete) === JSON.stringify(claudeFlete) ? "✅" : "⚠️"}</td>
+                                                </tr>
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                          {/* Contenedores */}
+                                          {(Array.isArray(gptContainers) && gptContainers.length > 0) && (
+                                            <div>
+                                              <div className="font-bold text-[11px] mb-1 text-warning">📦 CONTENEDORES ({Math.max(gptContainers.length, claudeContainers.length)})</div>
+                                              <table className="w-full border-collapse border border-gray-200">
+                                                <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200">#</th><th className="p-1 text-left border border-gray-200">🟢 GPT-4o</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
+                                                <tbody>
+                                                  {Array.from({ length: Math.max(gptContainers.length, claudeContainers.length) }).map((_, i) => {
+                                                    const gptNr = gptContainers[i]?.numero_contenedor || "—";
+                                                    const claudeNr = claudeContainers[i]?.numero_contenedor || "—";
+                                                    const match = gptNr === claudeNr;
+                                                    return (
+                                                      <tr key={i} className={match ? "bg-green-50" : "bg-red-50"}>
+                                                        <td className="p-1 border border-gray-200">{i + 1}</td>
+                                                        <td className="p-1 border border-gray-200 font-mono">{gptNr}</td>
+                                                        <td className="p-1 border border-gray-200 font-mono">{claudeNr}</td>
+                                                        <td className="p-1 text-center border border-gray-200">{match ? "✅" : "❌"}</td>
+                                                      </tr>
+                                                    );
+                                                  })}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </details>
+                                    )}
+
                                     <details className="text-xs mb-1">
                                       <summary className="cursor-pointer text-primary font-semibold">
                                         🟢 GPT-4o ({Object.keys(datos).length} campos)
