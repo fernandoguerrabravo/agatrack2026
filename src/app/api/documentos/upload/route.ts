@@ -310,16 +310,16 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             const os = await import("os");
 
             const tmpDir = os.tmpdir();
-            const tmpPdf = join(tmpDir, `claude_${Date.now()}.pdf`);
-            const tmpPng = join(tmpDir, `claude_${Date.now()}`);
+            const claudeId = `claude_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const tmpPdf = join(tmpDir, `${claudeId}.pdf`);
+            const tmpPng = join(tmpDir, claudeId);
 
             writeFileSync(tmpPdf, buffer);
             execSync(`pdftoppm -png -r 400 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
 
             const dirFiles = readdirSync(tmpDir) as string[];
-            const baseName = tmpPng.split("/").pop()!;
             const pngFiles = dirFiles
-              .filter((f: string) => f.startsWith(baseName) && f.endsWith(".png"))
+              .filter((f: string) => f.startsWith(claudeId) && f.endsWith(".png"))
               .sort()
               .map((f: string) => join(tmpDir, f));
 
