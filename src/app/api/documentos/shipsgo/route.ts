@@ -114,23 +114,35 @@ export async function POST(req: NextRequest) {
     const sgShipment = shipsgoData as Record<string, unknown>;
     const sgRoute = sgShipment.route as Record<string, unknown> | undefined;
     if (sgRoute && Number(sgRoute.ts_count) > 0) {
+      // El puerto de transbordo es el puerto intermedio (no POL ni POD) en los movimientos
+      const polName = String(((sgRoute.port_of_loading as Record<string, unknown>)?.location as Record<string, unknown>)?.name || "").toUpperCase();
+      const podName = String(((sgRoute.port_of_discharge as Record<string, unknown>)?.location as Record<string, unknown>)?.name || "").toUpperCase();
+      
       const firstContainer = sgContainers[0] as unknown as Record<string, unknown>;
       const movements = ((firstContainer as Record<string, unknown>)?.movements || []) as Array<Record<string, unknown>>;
-      const tsMovement = movements.find(m => m.event === "DSCH" || m.event === "LOAD");
-      const tsLoc = tsMovement?.location as Record<string, unknown> | undefined;
-      const sgTransbordoPort = tsLoc?.name ? String(tsLoc.name) : "";
+      
+      // Buscar puertos intermedios (que no sean POL ni POD)
+      let sgTransbordoPort = "";
+      for (const m of movements) {
+        const loc = m.location as Record<string, unknown> | undefined;
+        const portName = String(loc?.name || "").toUpperCase();
+        if (portName && portName !== polName && portName !== podName) {
+          sgTransbordoPort = String(loc?.name || "");
+          break;
+        }
+      }
 
       if (sgTransbordoPort) {
-        // Corregir en GPT
-        if (datos.puerto_transbordo && String(datos.puerto_transbordo).toUpperCase() !== sgTransbordoPort.toUpperCase()) {
-          datos.puerto_transbordo_original = datos.puerto_transbordo;
+        // Escribir en GPT si no tiene o difiere
+        if (!datos.puerto_transbordo || String(datos.puerto_transbordo).toUpperCase() !== sgTransbordoPort.toUpperCase()) {
+          if (datos.puerto_transbordo) datos.puerto_transbordo_original = datos.puerto_transbordo;
           datos.puerto_transbordo = sgTransbordoPort;
           datos._transbordo_corregido_shipsgo = true;
           await pgQuery("UPDATE documentos SET datos_extraidos = $1 WHERE id = $2", [JSON.stringify(datos), docId]);
         }
-        // Corregir en Claude
-        if ((datosClaude as Record<string, unknown>).puerto_transbordo && String((datosClaude as Record<string, unknown>).puerto_transbordo).toUpperCase() !== sgTransbordoPort.toUpperCase()) {
-          (datosClaude as Record<string, unknown>).puerto_transbordo_original = (datosClaude as Record<string, unknown>).puerto_transbordo;
+        // Escribir en Claude si no tiene o difiere
+        if (!(datosClaude as Record<string, unknown>).puerto_transbordo || String((datosClaude as Record<string, unknown>).puerto_transbordo).toUpperCase() !== sgTransbordoPort.toUpperCase()) {
+          if ((datosClaude as Record<string, unknown>).puerto_transbordo) (datosClaude as Record<string, unknown>).puerto_transbordo_original = (datosClaude as Record<string, unknown>).puerto_transbordo;
           (datosClaude as Record<string, unknown>).puerto_transbordo = sgTransbordoPort;
           (datosClaude as Record<string, unknown>)._transbordo_corregido_shipsgo = true;
           await pgQuery("UPDATE documentos SET datos_extraidos_claude = $1 WHERE id = $2", [JSON.stringify(datosClaude), docId]);
