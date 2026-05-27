@@ -114,21 +114,20 @@ export async function POST(req: NextRequest) {
     const sgShipment = shipsgoData as Record<string, unknown>;
     const sgRoute = sgShipment.route as Record<string, unknown> | undefined;
     if (sgRoute && Number(sgRoute.ts_count) > 0) {
-      // El puerto de transbordo es el puerto intermedio (no POL ni POD) en los movimientos
+      // El puerto de transbordo es el ÚLTIMO puerto intermedio (no POL ni POD) antes del POD
       const polName = String(((sgRoute.port_of_loading as Record<string, unknown>)?.location as Record<string, unknown>)?.name || "").toUpperCase();
       const podName = String(((sgRoute.port_of_discharge as Record<string, unknown>)?.location as Record<string, unknown>)?.name || "").toUpperCase();
       
       const firstContainer = sgContainers[0] as unknown as Record<string, unknown>;
       const movements = ((firstContainer as Record<string, unknown>)?.movements || []) as Array<Record<string, unknown>>;
       
-      // Buscar puertos intermedios (que no sean POL ni POD)
+      // Buscar el ÚLTIMO puerto intermedio (que no sea POL ni POD)
       let sgTransbordoPort = "";
       for (const m of movements) {
         const loc = m.location as Record<string, unknown> | undefined;
         const portName = String(loc?.name || "").toUpperCase();
         if (portName && portName !== polName && portName !== podName) {
           sgTransbordoPort = String(loc?.name || "");
-          break;
         }
       }
 

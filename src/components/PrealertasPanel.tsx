@@ -309,16 +309,23 @@ export default function PrealertasPanel() {
                                   const gptTransbordo = datos.puerto_transbordo || "";
                                   const claudeTransbordo = datosClaude.puerto_transbordo || "";
                                   const sgRoute = sgRaw.route as Record<string, unknown> | undefined;
-                                  const sgTransbordo = sgRoute?.ts_count && Number(sgRoute.ts_count) > 0
-                                    ? ((() => {
-                                        // Buscar puerto de transbordo en movimientos del primer contenedor
-                                        const firstContainer = (sgRaw.containers || [])[0] as Record<string, unknown> | undefined;
-                                        const movements = (firstContainer?.movements || []) as Array<Record<string, unknown>>;
-                                        const tsMovement = movements.find(m => m.event === "DSCH" || m.event === "LOAD");
-                                        const loc = tsMovement?.location as Record<string, unknown> | undefined;
-                                        return loc?.name || "";
-                                      })())
-                                    : "";
+                                  const sgTransbordo = (() => {
+                                    if (!sgRoute || !Number(sgRoute.ts_count)) return "";
+                                    const polName = String(((sgRoute.port_of_loading as Record<string, unknown>)?.location as Record<string, unknown>)?.name || "").toUpperCase();
+                                    const podName = String(((sgRoute.port_of_discharge as Record<string, unknown>)?.location as Record<string, unknown>)?.name || "").toUpperCase();
+                                    // Buscar el último puerto antes del POD en los movimientos del primer contenedor
+                                    const firstContainer = (sgRaw.containers || [])[0] as Record<string, unknown> | undefined;
+                                    const movements = (firstContainer?.movements || []) as Array<Record<string, unknown>>;
+                                    let lastIntermediatePort = "";
+                                    for (const m of movements) {
+                                      const loc = m.location as Record<string, unknown> | undefined;
+                                      const portName = String(loc?.name || "").toUpperCase();
+                                      if (portName && portName !== polName && portName !== podName) {
+                                        lastIntermediatePort = String(loc?.name || "");
+                                      }
+                                    }
+                                    return lastIntermediatePort;
+                                  })();
 
                                   return Object.keys(datos).length > 0 || Object.keys(datosClaude).length > 0 ? (
                                   <div>
