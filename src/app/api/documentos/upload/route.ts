@@ -418,11 +418,19 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       analysis.texto_completo = documentText;
     }
 
-    // Post-procesamiento: corregir BL (nunca minúsculas, l→1, o→0)
+    // Post-procesamiento: corregir BL (nunca minúsculas, l→1, I→1 en parte numérica)
     const fixBL = (bl: unknown): string => {
       if (!bl || typeof bl !== "string") return String(bl || "");
       let fixed = bl.replace(/l/g, "1");
       fixed = fixed.toUpperCase();
+      // En BLs: después del prefijo de letras, corregir letras que son dígitos
+      const match = fixed.match(/^([A-Z]+)(.+)$/);
+      if (match) {
+        const prefix = match[1];
+        let numPart = match[2];
+        numPart = numPart.replace(/I/g, "1").replace(/O/g, "0").replace(/Z/g, "7").replace(/S/g, "5").replace(/L/g, "1");
+        fixed = prefix + numPart;
+      }
       return fixed;
     };
     if (analysis.datos_extraidos) {
