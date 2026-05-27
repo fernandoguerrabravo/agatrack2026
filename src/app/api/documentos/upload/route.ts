@@ -464,6 +464,13 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       ? { ...(claudeAnalysis as Record<string, unknown>) }
       : { ...analysis.datos_extraidos };
     
+    // Para BL: si ambos tienen valor, usar GPT (más preciso en caracteres alfanuméricos)
+    if (analysis.datos_extraidos?.numero_bl_master || analysis.datos_extraidos?.numero_bl) {
+      const gptBL = analysis.datos_extraidos.numero_bl_master || analysis.datos_extraidos.numero_bl;
+      combined.numero_bl_master = gptBL;
+      combined.numero_bl = gptBL;
+    }
+
     if (Object.keys(claudeAnalysis).length > 0 && Object.keys(analysis.datos_extraidos).length > 0) {
       // Marcar contenedores validados/con diferencia
       const claudeContainers = (claudeAnalysis as Record<string, unknown>).contenedores || [];
