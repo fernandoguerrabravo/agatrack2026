@@ -331,6 +331,33 @@ export default function PrealertasPanel() {
                                                 </tr>
                                               </tbody>
                                             </table>
+                                            {/* Detalle línea por línea */}
+                                            {(Array.isArray(gptFlete) || Array.isArray(claudeFlete)) && (
+                                              <table className="w-full border-collapse border border-gray-200 mt-1">
+                                                <thead><tr className="bg-gray-50"><th className="p-1 text-left border border-gray-200">Concepto</th><th className="p-1 text-right border border-gray-200">🟢 GPT</th><th className="p-1 text-right border border-gray-200">🟣 Claude</th></tr></thead>
+                                                <tbody>
+                                                  {(() => {
+                                                    const gptArr = Array.isArray(gptFlete) ? gptFlete : [];
+                                                    const claudeArr = Array.isArray(claudeFlete) ? claudeFlete : [];
+                                                    const maxLen = Math.max(gptArr.length, claudeArr.length);
+                                                    return Array.from({ length: maxLen }).map((_, i) => {
+                                                      const g = gptArr[i] as Record<string, unknown> | undefined;
+                                                      const c = claudeArr[i] as Record<string, unknown> | undefined;
+                                                      const concepto = (g?.concepto || c?.concepto || g?.descripcion || c?.descripcion || `Línea ${i+1}`) as string;
+                                                      const gVal = g?.monto ?? g?.valor ?? g?.amount ?? "—";
+                                                      const cVal = c?.monto ?? c?.valor ?? c?.amount ?? "—";
+                                                      return (
+                                                        <tr key={i} className={String(gVal) === String(cVal) ? "bg-green-50" : "bg-yellow-50"}>
+                                                          <td className="p-1 border border-gray-200">{concepto}</td>
+                                                          <td className="p-1 text-right border border-gray-200 font-mono">{String(gVal)}</td>
+                                                          <td className="p-1 text-right border border-gray-200 font-mono">{String(cVal)}</td>
+                                                        </tr>
+                                                      );
+                                                    });
+                                                  })()}
+                                                </tbody>
+                                              </table>
+                                            )}
                                           </div>
                                           {/* Contenedores */}
                                           {(Array.isArray(gptContainers) && gptContainers.length > 0) && (
