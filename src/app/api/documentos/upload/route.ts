@@ -305,7 +305,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
           const cPdf = join(tmpDir, `${cId}.pdf`);
           const cPng = join(tmpDir, cId);
           writeFileSync(cPdf, buffer);
-          execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r400 -dJPEGQ=95 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${cPng}-%03d.jpg" "${cPdf}"`, { timeout: 60000 });
+          execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r500 -dJPEGQ=95 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${cPng}-%03d.jpg" "${cPdf}"`, { timeout: 60000 });
           const cFiles = (readdirSync(tmpDir) as string[]).filter(f => f.startsWith(cId) && f.endsWith(".jpg")).sort().map(f => join(tmpDir, f));
           if (cFiles.length > 0) {
             const cImages = cFiles.slice(0, 10).map(f => ({ type: "image" as const, image: `data:image/jpeg;base64,${readFileSync(f).toString("base64")}` }));
@@ -434,6 +434,37 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       value: textoParaEmbedding,
     });
 
+    // Combinar resultados: donde coinciden = certeza, donde difieren = marcar revisión
+    const combined = { ...analysis.datos_extraidos };
+    if (Object.keys(claudeAnalysis).length > 0 && Object.keys(analysis.datos_extraidos).length > 0) {
+      // Combinar contenedores
+      const gptContainers = analysis.datos_extraidos.contenedores || [];
+      const claudeContainers = (claudeAnalysis as Record<string, unknown>).contenedores || [];
+      if (Array.isArray(gptContainers) && Array.isArray(claudeContainers)) {
+        const mergedContainers = gptContainers.map((gc: Record<string, unknown>, i: number) => {
+          const cc = claudeContainers[i] as Record<string, unknown> | undefined;
+          if (!cc) return { ...gc, _revision: "solo_gpt" };
+          const gptNr = gc.numero_contenedor;
+          const claudeNr = cc.numero_contenedor;
+          if (gptNr === claudeNr) return { ...gc, _validado: true };
+          return { ...gc, numero_contenedor_gpt: gptNr, numero_contenedor_claude: claudeNr, _revision: "contenedor_difiere" };
+        });
+        combined.contenedores = mergedContainers;
+      }
+      // Combinar flete
+      const gptFlete = analysis.datos_extraidos.flete_total_prepaid;
+      const claudeFlete = (claudeAnalysis as Record<string, unknown>).flete_total_prepaid;
+      if (gptFlete && claudeFlete) {
+        if (gptFlete === claudeFlete) {
+          combined.flete_validado = true;
+        } else {
+          combined.flete_total_prepaid_gpt = gptFlete;
+          combined.flete_total_prepaid_claude = claudeFlete;
+          combined._revision_flete = "flete_difiere";
+        }
+      }
+    }
+
     // Guardar en PostgreSQL
     const embeddingStr = `[${embedding.join(",")}]`;
 
@@ -446,7 +477,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         nroOperacion,
         file.name,
         analysis.tipo_documento,
-        JSON.stringify(analysis.datos_extraidos),
+        JSON.stringify(combined),
         JSON.stringify(claudeAnalysis),
         analysis.texto_completo ?? "",
         embeddingStr,
