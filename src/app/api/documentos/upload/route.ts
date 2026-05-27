@@ -150,19 +150,19 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         const tmpPng = join(tmpDir, `upload_${Date.now()}`);
 
         writeFileSync(tmpPdf, buffer);
-        execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=png16m -r400 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.png" "${tmpPdf}"`, { timeout: 60000 });
+        execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r400 -dJPEGQ=95 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.jpg" "${tmpPdf}"`, { timeout: 60000 });
 
         const dirFiles = require("fs").readdirSync(tmpDir) as string[];
         const baseName = tmpPng.split("/").pop()!;
         const pngFiles = dirFiles
-          .filter((f: string) => f.startsWith(baseName) && f.endsWith(".png"))
+          .filter((f: string) => f.startsWith(baseName) && (f.endsWith(".png") || f.endsWith(".jpg")))
           .sort()
           .map((f: string) => join(tmpDir, f));
 
         if (pngFiles.length > 0) {
           const imageContents = pngFiles.slice(0, 10).map((pf: string) => {
             const pngBuf = readFileSync(pf);
-            return { type: "image" as const, image: `data:image/png;base64,${pngBuf.toString("base64")}` };
+            return { type: "image" as const, image: `data:image/jpeg;base64,${pngBuf.toString("base64")}` };
           });
 
           console.log("[docs] Sending", imageContents.length, "page(s) to GPT-4o vision (text+visual)");
@@ -214,13 +214,13 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         writeFileSync(tmpPdf, buffer);
 
         // Convertir TODAS las páginas a PNG
-        execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=png16m -r400 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.png" "${tmpPdf}"`, { timeout: 60000 });
+        execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r400 -dJPEGQ=95 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.jpg" "${tmpPdf}"`, { timeout: 60000 });
 
         // Buscar todos los archivos PNG generados
         const dirFiles = require("fs").readdirSync(tmpDir) as string[];
         const baseName = tmpPng.split("/").pop()!;
         const pngFiles = dirFiles
-          .filter((f: string) => f.startsWith(baseName) && f.endsWith(".png"))
+          .filter((f: string) => f.startsWith(baseName) && (f.endsWith(".png") || f.endsWith(".jpg")))
           .sort()
           .map((f: string) => join(tmpDir, f));
 
@@ -230,7 +230,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
           // Enviar todas las páginas (máximo 10) a GPT-4o vision
           const imageContents = pngFiles.slice(0, 10).map((pf: string) => {
             const pngBuf = readFileSync(pf);
-            return { type: "image" as const, image: `data:image/png;base64,${pngBuf.toString("base64")}` };
+            return { type: "image" as const, image: `data:image/jpeg;base64,${pngBuf.toString("base64")}` };
           });
 
           console.log("[docs] Sending", imageContents.length, "page(s) to GPT-4o vision");
