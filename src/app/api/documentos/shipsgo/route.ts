@@ -66,8 +66,24 @@ export async function POST(req: NextRequest) {
   const detailJson = await detailRes.json();
   const shipsgoData = detailJson.shipment || {};
 
-  // Guardar en BD
+  // Guardar ShipsGo data + mbl_shipsgo en todos los JSONs
+  const blUsado = shipsgoData.booking_number || blOverride || "";
   await pgQuery("UPDATE documentos SET datos_shipsgo = $1 WHERE id = $2", [JSON.stringify(shipsgoData), docId]);
+
+  // Re-leer datos actuales para agregar mbl_shipsgo
+  const docsUpdated = await pgQuery<{ datos_extraidos: string; datos_extraidos_claude: string }>(
+    "SELECT datos_extraidos, datos_extraidos_claude FROM documentos WHERE id = $1",
+    [docId]
+  );
+  if (docsUpdated[0] && blUsado) {
+    const datosF = typeof docsUpdated[0].datos_extraidos === "string" ? JSON.parse(docsUpdated[0].datos_extraidos || "{}") : docsUpdated[0].datos_extraidos;
+    datosF.mbl_shipsgo = blUsado;
+    await pgQuery("UPDATE documentos SET datos_extraidos = $1 WHERE id = $2", [JSON.stringify(datosF), docId]);
+
+    const claudeF = typeof docsUpdated[0].datos_extraidos_claude === "string" ? JSON.parse(docsUpdated[0].datos_extraidos_claude || "{}") : (docsUpdated[0].datos_extraidos_claude || {});
+    (claudeF as Record<string, unknown>).mbl_shipsgo = blUsado;
+    await pgQuery("UPDATE documentos SET datos_extraidos_claude = $1 WHERE id = $2", [JSON.stringify(claudeF), docId]);
+  }
 
   // Corregir contenedores en GPT y Claude si difieren con ShipsGo
   const sgContainers = (shipsgoData.containers || []) as Array<{ number: string }>;
