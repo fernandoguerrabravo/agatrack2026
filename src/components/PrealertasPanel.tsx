@@ -308,12 +308,17 @@ export default function PrealertasPanel() {
                                   // Puertos de transbordo
                                   const gptTransbordo = datos.puerto_transbordo || "";
                                   const claudeTransbordo = datosClaude.puerto_transbordo || "";
+
+                                  // Naves
+                                  const gptNave = datos.nave_corregida || datos.nave || "";
+                                  const claudeNave = datosClaude.nave_corregida || datosClaude.nave || "";
+                                  const gptViaje = datos.viaje_corregido || datos.viaje || "";
+                                  const claudeViaje = datosClaude.viaje_corregido || datosClaude.viaje || "";
                                   const sgRoute = sgRaw.route as Record<string, unknown> | undefined;
                                   const sgTransbordo = (() => {
                                     if (!sgRoute || !Number(sgRoute.ts_count)) return "";
                                     const polName = String(((sgRoute.port_of_loading as Record<string, unknown>)?.location as Record<string, unknown>)?.name || "").toUpperCase();
                                     const podName = String(((sgRoute.port_of_discharge as Record<string, unknown>)?.location as Record<string, unknown>)?.name || "").toUpperCase();
-                                    // Buscar el último puerto antes del POD en los movimientos del primer contenedor
                                     const firstContainer = (sgRaw.containers || [])[0] as Record<string, unknown> | undefined;
                                     const movements = (firstContainer?.movements || []) as Array<Record<string, unknown>>;
                                     let lastIntermediatePort = "";
@@ -325,6 +330,26 @@ export default function PrealertasPanel() {
                                       }
                                     }
                                     return lastIntermediatePort;
+                                  })();
+
+                                  // Nave de ShipsGo (última nave después del transbordo)
+                                  const sgNave = (() => {
+                                    if (!sgRoute) return "";
+                                    const podName = String(((sgRoute.port_of_discharge as Record<string, unknown>)?.location as Record<string, unknown>)?.name || "").toUpperCase();
+                                    const firstContainer = (sgRaw.containers || [])[0] as Record<string, unknown> | undefined;
+                                    const movements = (firstContainer?.movements || []) as Array<Record<string, unknown>>;
+                                    const polName = String(((sgRoute.port_of_loading as Record<string, unknown>)?.location as Record<string, unknown>)?.name || "").toUpperCase();
+                                    let lastVessel = "";
+                                    let lastVoyage = "";
+                                    for (const m of movements) {
+                                      const loc = m.location as Record<string, unknown> | undefined;
+                                      const portName = String(loc?.name || "").toUpperCase();
+                                      if (portName !== podName && m.vessel) {
+                                        const v = m.vessel as Record<string, unknown>;
+                                        if (v.name) { lastVessel = String(v.name); lastVoyage = String(m.voyage || ""); }
+                                      }
+                                    }
+                                    return lastVessel ? `${lastVessel} / ${lastVoyage}` : "";
                                   })();
 
                                   return Object.keys(datos).length > 0 || Object.keys(datosClaude).length > 0 ? (
@@ -432,6 +457,23 @@ export default function PrealertasPanel() {
                                                     <td className="p-1 text-center border border-gray-200">{
                                                       sgTransbordo ? "🚢" : (gptTransbordo === claudeTransbordo && gptTransbordo ? "🤝" : "⚠️")
                                                     }</td>
+                                                  </tr>
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          )}
+                                          {/* Nave post-transbordo */}
+                                          {(gptNave || claudeNave || sgNave) && (
+                                            <div>
+                                              <div className="font-bold text-[11px] mb-1 text-warning">🚢 NAVE (post-transbordo)</div>
+                                              <table className="w-full border-collapse border border-gray-200">
+                                                <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200">🟢 GPT</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 text-left border border-gray-200">🚢 ShipsGo</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
+                                                <tbody>
+                                                  <tr className={sgNave && (String(`${gptNave} / ${gptViaje}`).toUpperCase() === sgNave.toUpperCase() || String(`${claudeNave} / ${claudeViaje}`).toUpperCase() === sgNave.toUpperCase()) ? "bg-green-50" : sgNave ? "bg-yellow-50" : "bg-gray-50"}>
+                                                    <td className="p-1 border border-gray-200">{gptNave ? `${gptNave} / ${gptViaje}` : "—"}</td>
+                                                    <td className="p-1 border border-gray-200">{claudeNave ? `${claudeNave} / ${claudeViaje}` : "—"}</td>
+                                                    <td className="p-1 border border-gray-200 font-bold text-blue-700">{sgNave || "—"}</td>
+                                                    <td className="p-1 text-center border border-gray-200">{sgNave ? "🚢" : (gptNave === claudeNave ? "🤝" : "⚠️")}</td>
                                                   </tr>
                                                 </tbody>
                                               </table>
