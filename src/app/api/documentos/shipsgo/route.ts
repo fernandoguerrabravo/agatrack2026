@@ -147,6 +147,37 @@ export async function POST(req: NextRequest) {
           await pgQuery("UPDATE documentos SET datos_extraidos_claude = $1 WHERE id = $2", [JSON.stringify(datosClaude), docId]);
         }
       }
+
+      // Corregir nave (la última nave después del transbordo = la que llega al POD)
+      const lastMovementBeforePOD = movements.filter(m => {
+        const loc = m.location as Record<string, unknown> | undefined;
+        const portName = String(loc?.name || "").toUpperCase();
+        return portName !== podName && m.vessel;
+      });
+      const lastVesselMovement = lastMovementBeforePOD[lastMovementBeforePOD.length - 1];
+      const sgNave = (lastVesselMovement?.vessel as Record<string, unknown>)?.name ? String((lastVesselMovement.vessel as Record<string, unknown>).name) : "";
+      const sgViaje = lastVesselMovement?.voyage ? String(lastVesselMovement.voyage) : "";
+
+      if (sgNave) {
+        // Corregir nave en GPT
+        const gptNave = datos.nave_corregida || datos.nave || "";
+        if (!gptNave || String(gptNave).toUpperCase() !== sgNave.toUpperCase()) {
+          if (gptNave) datos.nave_original_ia = gptNave;
+          datos.nave_corregida = sgNave;
+          if (sgViaje) datos.viaje_corregido = sgViaje;
+          datos._nave_corregida_shipsgo = true;
+          await pgQuery("UPDATE documentos SET datos_extraidos = $1 WHERE id = $2", [JSON.stringify(datos), docId]);
+        }
+        // Corregir nave en Claude
+        const claudeNave = (datosClaude as Record<string, unknown>).nave_corregida || (datosClaude as Record<string, unknown>).nave || "";
+        if (!claudeNave || String(claudeNave).toUpperCase() !== sgNave.toUpperCase()) {
+          if (claudeNave) (datosClaude as Record<string, unknown>).nave_original_ia = claudeNave;
+          (datosClaude as Record<string, unknown>).nave_corregida = sgNave;
+          if (sgViaje) (datosClaude as Record<string, unknown>).viaje_corregido = sgViaje;
+          (datosClaude as Record<string, unknown>)._nave_corregida_shipsgo = true;
+          await pgQuery("UPDATE documentos SET datos_extraidos_claude = $1 WHERE id = $2", [JSON.stringify(datosClaude), docId]);
+        }
+      }
     }
   }
 
