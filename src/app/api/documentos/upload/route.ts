@@ -170,7 +170,8 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             model: openai("gpt-4o"),
             maxOutputTokens: 16000,
             messages: [
-              { role: "user" as const, content: [{ type: "text" as const, text: prompt + `\n\nTEXTO EXTRAÍDO DEL PDF (referencia adicional):\n${documentText.substring(0, 5000)}` }, ...imageContents] },
+              { role: "system" as const, content: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON." },
+              { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContents] },
             ],
           });
           analysisText = result.text;
@@ -239,6 +240,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             model: openai("gpt-4o"),
             maxOutputTokens: 16000,
             messages: [
+              { role: "system" as const, content: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON." },
               { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContents] },
             ],
           });
