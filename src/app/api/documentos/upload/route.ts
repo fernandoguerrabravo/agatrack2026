@@ -436,33 +436,36 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       value: textoParaEmbedding,
     });
 
-    // Combinar resultados: donde coinciden = certeza, donde difieren = marcar revisión
-    const combined = { ...analysis.datos_extraidos };
+    // Combinar resultados: Claude es principal, GPT-4o es secundario
+    // Donde coinciden = certeza, donde difieren = usar Claude (mejor OCR)
+    const combined = Object.keys(claudeAnalysis).length > 0 
+      ? { ...(claudeAnalysis as Record<string, unknown>) }
+      : { ...analysis.datos_extraidos };
+    
     if (Object.keys(claudeAnalysis).length > 0 && Object.keys(analysis.datos_extraidos).length > 0) {
-      // Combinar contenedores
-      const gptContainers = analysis.datos_extraidos.contenedores || [];
+      // Marcar contenedores validados/con diferencia
       const claudeContainers = (claudeAnalysis as Record<string, unknown>).contenedores || [];
-      if (Array.isArray(gptContainers) && Array.isArray(claudeContainers)) {
-        const mergedContainers = gptContainers.map((gc: Record<string, unknown>, i: number) => {
-          const cc = claudeContainers[i] as Record<string, unknown> | undefined;
-          if (!cc) return { ...gc, _revision: "solo_gpt" };
-          const gptNr = gc.numero_contenedor;
+      const gptContainers = analysis.datos_extraidos.contenedores || [];
+      if (Array.isArray(claudeContainers) && Array.isArray(gptContainers)) {
+        const mergedContainers = claudeContainers.map((cc: Record<string, unknown>, i: number) => {
+          const gc = gptContainers[i] as Record<string, unknown> | undefined;
+          if (!gc) return { ...cc, _fuente: "claude" };
           const claudeNr = cc.numero_contenedor;
-          if (gptNr === claudeNr) return { ...gc, _validado: true };
-          return { ...gc, numero_contenedor_gpt: gptNr, numero_contenedor_claude: claudeNr, _revision: "contenedor_difiere" };
+          const gptNr = gc.numero_contenedor;
+          if (claudeNr === gptNr) return { ...cc, _validado: true };
+          return { ...cc, numero_contenedor_gpt: gptNr, _revision: "contenedor_difiere" };
         });
         combined.contenedores = mergedContainers;
       }
-      // Combinar flete
-      const gptFlete = analysis.datos_extraidos.flete_total_prepaid;
+      // Marcar flete
       const claudeFlete = (claudeAnalysis as Record<string, unknown>).flete_total_prepaid;
-      if (gptFlete && claudeFlete) {
-        if (gptFlete === claudeFlete) {
+      const gptFlete = analysis.datos_extraidos.flete_total_prepaid;
+      if (claudeFlete && gptFlete) {
+        if (claudeFlete === gptFlete) {
           combined.flete_validado = true;
         } else {
           combined.flete_total_prepaid_gpt = gptFlete;
-          combined.flete_total_prepaid_claude = claudeFlete;
-          combined._revision_flete = "flete_difiere";
+          combined._revision_flete = "flete_difiere_gpt";
         }
       }
     }
