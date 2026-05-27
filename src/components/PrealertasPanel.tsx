@@ -8,6 +8,7 @@ type Documento = {
   nombre_archivo: string;
   tipo_documento: string;
   datos_extraidos: Record<string, unknown>;
+  datos_extraidos_claude?: Record<string, unknown>;
   storage_url: string;
   created_at: string;
 };
@@ -287,18 +288,31 @@ export default function PrealertasPanel() {
                               <td>
                                 <span className="badge badge-sm badge-outline">{doc.tipo_documento}</span>
                               </td>
-                              <td className="max-w-[300px]">
+                              <td className="max-w-[400px]">
                                 {(() => {
                                   const datos = typeof doc.datos_extraidos === "string" ? JSON.parse(doc.datos_extraidos || "{}") : (doc.datos_extraidos || {});
-                                  return Object.keys(datos).length > 0 ? (
-                                  <details className="text-xs">
-                                    <summary className="cursor-pointer text-primary font-semibold">
-                                      {Object.keys(datos).length} campos extraídos
-                                    </summary>
-                                    <pre className="mt-1 p-2 bg-base-100 rounded text-[11px] overflow-auto max-h-40">
-                                      {JSON.stringify(datos, null, 2)}
-                                    </pre>
-                                  </details>
+                                  const datosClaude = typeof doc.datos_extraidos_claude === "string" ? JSON.parse(doc.datos_extraidos_claude || "{}") : (doc.datos_extraidos_claude || {});
+                                  return Object.keys(datos).length > 0 || Object.keys(datosClaude).length > 0 ? (
+                                  <div>
+                                    <details className="text-xs mb-1">
+                                      <summary className="cursor-pointer text-primary font-semibold">
+                                        🟢 GPT-4o ({Object.keys(datos).length} campos)
+                                      </summary>
+                                      <pre className="mt-1 p-2 bg-base-100 rounded text-[11px] overflow-auto max-h-40">
+                                        {JSON.stringify(datos, null, 2)}
+                                      </pre>
+                                    </details>
+                                    {Object.keys(datosClaude).length > 0 && (
+                                      <details className="text-xs">
+                                        <summary className="cursor-pointer text-secondary font-semibold">
+                                          🟣 Claude ({Object.keys(datosClaude).length} campos)
+                                        </summary>
+                                        <pre className="mt-1 p-2 bg-base-100 rounded text-[11px] overflow-auto max-h-40">
+                                          {JSON.stringify(datosClaude, null, 2)}
+                                        </pre>
+                                      </details>
+                                    )}
+                                  </div>
                                 ) : (
                                   <span className="text-xs text-base-content/40">Sin datos</span>
                                 );
