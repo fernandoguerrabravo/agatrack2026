@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
   if (!shipsgoToken) return NextResponse.json({ error: "SHIPSGO_API_KEY no configurada." }, { status: 500 });
 
   // Obtener shipsgo_id del documento
-  const docs = await pgQuery<{ shipsgo_id: number; datos_extraidos: string }>(
-    "SELECT shipsgo_id, datos_extraidos FROM documentos WHERE id = $1 AND rut_cliente = $2",
+  const docs = await pgQuery<{ shipsgo_id: number; datos_extraidos: string; datos_extraidos_claude: string }>(
+    "SELECT shipsgo_id, datos_extraidos, datos_extraidos_claude FROM documentos WHERE id = $1 AND rut_cliente = $2",
     [docId, session.rut]
   );
 
@@ -59,6 +59,57 @@ export async function POST(req: NextRequest) {
 
   // Guardar en BD
   await pgQuery("UPDATE documentos SET datos_shipsgo = $1 WHERE id = $2", [JSON.stringify(shipsgoData), docId]);
+
+  // Corregir contenedores en GPT y Claude si difieren con ShipsGo
+  const sgContainers = (shipsgoData.containers || []) as Array<{ number: string }>;
+  if (sgContainers.length > 0) {
+    const datos = typeof docs[0].datos_extraidos === "string" ? JSON.parse(docs[0].datos_extraidos) : docs[0].datos_extraidos;
+    const datosClaude = typeof (docs[0] as Record<string, unknown>).datos_extraidos_claude === "string" 
+      ? JSON.parse((docs[0] as Record<string, unknown>).datos_extraidos_claude as string || "{}") 
+      : ((docs[0] as Record<string, unknown>).datos_extraidos_claude || {});
+
+    // Función de similitud
+    const similarity = (a: string, b: string) => {
+      if (!a || !b) return 0;
+      let match = 0;
+      for (let i = 0; i < Math.min(a.length, b.length); i++) { if (a[i] === b[i]) match++; }
+      return match / Math.max(a.length, b.length);
+    };
+
+    // Corregir GPT
+    if (Array.isArray(datos.contenedores)) {
+      let changed = false;
+      datos.contenedores = datos.contenedores.map((c: Record<string, unknown>) => {
+        const nr = String(c.numero_contenedor || "");
+        const sgMatch = sgContainers.find(sg => similarity(sg.number, nr) > 0.7);
+        if (sgMatch && sgMatch.number !== nr) {
+          changed = true;
+          return { ...c, numero_contenedor: sgMatch.number, numero_contenedor_original_gpt: nr, _corregido_shipsgo: true };
+        }
+        return c;
+      });
+      if (changed) {
+        await pgQuery("UPDATE documentos SET datos_extraidos = $1 WHERE id = $2", [JSON.stringify(datos), docId]);
+      }
+    }
+
+    // Corregir Claude
+    if (Array.isArray((datosClaude as Record<string, unknown>).contenedores)) {
+      let changed = false;
+      (datosClaude as Record<string, unknown>).contenedores = ((datosClaude as Record<string, unknown>).contenedores as Array<Record<string, unknown>>).map((c: Record<string, unknown>) => {
+        const nr = String(c.numero_contenedor || "");
+        const sgMatch = sgContainers.find(sg => similarity(sg.number, nr) > 0.7);
+        if (sgMatch && sgMatch.number !== nr) {
+          changed = true;
+          return { ...c, numero_contenedor: sgMatch.number, numero_contenedor_original_claude: nr, _corregido_shipsgo: true };
+        }
+        return c;
+      });
+      if (changed) {
+        await pgQuery("UPDATE documentos SET datos_extraidos_claude = $1 WHERE id = $2", [JSON.stringify(datosClaude), docId]);
+      }
+    }
+  }
 
   return NextResponse.json({ ok: true, shipsgo: shipsgoData });
 }

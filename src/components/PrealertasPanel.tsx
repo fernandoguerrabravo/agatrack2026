@@ -327,6 +327,37 @@ export default function PrealertasPanel() {
                                                   <td className="p-1 text-center border border-gray-200">{gptFleteTotal === claudeFleteTotal ? "✅" : "❌"}</td>
                                                 </tr>
                                                 <tr>
+                                                  <td colSpan={4} className="p-1 border border-gray-200">
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-[10px] font-semibold">Valor aprobado:</span>
+                                                      <input
+                                                        type="text"
+                                                        className="input input-xs input-bordered w-28 font-mono"
+                                                        defaultValue={String(gptFleteTotal || claudeFleteTotal || "")}
+                                                        id={`flete-input-${doc.id}`}
+                                                      />
+                                                      <button
+                                                        className="btn btn-xs btn-success"
+                                                        onClick={async () => {
+                                                          const input = document.getElementById(`flete-input-${doc.id}`) as HTMLInputElement;
+                                                          const val = input?.value?.trim();
+                                                          if (!val) return;
+                                                          const res = await fetch("/api/documentos/update-flete", {
+                                                            method: "POST",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({ docId: doc.id, fleteTotal: val }),
+                                                          });
+                                                          if (res.ok) { alert("✅ Flete aprobado"); fetchDocumentos(); }
+                                                          else { const d = await res.json(); alert(d.error || "Error"); }
+                                                        }}
+                                                      >
+                                                        ✓ Aprobar
+                                                      </button>
+                                                      {datos.flete_aprobado && <span className="text-[9px] text-success font-bold">✅ Aprobado</span>}
+                                                    </div>
+                                                  </td>
+                                                </tr>
+                                                <tr>
                                                   <td className="p-1 font-semibold border border-gray-200">Detalle</td>
                                                   <td className="p-1 border border-gray-200 break-all">{JSON.stringify(gptFlete ?? "—").substring(0, 100)}</td>
                                                   <td className="p-1 border border-gray-200 break-all">{JSON.stringify(claudeFlete ?? "—").substring(0, 100)}</td>
