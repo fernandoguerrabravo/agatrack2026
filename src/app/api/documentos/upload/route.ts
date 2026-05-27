@@ -314,7 +314,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             const tmpPng = join(tmpDir, `claude_${Date.now()}`);
 
             writeFileSync(tmpPdf, buffer);
-            execSync(`pdftoppm -png -r 500 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
+            execSync(`pdftoppm -png -r 300 "${tmpPdf}" "${tmpPng}"`, { timeout: 60000 });
 
             const dirFiles = readdirSync(tmpDir) as string[];
             const baseName = tmpPng.split("/").pop()!;
