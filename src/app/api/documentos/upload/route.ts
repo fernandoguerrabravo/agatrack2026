@@ -169,8 +169,8 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
           const result = await generateText({
             model: openai("gpt-4o"),
             maxOutputTokens: 16000,
+            system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
             messages: [
-              { role: "system" as const, content: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON." },
               { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContents] },
             ],
           });
@@ -239,8 +239,8 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
           const result = await generateText({
             model: openai("gpt-4o"),
             maxOutputTokens: 16000,
+            system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
             messages: [
-              { role: "system" as const, content: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON." },
               { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContents] },
             ],
           });
@@ -291,6 +291,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
           const claudeResult = await generateText({
             model: anthropic("claude-sonnet-4-5"),
             maxOutputTokens: 16000,
+            system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
             messages: [{ role: "user" as const, content: [
               { type: "text" as const, text: prompt },
               { type: "image" as const, image: `data:${mimeType};base64,${base64}` },
@@ -315,7 +316,8 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             const claudeResult = await generateText({
               model: anthropic("claude-sonnet-4-5"),
               maxOutputTokens: 16000,
-              messages: [{ role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...cImages] }],
+              system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
+            messages: [{ role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...cImages] }],
             });
             claudeAnalysisText = claudeResult.text;
             unlinkSync(cPdf);
