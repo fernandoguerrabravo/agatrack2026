@@ -308,7 +308,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
           const cPdf = join(tmpDir, `${cId}.pdf`);
           const cPng = join(tmpDir, cId);
           writeFileSync(cPdf, buffer);
-          execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r600 -dJPEGQ=90 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${cPng}-%03d.jpg" "${cPdf}"`, { timeout: 60000 });
+          execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r400 -dJPEGQ=95 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${cPng}-%03d.jpg" "${cPdf}"`, { timeout: 60000 });
           const cFiles = (readdirSync(tmpDir) as string[]).filter(f => f.startsWith(cId) && f.endsWith(".jpg")).sort().map(f => join(tmpDir, f));
           if (cFiles.length > 0) {
             const cImages = cFiles.slice(0, 10).map(f => ({ type: "image" as const, image: `data:image/jpeg;base64,${readFileSync(f).toString("base64")}` }));
