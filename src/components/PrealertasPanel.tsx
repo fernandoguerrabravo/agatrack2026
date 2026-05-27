@@ -567,6 +567,15 @@ export default function PrealertasPanel() {
                                                 </tbody>
                                               </table>
                                             )}
+                                            {/* JSON completo ShipsGo */}
+                                            {sg.id && (
+                                              <details className="mt-2">
+                                                <summary className="cursor-pointer text-[9px] text-gray-400">Ver JSON completo ShipsGo</summary>
+                                                <pre className="mt-1 p-2 bg-gray-50 rounded text-[9px] overflow-auto max-h-40">
+                                                  {JSON.stringify(sg, null, 2)}
+                                                </pre>
+                                              </details>
+                                            )}
                                           </div>
                                         </details>
                                       );
