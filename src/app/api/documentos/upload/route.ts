@@ -419,14 +419,23 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     }
 
     // Post-procesamiento: corregir BL (nunca minúsculas, l→1, o→0)
+    const fixBL = (bl: unknown): string => {
+      if (!bl || typeof bl !== "string") return String(bl || "");
+      let fixed = bl.replace(/l/g, "1");
+      fixed = fixed.toUpperCase();
+      return fixed;
+    };
     if (analysis.datos_extraidos) {
-      const fixBL = (bl: unknown): string => {
-        if (!bl || typeof bl !== "string") return String(bl || "");
-        return bl.toUpperCase().replace(/l/g, "1").replace(/O(?=\d)/g, "0");
-      };
       if (analysis.datos_extraidos.numero_bl) analysis.datos_extraidos.numero_bl = fixBL(analysis.datos_extraidos.numero_bl);
       if (analysis.datos_extraidos.numero_bl_master) analysis.datos_extraidos.numero_bl_master = fixBL(analysis.datos_extraidos.numero_bl_master);
       if (analysis.datos_extraidos.numero_bl_house) analysis.datos_extraidos.numero_bl_house = fixBL(analysis.datos_extraidos.numero_bl_house);
+    }
+    // Fix Claude también
+    if (claudeAnalysis) {
+      const ca = claudeAnalysis as Record<string, unknown>;
+      if (ca.numero_bl) ca.numero_bl = fixBL(ca.numero_bl);
+      if (ca.numero_bl_master) ca.numero_bl_master = fixBL(ca.numero_bl_master);
+      if (ca.numero_bl_house) ca.numero_bl_house = fixBL(ca.numero_bl_house);
     }
 
     // Subir archivo a DigitalOcean Spaces
