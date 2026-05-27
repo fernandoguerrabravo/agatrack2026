@@ -298,6 +298,8 @@ export default function PrealertasPanel() {
                                   // Extraer contenedores y flete para comparación
                                   const gptContainers = datos.contenedores || [];
                                   const claudeContainers = datosClaude.contenedores || [];
+                                  const sgRaw = typeof doc.datos_shipsgo === "string" ? JSON.parse(doc.datos_shipsgo || "{}") : (doc.datos_shipsgo || {});
+                                  const shipsgoContainers = (sgRaw.containers || []) as Array<Record<string, unknown>>;
                                   const gptFlete = datos.flete_detalle || datos.flete || null;
                                   const claudeFlete = datosClaude.flete_detalle || datosClaude.flete || null;
                                   const gptFleteTotal = datos.flete_total_prepaid || datos.flete_total || null;
@@ -363,25 +365,29 @@ export default function PrealertasPanel() {
                                           {/* Contenedores */}
                                           {(Array.isArray(gptContainers) && gptContainers.length > 0) && (
                                             <div>
-                                              <div className="font-bold text-[11px] mb-1 text-warning">📦 CONTENEDORES ({Math.max(gptContainers.length, claudeContainers.length)})</div>
+                                              <div className="font-bold text-[11px] mb-1 text-warning">📦 CONTENEDORES</div>
                                               <table className="w-full border-collapse border border-gray-200">
-                                                <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200">#</th><th className="p-1 text-left border border-gray-200">🟢 GPT-4o</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
+                                                <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200">#</th><th className="p-1 text-left border border-gray-200">🟢 GPT</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 text-left border border-gray-200">🚢 ShipsGo</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
                                                 <tbody>
-                                                  {Array.from({ length: Math.max(gptContainers.length, claudeContainers.length) }).map((_, i) => {
-                                                    const gptNr = gptContainers[i]?.numero_contenedor || "—";
-                                                    const claudeNr = claudeContainers[i]?.numero_contenedor || "—";
-                                                    const match = gptNr === claudeNr;
+                                                  {Array.from({ length: Math.max(gptContainers.length, claudeContainers.length, shipsgoContainers.length) }).map((_, i) => {
+                                                    const gptNr = (gptContainers[i] as Record<string, unknown>)?.numero_contenedor || "—";
+                                                    const claudeNr = (claudeContainers[i] as Record<string, unknown>)?.numero_contenedor || "—";
+                                                    const sgNr = shipsgoContainers[i]?.number || "—";
+                                                    const allMatch = gptNr === claudeNr && claudeNr === sgNr && sgNr !== "—";
+                                                    const sgMatch = sgNr !== "—" && (gptNr === sgNr || claudeNr === sgNr);
                                                     return (
-                                                      <tr key={i} className={match ? "bg-green-50" : "bg-red-50"}>
+                                                      <tr key={i} className={allMatch ? "bg-green-50" : sgMatch ? "bg-blue-50" : "bg-red-50"}>
                                                         <td className="p-1 border border-gray-200">{i + 1}</td>
-                                                        <td className="p-1 border border-gray-200 font-mono">{gptNr}</td>
-                                                        <td className="p-1 border border-gray-200 font-mono">{claudeNr}</td>
-                                                        <td className="p-1 text-center border border-gray-200">{match ? "✅" : "❌"}</td>
+                                                        <td className="p-1 border border-gray-200 font-mono">{String(gptNr)}</td>
+                                                        <td className="p-1 border border-gray-200 font-mono">{String(claudeNr)}</td>
+                                                        <td className="p-1 border border-gray-200 font-mono font-bold">{String(sgNr)}</td>
+                                                        <td className="p-1 text-center border border-gray-200">{allMatch ? "✅" : sgNr !== "—" ? "🚢" : "❌"}</td>
                                                       </tr>
                                                     );
                                                   })}
                                                 </tbody>
                                               </table>
+                                              <div className="mt-1 text-[9px] text-gray-500">🚢 = ShipsGo es fuente de verdad</div>
                                             </div>
                                           )}
                                         </div>
@@ -411,15 +417,28 @@ export default function PrealertasPanel() {
                                       const sg = typeof doc.datos_shipsgo === "string" ? JSON.parse(doc.datos_shipsgo || "{}") : (doc.datos_shipsgo || {});
                                       const sgContainers = (sg.containers || []) as Array<Record<string, unknown>>;
                                       const sgRoute = sg.route as Record<string, unknown> | undefined;
-                                      if (!sg.id) return null;
                                       return (
                                         <details className="text-xs">
                                           <summary className="cursor-pointer text-info font-semibold">
-                                            🚢 ShipsGo ({sgContainers.length} contenedores) — {String(sg.status || "")}
+                                            🚢 ShipsGo {sg.id ? `(${sgContainers.length} contenedores) — ${String(sg.status || "")}` : "(pendiente)"}
                                           </summary>
                                           <div className="mt-1 p-2 bg-base-100 rounded text-[10px] overflow-auto max-h-60 space-y-2">
+                                            <button
+                                              className="btn btn-xs btn-info"
+                                              onClick={async () => {
+                                                const res = await fetch("/api/documentos/shipsgo", {
+                                                  method: "POST",
+                                                  headers: { "Content-Type": "application/json" },
+                                                  body: JSON.stringify({ docId: doc.id }),
+                                                });
+                                                if (res.ok) { fetchDocumentos(); }
+                                                else { const d = await res.json(); alert(d.error || "Error"); }
+                                              }}
+                                            >
+                                              🔄 Actualizar ShipsGo
+                                            </button>
                                             {sgRoute && (
-                                              <div className="flex items-center gap-2 text-[11px]">
+                                              <div className="flex items-center gap-2 text-[11px] mt-2">
                                                 <span>📍 {String((sgRoute.port_of_loading as Record<string, unknown>)?.location && ((sgRoute.port_of_loading as Record<string, unknown>).location as Record<string, unknown>)?.name || "—")}</span>
                                                 <span>→</span>
                                                 <span>🏁 {String((sgRoute.port_of_discharge as Record<string, unknown>)?.location && ((sgRoute.port_of_discharge as Record<string, unknown>).location as Record<string, unknown>)?.name || "—")}</span>

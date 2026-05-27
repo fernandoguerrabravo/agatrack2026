@@ -472,7 +472,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       }
     }
 
-    // ShipsGo: crear shipment y obtener datos reales de contenedores
+    // ShipsGo: crear shipment (los datos se consultan después con botón "Actualizar")
     let shipsgoData: Record<string, unknown> = {};
     let shipsgoId: number | null = null;
     try {
@@ -489,36 +489,9 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
 
         if (createRes.status === 200 || createRes.status === 409) {
           shipsgoId = createJson.shipment?.id;
-          console.log("[docs] ShipsGo shipment ID:", shipsgoId);
-
-          // Esperar 3 segundos y consultar detalles
-          if (shipsgoId) {
-            await new Promise(r => setTimeout(r, 3000));
-            const detailRes = await fetch(`https://api.shipsgo.com/v2/ocean/shipments/${shipsgoId}`, {
-              headers: { "X-Shipsgo-User-Token": shipsgoToken },
-            });
-            if (detailRes.ok) {
-              const detailJson = await detailRes.json();
-              shipsgoData = detailJson.shipment || {};
-              console.log("[docs] ShipsGo containers:", (shipsgoData.containers as unknown[])?.length || 0);
-
-              // Validar contenedores con ShipsGo como fuente de verdad
-              const sgContainers = (shipsgoData.containers || []) as Array<{ number: string }>;
-              if (sgContainers.length > 0 && Array.isArray(combined.contenedores)) {
-                combined.contenedores = sgContainers.map((sgc, i) => {
-                  const existing = (combined.contenedores as Array<Record<string, unknown>>)?.[i] || {};
-                  return {
-                    ...existing,
-                    numero_contenedor: sgc.number, // ShipsGo es fuente de verdad
-                    numero_contenedor_shipsgo: sgc.number,
-                    _validado_shipsgo: true,
-                  };
-                });
-              }
-            }
-          }
+          console.log("[docs] ShipsGo shipment created, ID:", shipsgoId, "(data will be available in a few minutes)");
         } else {
-          console.log("[docs] ShipsGo error:", createJson.message);
+          console.log("[docs] ShipsGo create error:", createJson.message);
         }
       }
     } catch (sgErr) {
