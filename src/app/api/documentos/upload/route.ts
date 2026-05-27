@@ -472,13 +472,66 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       }
     }
 
+    // ShipsGo: crear shipment y obtener datos reales de contenedores
+    let shipsgoData: Record<string, unknown> = {};
+    let shipsgoId: number | null = null;
+    try {
+      const shipsgoToken = process.env.SHIPSGO_API_KEY;
+      const blNumber = combined.numero_bl || analysis.datos_extraidos?.numero_bl;
+      if (shipsgoToken && blNumber) {
+        console.log("[docs] ShipsGo: creating shipment for BL:", blNumber);
+        const createRes = await fetch("https://api.shipsgo.com/v2/ocean/shipments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Shipsgo-User-Token": shipsgoToken },
+          body: JSON.stringify({ booking_number: blNumber }),
+        });
+        const createJson = await createRes.json();
+
+        if (createRes.status === 200 || createRes.status === 409) {
+          shipsgoId = createJson.shipment?.id;
+          console.log("[docs] ShipsGo shipment ID:", shipsgoId);
+
+          // Esperar 3 segundos y consultar detalles
+          if (shipsgoId) {
+            await new Promise(r => setTimeout(r, 3000));
+            const detailRes = await fetch(`https://api.shipsgo.com/v2/ocean/shipments/${shipsgoId}`, {
+              headers: { "X-Shipsgo-User-Token": shipsgoToken },
+            });
+            if (detailRes.ok) {
+              const detailJson = await detailRes.json();
+              shipsgoData = detailJson.shipment || {};
+              console.log("[docs] ShipsGo containers:", (shipsgoData.containers as unknown[])?.length || 0);
+
+              // Validar contenedores con ShipsGo como fuente de verdad
+              const sgContainers = (shipsgoData.containers || []) as Array<{ number: string }>;
+              if (sgContainers.length > 0 && Array.isArray(combined.contenedores)) {
+                combined.contenedores = sgContainers.map((sgc, i) => {
+                  const existing = (combined.contenedores as Array<Record<string, unknown>>)?.[i] || {};
+                  return {
+                    ...existing,
+                    numero_contenedor: sgc.number, // ShipsGo es fuente de verdad
+                    numero_contenedor_shipsgo: sgc.number,
+                    _validado_shipsgo: true,
+                  };
+                });
+              }
+            }
+          }
+        } else {
+          console.log("[docs] ShipsGo error:", createJson.message);
+        }
+      }
+    } catch (sgErr) {
+      console.error("[docs] ShipsGo error:", sgErr instanceof Error ? sgErr.message : sgErr);
+    }
+
     // Guardar en PostgreSQL
     const embeddingStr = `[${embedding.join(",")}]`;
 
     const rows = await pgQuery(
-      `INSERT INTO documentos (rut_cliente, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, texto_completo, embedding, storage_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::vector, $9)
-       RETURNING id, tipo_documento, datos_extraidos, datos_extraidos_claude, storage_url, created_at`,
+      `INSERT INTO documentos (rut_cliente, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, shipsgo_id, texto_completo, embedding, storage_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::vector, $11)
+       RETURNING id, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, storage_url, created_at`,
       [
         session.rut,
         nroOperacion,
@@ -486,6 +539,8 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         analysis.tipo_documento,
         JSON.stringify(combined),
         JSON.stringify(claudeAnalysis),
+        JSON.stringify(shipsgoData),
+        shipsgoId,
         analysis.texto_completo ?? "",
         embeddingStr,
         storageUrl,

@@ -9,6 +9,7 @@ type Documento = {
   tipo_documento: string;
   datos_extraidos: Record<string, unknown>;
   datos_extraidos_claude?: Record<string, unknown>;
+  datos_shipsgo?: Record<string, unknown>;
   storage_url: string;
   created_at: string;
 };
@@ -405,6 +406,44 @@ export default function PrealertasPanel() {
                                         </pre>
                                       </details>
                                     )}
+                                    {/* ShipsGo Tracking */}
+                                    {(() => {
+                                      const sg = typeof doc.datos_shipsgo === "string" ? JSON.parse(doc.datos_shipsgo || "{}") : (doc.datos_shipsgo || {});
+                                      const sgContainers = (sg.containers || []) as Array<Record<string, unknown>>;
+                                      const sgRoute = sg.route as Record<string, unknown> | undefined;
+                                      if (!sg.id) return null;
+                                      return (
+                                        <details className="text-xs">
+                                          <summary className="cursor-pointer text-info font-semibold">
+                                            🚢 ShipsGo ({sgContainers.length} contenedores) — {String(sg.status || "")}
+                                          </summary>
+                                          <div className="mt-1 p-2 bg-base-100 rounded text-[10px] overflow-auto max-h-60 space-y-2">
+                                            {sgRoute && (
+                                              <div className="flex items-center gap-2 text-[11px]">
+                                                <span>📍 {String((sgRoute.port_of_loading as Record<string, unknown>)?.location && ((sgRoute.port_of_loading as Record<string, unknown>).location as Record<string, unknown>)?.name || "—")}</span>
+                                                <span>→</span>
+                                                <span>🏁 {String((sgRoute.port_of_discharge as Record<string, unknown>)?.location && ((sgRoute.port_of_discharge as Record<string, unknown>).location as Record<string, unknown>)?.name || "—")}</span>
+                                                {sgRoute.transit_percentage && <span className="ml-auto font-bold text-info">{String(sgRoute.transit_percentage)}%</span>}
+                                              </div>
+                                            )}
+                                            {sgContainers.length > 0 && (
+                                              <table className="w-full border-collapse border border-gray-200">
+                                                <thead><tr className="bg-info/10"><th className="p-1 text-left border border-gray-200">Contenedor</th><th className="p-1 text-left border border-gray-200">Status</th><th className="p-1 text-left border border-gray-200">Tipo</th></tr></thead>
+                                                <tbody>
+                                                  {sgContainers.map((c, i) => (
+                                                    <tr key={i}>
+                                                      <td className="p-1 border border-gray-200 font-mono font-bold">{String(c.number)}</td>
+                                                      <td className="p-1 border border-gray-200">{String(c.status)}</td>
+                                                      <td className="p-1 border border-gray-200">{String(c.size || "")}{String(c.type || "")}</td>
+                                                    </tr>
+                                                  ))}
+                                                </tbody>
+                                              </table>
+                                            )}
+                                          </div>
+                                        </details>
+                                      );
+                                    })()}
                                   </div>
                                 ) : (
                                   <span className="text-xs text-base-content/40">Sin datos</span>
