@@ -149,7 +149,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         const tmpPng = join(tmpDir, `upload_${Date.now()}`);
 
         writeFileSync(tmpPdf, buffer);
-        execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=png16m -r800 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.png" "${tmpPdf}"`, { timeout: 60000 });
+        execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=png16m -r500 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.png" "${tmpPdf}"`, { timeout: 60000 });
 
         const dirFiles = require("fs").readdirSync(tmpDir) as string[];
         const baseName = tmpPng.split("/").pop()!;
@@ -213,7 +213,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         writeFileSync(tmpPdf, buffer);
 
         // Convertir TODAS las páginas a PNG
-        execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=png16m -r800 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.png" "${tmpPdf}"`, { timeout: 60000 });
+        execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=png16m -r500 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.png" "${tmpPdf}"`, { timeout: 60000 });
 
         // Buscar todos los archivos PNG generados
         const dirFiles = require("fs").readdirSync(tmpDir) as string[];
