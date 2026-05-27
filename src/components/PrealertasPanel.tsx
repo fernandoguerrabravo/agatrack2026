@@ -288,12 +288,16 @@ export default function PrealertasPanel() {
                               <td>
                                 <span className="badge badge-sm badge-outline">{doc.tipo_documento}</span>
                               </td>
-                              <td className="max-w-[300px]">
+                              <td className="max-w-[500px]">
                                 {(() => {
                                   const datos = typeof doc.datos_extraidos === "string" ? JSON.parse(doc.datos_extraidos || "{}") : (doc.datos_extraidos || {});
                                   const datosClaude = typeof doc.datos_extraidos_claude === "string" ? JSON.parse(doc.datos_extraidos_claude || "{}") : (doc.datos_extraidos_claude || {});
-                                  return Object.keys(datos).length > 0 ? (
+                                  const allKeys = [...new Set([...Object.keys(datos), ...Object.keys(datosClaude)])];
+                                  const hasBoth = Object.keys(datos).length > 0 && Object.keys(datosClaude).length > 0;
+
+                                  return Object.keys(datos).length > 0 || Object.keys(datosClaude).length > 0 ? (
                                   <div>
+                                    {/* Tabs: GPT / Claude / Comparar */}
                                     <details className="text-xs mb-1">
                                       <summary className="cursor-pointer text-primary font-semibold">
                                         🟢 GPT-4o ({Object.keys(datos).length} campos)
@@ -303,13 +307,53 @@ export default function PrealertasPanel() {
                                       </pre>
                                     </details>
                                     {Object.keys(datosClaude).length > 0 && (
-                                      <details className="text-xs">
+                                      <details className="text-xs mb-1">
                                         <summary className="cursor-pointer text-secondary font-semibold">
                                           🟣 Claude ({Object.keys(datosClaude).length} campos)
                                         </summary>
                                         <pre className="mt-1 p-2 bg-base-100 rounded text-[11px] overflow-auto max-h-40">
                                           {JSON.stringify(datosClaude, null, 2)}
                                         </pre>
+                                      </details>
+                                    )}
+                                    {hasBoth && (
+                                      <details className="text-xs">
+                                        <summary className="cursor-pointer text-warning font-semibold">
+                                          ⚡ Comparar ({allKeys.filter(k => JSON.stringify(datos[k]) !== JSON.stringify(datosClaude[k])).length} diferencias)
+                                        </summary>
+                                        <div className="mt-1 p-2 bg-base-100 rounded text-[11px] overflow-auto max-h-60">
+                                          <table className="w-full text-[10px] border-collapse">
+                                            <thead>
+                                              <tr className="border-b">
+                                                <th className="text-left p-1 w-1/4">Campo</th>
+                                                <th className="text-left p-1 w-[37%]">🟢 GPT-4o</th>
+                                                <th className="text-left p-1 w-[37%]">🟣 Claude</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {allKeys.filter(k => k !== "texto_completo").map(key => {
+                                                const gptVal = JSON.stringify(datos[key] ?? "—", null, 1);
+                                                const claudeVal = JSON.stringify(datosClaude[key] ?? "—", null, 1);
+                                                const match = gptVal === claudeVal;
+                                                const onlyGpt = datos[key] && !datosClaude[key];
+                                                const onlyClaude = !datos[key] && datosClaude[key];
+                                                return (
+                                                  <tr key={key} className={`border-b ${match ? "bg-green-50" : onlyGpt ? "bg-blue-50" : onlyClaude ? "bg-purple-50" : "bg-yellow-50"}`}>
+                                                    <td className="p-1 font-semibold">{key}</td>
+                                                    <td className="p-1 break-all max-w-[150px]">{gptVal.length > 80 ? gptVal.substring(0, 80) + "..." : gptVal}</td>
+                                                    <td className="p-1 break-all max-w-[150px]">{claudeVal.length > 80 ? claudeVal.substring(0, 80) + "..." : claudeVal}</td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                          </table>
+                                          <div className="mt-2 flex gap-2 text-[9px]">
+                                            <span className="bg-green-50 px-1 rounded">🟢 Coinciden</span>
+                                            <span className="bg-yellow-50 px-1 rounded">🟡 Difieren</span>
+                                            <span className="bg-blue-50 px-1 rounded">🔵 Solo GPT</span>
+                                            <span className="bg-purple-50 px-1 rounded">🟣 Solo Claude</span>
+                                          </div>
+                                        </div>
                                       </details>
                                     )}
                                   </div>
