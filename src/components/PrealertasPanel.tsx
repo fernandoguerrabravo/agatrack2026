@@ -361,6 +361,50 @@ export default function PrealertasPanel() {
                                           ⚡ Comparar Contenedores & Flete
                                         </summary>
                                         <div className="mt-1 p-2 bg-base-100 rounded text-[10px] overflow-auto max-h-60 space-y-3">
+                                          {/* Número de BL */}
+                                          <div>
+                                            <div className="font-bold text-[11px] mb-1 text-warning">📄 NÚMERO DE BL (Master)</div>
+                                            <table className="w-full border-collapse border border-gray-200">
+                                              <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200">🟢 GPT</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
+                                              <tbody>
+                                                <tr className={(datos.numero_bl_master || datos.numero_bl) === (datosClaude.numero_bl_master || datosClaude.numero_bl) ? "bg-green-50" : "bg-yellow-50"}>
+                                                  <td className="p-1 border border-gray-200 font-mono">{String(datos.numero_bl_master || datos.numero_bl || "—")}</td>
+                                                  <td className="p-1 border border-gray-200 font-mono">{String(datosClaude.numero_bl_master || datosClaude.numero_bl || "—")}</td>
+                                                  <td className="p-1 text-center border border-gray-200">{(datos.numero_bl_master || datos.numero_bl) === (datosClaude.numero_bl_master || datosClaude.numero_bl) ? "✅" : "⚠️"}</td>
+                                                </tr>
+                                              </tbody>
+                                            </table>
+                                            {/* Botón enviar a ShipsGo */}
+                                            {!doc.datos_shipsgo || doc.datos_shipsgo === "{}" || doc.datos_shipsgo === "" ? (
+                                              <div className="mt-2 flex items-center gap-2">
+                                                <input
+                                                  type="text"
+                                                  className="input input-xs input-bordered w-40 font-mono uppercase"
+                                                  defaultValue={String(datos.numero_bl_master || datos.numero_bl || datosClaude.numero_bl_master || datosClaude.numero_bl || "")}
+                                                  id={`bl-input-${doc.id}`}
+                                                />
+                                                <button
+                                                  className="btn btn-xs btn-info"
+                                                  onClick={async () => {
+                                                    const input = document.getElementById(`bl-input-${doc.id}`) as HTMLInputElement;
+                                                    const bl = input?.value?.trim().toUpperCase();
+                                                    if (!bl) return;
+                                                    const res = await fetch("/api/documentos/shipsgo", {
+                                                      method: "POST",
+                                                      headers: { "Content-Type": "application/json" },
+                                                      body: JSON.stringify({ docId: doc.id, blOverride: bl }),
+                                                    });
+                                                    if (res.ok) { fetchDocumentos(); }
+                                                    else { const d = await res.json(); alert(d.error || "Error"); }
+                                                  }}
+                                                >
+                                                  🚢 Enviar a ShipsGo
+                                                </button>
+                                              </div>
+                                            ) : (
+                                              <div className="mt-1 text-[9px] text-success font-bold">✅ Enviado a ShipsGo</div>
+                                            )}
+                                          </div>
                                           {/* Flete */}
                                           <div>
                                             <div className="font-bold text-[11px] mb-1 text-warning">💰 FLETE</div>

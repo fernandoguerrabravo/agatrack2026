@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
-  const { docId } = await req.json();
+  const { docId, blOverride } = await req.json();
   if (!docId) return NextResponse.json({ error: "docId requerido." }, { status: 400 });
 
   const shipsgoToken = process.env.SHIPSGO_API_KEY;
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   // Si no tiene shipsgo_id, intentar crear
   if (!shipsgoId) {
     const datos = typeof docs[0].datos_extraidos === "string" ? JSON.parse(docs[0].datos_extraidos) : docs[0].datos_extraidos;
-    const blNumber = datos?.numero_bl_master || datos?.numero_bl;
+    const blNumber = blOverride || datos?.numero_bl_master || datos?.numero_bl;
     if (!blNumber) return NextResponse.json({ error: "No se encontró número de BL." }, { status: 400 });
 
     const createRes = await fetch("https://api.shipsgo.com/v2/ocean/shipments", {

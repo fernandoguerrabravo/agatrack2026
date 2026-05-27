@@ -472,31 +472,9 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       }
     }
 
-    // ShipsGo: crear shipment (los datos se consultan después con botón "Actualizar")
-    let shipsgoData: Record<string, unknown> = {};
+    // ShipsGo: NO enviar automáticamente - el usuario decide después de comparar
     let shipsgoId: number | null = null;
-    try {
-      const shipsgoToken = process.env.SHIPSGO_API_KEY;
-      const blNumber = combined.numero_bl_master || combined.numero_bl || analysis.datos_extraidos?.numero_bl_master || analysis.datos_extraidos?.numero_bl;
-      if (shipsgoToken && blNumber) {
-        console.log("[docs] ShipsGo: creating shipment for BL:", blNumber);
-        const createRes = await fetch("https://api.shipsgo.com/v2/ocean/shipments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Shipsgo-User-Token": shipsgoToken },
-          body: JSON.stringify({ booking_number: blNumber }),
-        });
-        const createJson = await createRes.json();
-
-        if (createRes.status === 200 || createRes.status === 409) {
-          shipsgoId = createJson.shipment?.id;
-          console.log("[docs] ShipsGo shipment created, ID:", shipsgoId, "(data will be available in a few minutes)");
-        } else {
-          console.log("[docs] ShipsGo create error:", createJson.message);
-        }
-      }
-    } catch (sgErr) {
-      console.error("[docs] ShipsGo error:", sgErr instanceof Error ? sgErr.message : sgErr);
-    }
+    const shipsgoData: Record<string, unknown> = {};
 
     // Guardar en PostgreSQL
     const embeddingStr = `[${embedding.join(",")}]`;
