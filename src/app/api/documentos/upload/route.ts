@@ -418,13 +418,14 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       analysis.texto_completo = documentText;
     }
 
-    // Post-procesamiento: corregir BL (nunca minúsculas, l→1, I→1 en parte numérica)
+    // Post-procesamiento: corregir BL (nunca minúsculas, I→1 en parte numérica)
     const fixBL = (bl: unknown): string => {
       if (!bl || typeof bl !== "string") return String(bl || "");
       let fixed = bl.replace(/l/g, "1");
       fixed = fixed.toUpperCase();
-      // En BLs: después del prefijo de letras, corregir letras que son dígitos
-      const match = fixed.match(/^([A-Z]+)(.+)$/);
+      // El prefijo de un BL son máximo 4 letras, el resto es numérico
+      // Buscar los primeros 3-4 caracteres que son letras puras (A-Z sin I,O,Z,S que podrían ser dígitos)
+      const match = fixed.match(/^([A-Z]{3,4})(.+)$/);
       if (match) {
         const prefix = match[1];
         let numPart = match[2];
