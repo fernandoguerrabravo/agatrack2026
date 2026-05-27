@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   // Si no tiene shipsgo_id, intentar crear
   if (!shipsgoId) {
     const datos = typeof docs[0].datos_extraidos === "string" ? JSON.parse(docs[0].datos_extraidos) : docs[0].datos_extraidos;
-    const blNumber = datos?.numero_bl;
+    const blNumber = datos?.numero_bl_master || datos?.numero_bl;
     if (!blNumber) return NextResponse.json({ error: "No se encontró número de BL." }, { status: 400 });
 
     const createRes = await fetch("https://api.shipsgo.com/v2/ocean/shipments", {

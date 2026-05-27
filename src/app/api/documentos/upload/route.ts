@@ -477,7 +477,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     let shipsgoId: number | null = null;
     try {
       const shipsgoToken = process.env.SHIPSGO_API_KEY;
-      const blNumber = combined.numero_bl || analysis.datos_extraidos?.numero_bl;
+      const blNumber = combined.numero_bl_master || combined.numero_bl || analysis.datos_extraidos?.numero_bl_master || analysis.datos_extraidos?.numero_bl;
       if (shipsgoToken && blNumber) {
         console.log("[docs] ShipsGo: creating shipment for BL:", blNumber);
         const createRes = await fetch("https://api.shipsgo.com/v2/ocean/shipments", {
