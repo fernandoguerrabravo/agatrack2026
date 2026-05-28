@@ -122,6 +122,27 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
 
     let analysisText: string = "";
 
+    // Buscar BLs anteriores correctos para dar contexto al modelo (few-shot memory)
+    let blExamples = "";
+    try {
+      const prevDocs = await pgQuery<{ datos_extraidos: string }>(
+        "SELECT datos_extraidos FROM documentos WHERE rut_cliente = $1 AND datos_extraidos LIKE '%mbl_shipsgo%' ORDER BY created_at DESC LIMIT 10",
+        [session.rut]
+      );
+      const prevBLs = prevDocs
+        .map(d => {
+          const parsed = typeof d.datos_extraidos === "string" ? JSON.parse(d.datos_extraidos) : d.datos_extraidos;
+          return parsed?.mbl_shipsgo || parsed?.numero_bl_master || parsed?.numero_bl;
+        })
+        .filter(Boolean);
+      if (prevBLs.length > 0) {
+        blExamples = `\nREFERENCIA DE BLs ANTERIORES CORRECTOS (usa como guía de formato): ${prevBLs.join(", ")}. Los números de BL siguen estos patrones — úsalos para validar tu lectura.`;
+      }
+    } catch { /* ignore */ }
+
+    // Agregar ejemplos al prompt
+    const finalPrompt = prompt + blExamples;
+
     if (isImage) {
       // Para imágenes: usar GPT-4o vision (mejor para detalles visuales)
       const dataUrl = `data:${mimeType};base64,${base64}`;
@@ -130,7 +151,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         model: openai("gpt-4o"),
         maxOutputTokens: 16000,
         messages: [
-          { role: "user" as const, content: [{ type: "text" as const, text: prompt }, { type: "image" as const, image: dataUrl }] },
+          { role: "user" as const, content: [{ type: "text" as const, text: finalPrompt }, { type: "image" as const, image: dataUrl }] },
         ],
       });
       analysisText = result.text;
@@ -171,7 +192,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             maxOutputTokens: 16000,
             system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
             messages: [
-              { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContents] },
+              { role: "user" as const, content: [{ type: "text" as const, text: finalPrompt }, ...imageContents] },
             ],
           });
           analysisText = result.text;
@@ -193,7 +214,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
           model: openai("gpt-4o-mini"),
           maxOutputTokens: 16000,
           messages: [
-            { role: "user" as const, content: `${prompt}\n\n--- TEXTO DEL DOCUMENTO (${file.name}) ---\n\n${documentText.substring(0, 15000)}` },
+            { role: "user" as const, content: `${finalPrompt}\n\n--- TEXTO DEL DOCUMENTO (${file.name}) ---\n\n${documentText.substring(0, 15000)}` },
           ],
         });
         analysisText = result.text;
@@ -241,7 +262,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             maxOutputTokens: 16000,
             system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
             messages: [
-              { role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...imageContents] },
+              { role: "user" as const, content: [{ type: "text" as const, text: finalPrompt }, ...imageContents] },
             ],
           });
           analysisText = result.text;
@@ -264,7 +285,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
           model: openai("gpt-4o-mini"),
           maxOutputTokens: 16000,
           messages: [
-            { role: "user" as const, content: `${prompt}\n\nEl archivo es un PDF escaneado llamado "${file.name}". No se pudo procesar. Clasifica el tipo de documento por el nombre.` },
+            { role: "user" as const, content: `${finalPrompt}\n\nEl archivo es un PDF escaneado llamado "${file.name}". No se pudo procesar. Clasifica el tipo de documento por el nombre.` },
           ],
         });
         analysisText = result.text;
@@ -274,7 +295,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
         model: openai("gpt-4o-mini"),
         maxOutputTokens: 16000,
         messages: [
-          { role: "user" as const, content: `${prompt}\n\n[Archivo: ${file.name}]` },
+          { role: "user" as const, content: `${finalPrompt}\n\n[Archivo: ${file.name}]` },
         ],
       });
       analysisText = result.text;
@@ -293,7 +314,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
             maxOutputTokens: 16000,
             system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
             messages: [{ role: "user" as const, content: [
-              { type: "text" as const, text: prompt },
+              { type: "text" as const, text: finalPrompt },
               { type: "image" as const, image: `data:${mimeType};base64,${base64}` },
             ]}],
           });
@@ -317,7 +338,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
               model: anthropic("claude-sonnet-4-5"),
               maxOutputTokens: 16000,
               system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
-            messages: [{ role: "user" as const, content: [{ type: "text" as const, text: prompt }, ...cImages] }],
+            messages: [{ role: "user" as const, content: [{ type: "text" as const, text: finalPrompt }, ...cImages] }],
             });
             claudeAnalysisText = claudeResult.text;
             unlinkSync(cPdf);
