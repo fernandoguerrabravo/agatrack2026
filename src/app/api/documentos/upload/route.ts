@@ -423,12 +423,12 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       if (!bl || typeof bl !== "string") return String(bl || "");
       let fixed = bl.replace(/l/g, "1");
       fixed = fixed.toUpperCase();
-      // El prefijo de un BL son máximo 4 letras, el resto es numérico
-      // Buscar los primeros 3-4 caracteres que son letras puras (A-Z sin I,O,Z,S que podrían ser dígitos)
-      const match = fixed.match(/^([A-Z]{3,4})(.+)$/);
-      if (match) {
-        const prefix = match[1];
-        let numPart = match[2];
+      // Prefijos conocidos donde después solo van números:
+      const numericPrefixes = ["SSZ", "MEDU", "MEDUWN", "HLCU", "HLXU", "SUDU", "ZIMU", "COSU", "CMDU", "MSCU", "ANNU"];
+      const matchedPrefix = numericPrefixes.find(p => fixed.startsWith(p));
+      if (matchedPrefix) {
+        const prefix = fixed.substring(0, matchedPrefix.length);
+        let numPart = fixed.substring(matchedPrefix.length);
         numPart = numPart.replace(/I/g, "1").replace(/O/g, "0").replace(/Z/g, "7").replace(/S/g, "5").replace(/L/g, "1");
         fixed = prefix + numPart;
       }
