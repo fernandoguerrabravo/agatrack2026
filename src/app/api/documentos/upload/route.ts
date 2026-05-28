@@ -492,11 +492,17 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       ? { ...(claudeAnalysis as Record<string, unknown>) }
       : { ...analysis.datos_extraidos };
     
-    // Para BL: si ambos tienen valor, usar GPT (más preciso en caracteres alfanuméricos)
-    if (analysis.datos_extraidos?.numero_bl_master || analysis.datos_extraidos?.numero_bl) {
+    // Para BL: usar Claude si tiene ambos (master+house), sino GPT
+    const claudeA = claudeAnalysis as Record<string, unknown>;
+    if (claudeA.numero_bl_master) {
+      combined.numero_bl_master = claudeA.numero_bl_master;
+      combined.numero_bl = claudeA.numero_bl_master;
+      if (claudeA.numero_bl_house) combined.numero_bl_house = claudeA.numero_bl_house;
+    } else if (analysis.datos_extraidos?.numero_bl_master || analysis.datos_extraidos?.numero_bl) {
       const gptBL = analysis.datos_extraidos.numero_bl_master || analysis.datos_extraidos.numero_bl;
       combined.numero_bl_master = gptBL;
       combined.numero_bl = gptBL;
+      if (analysis.datos_extraidos.numero_bl_house) combined.numero_bl_house = analysis.datos_extraidos.numero_bl_house;
     }
 
     if (Object.keys(claudeAnalysis).length > 0 && Object.keys(analysis.datos_extraidos).length > 0) {
