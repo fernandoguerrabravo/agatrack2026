@@ -418,20 +418,18 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       analysis.texto_completo = documentText;
     }
 
-    // Post-procesamiento: corregir BL (nunca minúsculas, I→1 en parte numérica)
+    // Post-procesamiento: corregir BL (nunca minúsculas)
     const fixBL = (bl: unknown): string => {
       if (!bl || typeof bl !== "string") return String(bl || "");
       let fixed = bl.replace(/l/g, "1");
       fixed = fixed.toUpperCase();
-      // Prefijos conocidos donde después solo van números:
-      const numericPrefixes = ["SSZ", "MEDU", "MEDUWN", "HLCU", "HLXU", "SUDU", "ZIMU", "COSU", "CMDU", "MSCU", "ANNU"];
-      const matchedPrefix = numericPrefixes.find(p => fixed.startsWith(p));
-      if (matchedPrefix) {
-        const prefix = fixed.substring(0, matchedPrefix.length);
-        let numPart = fixed.substring(matchedPrefix.length);
-        numPart = numPart.replace(/I/g, "1").replace(/O/g, "0").replace(/Z/g, "7").replace(/S/g, "5").replace(/L/g, "1");
-        fixed = prefix + numPart;
-      }
+      // Solo corregir letras que están ENTRE dígitos (contexto numérico puro)
+      // Ej: "SSZ1I61903" → el I entre 1 y 6 es un 1. Pero "ZIMUIAH987" → IAH son letras legítimas
+      fixed = fixed.replace(/(\d)I(\d)/g, "$11$2");  // dígito-I-dígito → dígito-1-dígito
+      fixed = fixed.replace(/(\d)O(\d)/g, "$10$2");  // dígito-O-dígito → dígito-0-dígito
+      fixed = fixed.replace(/(\d)L(\d)/g, "$11$2");  // dígito-L-dígito → dígito-1-dígito
+      fixed = fixed.replace(/(\d)Z(\d)/g, "$17$2");  // dígito-Z-dígito → dígito-7-dígito
+      fixed = fixed.replace(/(\d)S(\d)/g, "$15$2");  // dígito-S-dígito → dígito-5-dígito
       return fixed;
     };
     if (analysis.datos_extraidos) {
