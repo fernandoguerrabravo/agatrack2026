@@ -363,14 +363,21 @@ export default function PrealertasPanel() {
                                         <div className="mt-1 p-2 bg-base-100 rounded text-[10px] overflow-auto max-h-60 space-y-3">
                                           {/* Número de BL */}
                                           <div>
-                                            <div className="font-bold text-[11px] mb-1 text-warning">📄 NÚMERO DE BL (Master)</div>
+                                            <div className="font-bold text-[11px] mb-1 text-warning">📄 NÚMERO DE BL</div>
                                             <table className="w-full border-collapse border border-gray-200">
-                                              <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200">🟢 GPT</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
+                                              <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200"></th><th className="p-1 text-left border border-gray-200">🟢 GPT</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
                                               <tbody>
                                                 <tr className={(datos.numero_bl_master || datos.numero_bl) === (datosClaude.numero_bl_master || datosClaude.numero_bl) ? "bg-green-50" : "bg-yellow-50"}>
+                                                  <td className="p-1 font-semibold border border-gray-200">MBL</td>
                                                   <td className="p-1 border border-gray-200 font-mono">{String(datos.numero_bl_master || datos.numero_bl || "—")}</td>
                                                   <td className="p-1 border border-gray-200 font-mono">{String(datosClaude.numero_bl_master || datosClaude.numero_bl || "—")}</td>
                                                   <td className="p-1 text-center border border-gray-200">{(datos.numero_bl_master || datos.numero_bl) === (datosClaude.numero_bl_master || datosClaude.numero_bl) ? "✅" : "⚠️"}</td>
+                                                </tr>
+                                                <tr className={(datos.numero_bl_house || "") === (datosClaude.numero_bl_house || "") ? "bg-green-50" : "bg-yellow-50"}>
+                                                  <td className="p-1 font-semibold border border-gray-200">HBL (h)</td>
+                                                  <td className="p-1 border border-gray-200 font-mono">{String(datos.numero_bl_house || "—")}</td>
+                                                  <td className="p-1 border border-gray-200 font-mono">{String(datosClaude.numero_bl_house || "—")}</td>
+                                                  <td className="p-1 text-center border border-gray-200">{(datos.numero_bl_house || "") === (datosClaude.numero_bl_house || "") ? "✅" : "⚠️"}</td>
                                                 </tr>
                                               </tbody>
                                             </table>
