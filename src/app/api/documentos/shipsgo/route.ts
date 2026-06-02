@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { pgQuery } from "@/lib/postgres";
+import { guardarEjemploBL } from "@/lib/bl-ejemplos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -210,6 +211,24 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+  }
+
+  // Guardar como ejemplo VERIFICADO con ShipsGo (alta confianza para el aprendizaje)
+  try {
+    const finalDocs = await pgQuery<{ datos_extraidos: string }>(
+      "SELECT datos_extraidos FROM documentos WHERE id = $1",
+      [docId]
+    );
+    if (finalDocs[0]) {
+      const datosFinal = typeof finalDocs[0].datos_extraidos === "string"
+        ? JSON.parse(finalDocs[0].datos_extraidos || "{}")
+        : finalDocs[0].datos_extraidos;
+      // Asegurar que el MBL usado en ShipsGo quede registrado
+      if (blUsado) datosFinal.mbl_shipsgo = blUsado;
+      await guardarEjemploBL(session.rut, datosFinal, "shipsgo", true);
+    }
+  } catch (err) {
+    console.error("[shipsgo] Error guardando ejemplo verificado:", err instanceof Error ? err.message : err);
   }
 
   return NextResponse.json({ ok: true, shipsgo: shipsgoData });

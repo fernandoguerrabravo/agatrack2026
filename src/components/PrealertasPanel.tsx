@@ -305,6 +305,14 @@ export default function PrealertasPanel() {
                                   const gptFleteTotal = datos.flete_total_prepaid || datos.flete_total || null;
                                   const claudeFleteTotal = datosClaude.flete_total_prepaid || datosClaude.flete_total || null;
 
+                                  // Gastos hasta FOB
+                                  const gptGastosFob = datos.gastos_hasta_fob || null;
+                                  const claudeGastosFob = datosClaude.gastos_hasta_fob || null;
+                                  const gptGastosFobTotal = datos.gastos_fob_total || null;
+                                  const claudeGastosFobTotal = datosClaude.gastos_fob_total || null;
+                                  const gptIncoterm = datos.incoterm || "";
+                                  const claudeIncoterm = datosClaude.incoterm || "";
+
                                   // Puertos de transbordo
                                   const gptTransbordo = datos.puerto_transbordo || "";
                                   const claudeTransbordo = datosClaude.puerto_transbordo || "";
@@ -382,7 +390,7 @@ export default function PrealertasPanel() {
                                               </tbody>
                                             </table>
                                             {/* Botón enviar a ShipsGo */}
-                                            {!doc.datos_shipsgo || doc.datos_shipsgo === "{}" || doc.datos_shipsgo === "" ? (
+                                            {!doc.datos_shipsgo || (typeof doc.datos_shipsgo === "string" && (doc.datos_shipsgo === "{}" || doc.datos_shipsgo === "")) || (typeof doc.datos_shipsgo === "object" && Object.keys(doc.datos_shipsgo).length === 0) ? (
                                               <div className="mt-2 flex items-center gap-2">
                                                 <input
                                                   type="text"
@@ -491,6 +499,56 @@ export default function PrealertasPanel() {
                                               </table>
                                             )}
                                           </div>
+                                          {/* Gastos hasta FOB (EXW) */}
+                                          {(gptGastosFob || claudeGastosFob || gptGastosFobTotal || claudeGastosFobTotal) && (
+                                          <div>
+                                            <div className="font-bold text-[11px] mb-1 text-warning">📦 GASTOS HASTA FOB {gptIncoterm || claudeIncoterm ? `(${gptIncoterm || claudeIncoterm})` : ""}</div>
+                                            <table className="w-full border-collapse border border-gray-200">
+                                              <thead><tr className="bg-gray-100"><th className="p-1 text-left border border-gray-200">Campo</th><th className="p-1 text-left border border-gray-200">🟢 GPT-4o</th><th className="p-1 text-left border border-gray-200">🟣 Claude</th><th className="p-1 border border-gray-200">✓</th></tr></thead>
+                                              <tbody>
+                                                <tr className={String(gptGastosFobTotal) === String(claudeGastosFobTotal) ? "bg-green-50" : "bg-yellow-50"}>
+                                                  <td className="p-1 font-semibold border border-gray-200">Total Gastos FOB</td>
+                                                  <td className="p-1 border border-gray-200 font-mono">{gptGastosFobTotal != null ? String(gptGastosFobTotal) : "—"}</td>
+                                                  <td className="p-1 border border-gray-200 font-mono">{claudeGastosFobTotal != null ? String(claudeGastosFobTotal) : "—"}</td>
+                                                  <td className="p-1 text-center border border-gray-200">{String(gptGastosFobTotal) === String(claudeGastosFobTotal) ? "✅" : "⚠️"}</td>
+                                                </tr>
+                                                <tr className={String(gptIncoterm).toUpperCase() === String(claudeIncoterm).toUpperCase() ? "bg-green-50" : "bg-yellow-50"}>
+                                                  <td className="p-1 font-semibold border border-gray-200">Incoterm</td>
+                                                  <td className="p-1 border border-gray-200">{String(gptIncoterm || "—")}</td>
+                                                  <td className="p-1 border border-gray-200">{String(claudeIncoterm || "—")}</td>
+                                                  <td className="p-1 text-center border border-gray-200">{String(gptIncoterm).toUpperCase() === String(claudeIncoterm).toUpperCase() ? "✅" : "⚠️"}</td>
+                                                </tr>
+                                              </tbody>
+                                            </table>
+                                            {/* Detalle gastos FOB */}
+                                            {(Array.isArray(gptGastosFob) || Array.isArray(claudeGastosFob)) && (
+                                              <table className="w-full border-collapse border border-gray-200 mt-1">
+                                                <thead><tr className="bg-gray-50"><th className="p-1 text-left border border-gray-200">Concepto</th><th className="p-1 text-right border border-gray-200">🟢 GPT</th><th className="p-1 text-right border border-gray-200">🟣 Claude</th></tr></thead>
+                                                <tbody>
+                                                  {(() => {
+                                                    const gptFobArr = Array.isArray(gptGastosFob) ? gptGastosFob : [];
+                                                    const claudeFobArr = Array.isArray(claudeGastosFob) ? claudeGastosFob : [];
+                                                    const maxLen = Math.max(gptFobArr.length, claudeFobArr.length);
+                                                    return Array.from({ length: maxLen }).map((_, i) => {
+                                                      const g = gptFobArr[i] as Record<string, unknown> | undefined;
+                                                      const c = claudeFobArr[i] as Record<string, unknown> | undefined;
+                                                      const concepto = (g?.concepto || c?.concepto || g?.descripcion || c?.descripcion || `Cargo ${i+1}`) as string;
+                                                      const gVal = g?.monto ?? g?.valor ?? g?.amount ?? "—";
+                                                      const cVal = c?.monto ?? c?.valor ?? c?.amount ?? "—";
+                                                      return (
+                                                        <tr key={i} className={String(gVal) === String(cVal) ? "bg-green-50" : "bg-yellow-50"}>
+                                                          <td className="p-1 border border-gray-200">{concepto}</td>
+                                                          <td className="p-1 text-right border border-gray-200 font-mono">{String(gVal)}</td>
+                                                          <td className="p-1 text-right border border-gray-200 font-mono">{String(cVal)}</td>
+                                                        </tr>
+                                                      );
+                                                    });
+                                                  })()}
+                                                </tbody>
+                                              </table>
+                                            )}
+                                          </div>
+                                          )}
                                           {/* Puerto de Transbordo */}
                                           {(gptTransbordo || claudeTransbordo || sgTransbordo) && (
                                             <div>
@@ -650,7 +708,7 @@ export default function PrealertasPanel() {
                                                 <span>📍 {String((sgRoute.port_of_loading as Record<string, unknown>)?.location && ((sgRoute.port_of_loading as Record<string, unknown>).location as Record<string, unknown>)?.name || "—")}</span>
                                                 <span>→</span>
                                                 <span>🏁 {String((sgRoute.port_of_discharge as Record<string, unknown>)?.location && ((sgRoute.port_of_discharge as Record<string, unknown>).location as Record<string, unknown>)?.name || "—")}</span>
-                                                {sgRoute.transit_percentage && <span className="ml-auto font-bold text-info">{String(sgRoute.transit_percentage)}%</span>}
+                                                {Boolean(sgRoute.transit_percentage) && <span className="ml-auto font-bold text-info">{String(sgRoute.transit_percentage)}%</span>}
                                               </div>
                                             )}
                                             {sgContainers.length > 0 && (

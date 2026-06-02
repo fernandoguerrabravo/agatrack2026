@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { pgQuery } from "@/lib/postgres";
+import { guardarEjemploBL } from "@/lib/bl-ejemplos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,13 @@ export async function POST(req: NextRequest) {
     "UPDATE documentos SET datos_extraidos = $1, datos_extraidos_claude = $2 WHERE id = $3",
     [JSON.stringify(datosGpt), JSON.stringify(datosClaude), docId]
   );
+
+  // Guardar como ejemplo VERIFICADO (flete aprobado manualmente = alta confianza)
+  try {
+    await guardarEjemploBL(session.rut, datosGpt, "flete_aprobado", false);
+  } catch (err) {
+    console.error("[update-flete] Error guardando ejemplo:", err instanceof Error ? err.message : err);
+  }
 
   return NextResponse.json({ ok: true });
 }
