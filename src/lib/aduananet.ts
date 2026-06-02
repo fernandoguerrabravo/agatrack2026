@@ -563,8 +563,16 @@ export async function grabarAntecedentes(input: AntecedentesInput): Promise<Ante
     console.log(`[antecedentes] Moneda: ${codigoMoneda} ← "${input.moneda || "USD (default)"}"`);
 
     // --- Tipo de divisas ---
-    campos.div_id = input.tipoDivisas || "1"; // MERC.CAMB.FORMAL
-    if (campos.ldiv_id !== undefined) campos.ldiv_id = input.tipoDivisas || "1";
+    // Solo setear si se indica explícitamente o si ya tenía valor.
+    // En muchas operaciones viene vacío y AduanaNet no lo exige.
+    if (input.tipoDivisas) {
+      campos.div_id = input.tipoDivisas;
+      if (campos.ldiv_id !== undefined) campos.ldiv_id = input.tipoDivisas;
+    } else if (campos.div_id === "" || campos.div_id === undefined) {
+      // Dejar vacío — no forzar valor
+    } else {
+      // Ya tiene valor, no tocar
+    }
 
     // --- Cláusula de Venta / Incoterm ---
     const codigoCvt = resolverCvt(input.incoterm);
@@ -714,7 +722,7 @@ export function prepararAntecedentes(
     gastosHastaFob,
     // Defaults que se pueden sobreescribir
     formaPago: "1",        // COB1
-    tipoDivisas: "1",      // MERC.CAMB.FORMAL
+    tipoDivisas: undefined, // No forzar si viene vacío en el form
     formaPagoGravamenes: "4", // Sp/IVA C
   };
 }
