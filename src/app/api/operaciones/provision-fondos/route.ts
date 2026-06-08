@@ -91,6 +91,9 @@ export async function POST(request: Request) {
     try {
       storageUrl = await uploadToSpaces(pdfBuffer, fileKey, "application/pdf");
       console.log(`[provision] PDF guardado en bucket: ${storageUrl}`);
+      // Guardar URL en la operación
+      await pgQuery("UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
+        [`\nprovision_url:${storageUrl}`, nro_operacion]);
     } catch (err) {
       console.error("[provision] Error subiendo a Spaces:", err instanceof Error ? err.message : err);
     }

@@ -119,13 +119,15 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   const viaje = String(bl?.viaje_corregido || bl?.viaje || "");
   const fobValue = Number(invoice.fob_value || invoice.monto_total || 0);
   // Flete: todo lo prepaid del BL se suma como flete. THC/DTHC siempre es collect (excluir).
-  const fletePrepaid = Number(bl?.flete_total_prepaid || 0);
+  // En CMA CGM el flete total viene como "total_prepaid"
+  const fletePrepaid = Number(bl?.flete_total_prepaid || bl?.total_prepaid || 0);
   // Gastos que la IA puso en gastos_hasta_fob pero son prepaid (excluir solo THC/DTHC que es collect)
   const gastosHastaFob = (bl?.gastos_hasta_fob || []) as Array<Record<string, unknown>>;
   const gastosPrepaidExtra = gastosHastaFob
     .filter(g => !/\bTHC\b|\bDTHC\b|terminal\s*handling/i.test(String(g.concepto || "")))
     .reduce((sum, g) => sum + Number(g.monto || 0), 0);
-  const fleteValue = fletePrepaid + gastosPrepaidExtra;
+  // Si ya viene total_prepaid (CMA CGM), no sumar gastos extra (ya están incluidos)
+  const fleteValue = bl?.total_prepaid ? Number(bl.total_prepaid) : fletePrepaid + gastosPrepaidExtra;
   const primaRaw = poliza?.prima || (poliza?.marcas_y_numeros as Record<string, unknown>)?.prima || "0";
   const seguroValue = parseFloat(String(primaRaw).replace(",", ".")) || 0;
   const cifValue = fobValue + fleteValue + seguroValue;

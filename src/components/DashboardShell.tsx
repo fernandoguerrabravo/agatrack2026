@@ -29,7 +29,7 @@ function getMenuItems(user: SessionPayload): MenuItem[] {
     ];
   }
 
-  // Cliente: Dashboard + Exportaciones + Importaciones
+  // Cliente: Dashboard + Exportaciones + Importaciones + Tracking Contenedores
   const items: MenuItem[] = [
     { label: "Home", href: "/dashboard", icon: HomeIcon },
     {
@@ -44,6 +44,7 @@ function getMenuItems(user: SessionPayload): MenuItem[] {
       { label: "Estadísticas Generales", href: "/dashboard/importaciones/estadisticas" },
       { label: "Impuestos Importaciones", href: "/dashboard/importaciones/impuestos" },
     ] },
+    { label: "Tracking Contenedores", href: "/dashboard/tracking-contenedores", icon: TrackingIcon },
   ];
 
   // Admin: todo
