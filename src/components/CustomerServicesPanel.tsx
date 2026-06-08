@@ -301,6 +301,22 @@ export default function CustomerServicesPanel() {
     fetchData();
   }
 
+  async function handleProvisionFondos(nroOp: string) {
+    const Swal = (await import("sweetalert2")).default;
+    const c = await Swal.fire({ title: "¿Generar Provisión de Fondos?", html: `Se creará la provisión para <b>${nroOp}</b>, se generará el PDF y se enviará por correo.`, icon: "question", showCancelButton: true, confirmButtonText: "Generar", confirmButtonColor: "#7c3aed" });
+    if (!c.isConfirmed) return;
+    Swal.fire({ title: "Generando provisión...", html: "Creando en AduanaNet y descargando PDF.", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+      const res = await fetch("/api/operaciones/provision-fondos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nro_operacion: nroOp }) });
+      const data = await res.json();
+      if (res.ok) {
+        await Swal.fire({ title: "✅ Provisión generada", html: `<b>Op ${nroOp}</b><br>Total: $${data.total || ""}<br>PDF guardado y enviado por correo.`, icon: "success" });
+      } else {
+        await Swal.fire({ title: "Error", text: data.error, icon: "error" });
+      }
+    } catch (err) { await Swal.fire({ title: "Error", text: err instanceof Error ? err.message : "Error", icon: "error" }); }
+  }
+
   async function handleEnviarTTE(nroOp: string) {
     const Swal = (await import("sweetalert2")).default;
     const c = await Swal.fire({ title: "¿Enviar solicitud de transporte?", html: `Se enviará email con BL adjunto para la operación <b>${nroOp}</b>`, icon: "question", showCancelButton: true, confirmButtonText: "Enviar", confirmButtonColor: "#6366f1" });
@@ -352,6 +368,7 @@ export default function CustomerServicesPanel() {
               ? `https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/din.php?lbac_nid=0&lib_base=1&lib_nid=${op.nro_operacion}&dus_tipo_envio=2&copias=1&tipo=0&borrador=0&dolar=1&ref=1&pedidor=1&archivo=din.php-1&impresion=windows&pagina_inicial=1&cont_todas=1&rango=2-1`
               : `https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/din.php?lib_base=1&lib_nid=${op.nro_operacion}&lbac_nid=0&dus_tipo_envio=2&pagno=0&tipo=&copias=1&borrador=1&ref=1&dolar=1&imp_masiva=0&comando=U`
             } target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-info">{op.estado === "aprobada" ? "DIN Aprobada" : "Borrador"}</a>
+            {op.estado === "aprobada" && <button className="btn btn-xs btn-secondary" onClick={() => handleProvisionFondos(op.nro_operacion)}>Provisión de Fondos</button>}
             {op.estado === "abierta" && <button className="btn btn-ghost btn-xs text-warning" onClick={() => handleCerrarOperacion(op.nro_operacion)}>✓</button>}
           </div>
         </div>

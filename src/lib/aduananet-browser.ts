@@ -139,3 +139,113 @@ export async function browserCuentasValores(
 
   return { iva, total, clp };
 }
+
+/**
+ * Provisión de Fondos: carga formulario, AduanaNet calcula los totales con JS,
+ * selecciona forma de pago, marca imprimir, y hace click en Aceptar.
+ * Retorna el PDF generado como Buffer.
+ */
+export async function browserProvisionFondos(
+  nroOperacion: string
+): Promise<{ ok: boolean; pdfUrl?: string; total?: string; error?: string }> {
+  const { browser, page } = await aduananetBrowserLogin();
+
+  try {
+    // 1. Ir a nuevo.php para iniciar la creación
+    await page.goto(`${BASE_URL}/modulos/contabilidad/solicitud_fondos/nuevo.php`, { waitUntil: "networkidle0" });
+
+    // 2. Llenar lib_nid y submit al formulario
+    await page.type('input[name="lib_nid"]', nroOperacion);
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: "networkidle0" }),
+      page.evaluate(() => {
+        const form = document.querySelector('form') as HTMLFormElement;
+        if (form) form.submit();
+      }),
+    ]);
+
+    // 3. Esperar a que se cargue formulario.php con los datos precalculados
+    await new Promise(r => setTimeout(r, 2000));
+
+    // 4. Seleccionar cheque agencia (radio button cheque=1 ya viene checked)
+    // Seleccionar leyenda: "CHEQUE A : TESORERIA GENERAL DE LA REPUBLICA"
+    await page.select('select[name="sel_leyendaA"]', "CHEQUE A : TESORERIA GENERAL DE LA REPUBLICA");
+
+    // 5. Marcar checkbox imprimir
+    const imprimirChecked = await page.$eval('input[name="imprimir"]', el => (el as HTMLInputElement).checked).catch(() => false);
+    if (!imprimirChecked) {
+      await page.click('input[name="imprimir"]');
+    }
+
+    // 6. Desmarcar email (no enviar por email de aduananet)
+    const emailChecked = await page.$eval('input[name="email"]', el => (el as HTMLInputElement).checked).catch(() => false);
+    if (emailChecked) {
+      await page.click('input[name="email"]');
+    }
+
+    // 7. Esperar a que JS calcule los totales
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Leer el total para verificar
+    const total = await page.$eval('input[name="total_solicitado"]', el => (el as HTMLInputElement).value).catch(() => "");
+
+    // 8. Click en Aceptar/Grabar
+    // Buscar el botón de grabar
+    const btnGuardar = await page.$('input[name="btnGuardar"]') || await page.$('input[value="Aceptar"]') || await page.$('button[name="btnGuardar"]');
+    
+    if (btnGuardar) {
+      // Capturar posible nueva página/PDF que se abra
+      const newPagePromise = new Promise<Page | null>(resolve => {
+        browser.once("targetcreated", async target => {
+          const newPage = await target.page();
+          resolve(newPage);
+        });
+        setTimeout(() => resolve(null), 10000);
+      });
+
+      await btnGuardar.click();
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Verificar si se abrió una nueva ventana (PDF)
+      const newPage = await newPagePromise;
+      if (newPage) {
+        const pdfUrl = newPage.url();
+        await newPage.close();
+        await browser.close();
+        return { ok: true, pdfUrl, total };
+      }
+
+      // Si no se abrió nueva ventana, buscar el PDF en la página actual
+      await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+      const currentUrl = page.url();
+      
+      if (currentUrl.includes("mensaje.php")) {
+        // Buscar link a PDF en el mensaje
+        const pdfLink = await page.$eval('a[href*="pdf"], a[href*="imprimir"], a[href*="reporte"]', el => (el as HTMLAnchorElement).href).catch(() => "");
+        await browser.close();
+        return { ok: true, pdfUrl: pdfLink || undefined, total };
+      }
+
+      await browser.close();
+      return { ok: true, total };
+    } else {
+      // Intentar con función JS
+      await page.evaluate(() => {
+        if (typeof (window as unknown as Record<string, unknown>).grabar === "function") {
+          (window as unknown as Record<string, () => void>).grabar();
+        } else if (typeof (window as unknown as Record<string, unknown>).aceptar === "function") {
+          (window as unknown as Record<string, () => void>).aceptar();
+        } else {
+          const form = document.querySelector('form[action="grabar.php"]') as HTMLFormElement;
+          if (form) form.submit();
+        }
+      });
+      await new Promise(r => setTimeout(r, 3000));
+      await browser.close();
+      return { ok: true, total };
+    }
+  } catch (err) {
+    await browser.close();
+    return { ok: false, error: err instanceof Error ? err.message : "Error desconocido" };
+  }
+}
