@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       rut: user.rut,
       nombre: user.nombre ?? "",
       email: user.email ?? "",
+      rol: (user.rol as "cliente" | "ejecutivo" | "admin") || "cliente",
       rol_prealertas: user.rol_prealertas ?? 0,
     });
 

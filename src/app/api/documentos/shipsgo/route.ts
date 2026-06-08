@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
 
   // Obtener shipsgo_id del documento
   const docs = await pgQuery<{ shipsgo_id: number; datos_extraidos: string; datos_extraidos_claude: string }>(
-    "SELECT shipsgo_id, datos_extraidos, datos_extraidos_claude FROM documentos WHERE id = $1 AND rut_cliente = $2",
-    [docId, session.rut]
+    "SELECT shipsgo_id, datos_extraidos, datos_extraidos_claude FROM documentos WHERE id = $1",
+    [docId]
   );
 
   if (!docs[0]) return NextResponse.json({ error: "Documento no encontrado." }, { status: 404 });

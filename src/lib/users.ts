@@ -9,6 +9,7 @@ export type UserRecord = {
   nombre: string;
   email: string;
   created_at: string;
+  rol: string;
   rol_prealertas?: number;
 };
 

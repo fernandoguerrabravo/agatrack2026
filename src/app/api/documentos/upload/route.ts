@@ -14,9 +14,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // Modelos de visión avanzados para análisis de BL (máxima precisión OCR)
-const GPT_VISION_MODEL = "gpt-5.5";          // GPT-5.5: mejor razonamiento espacial y visión
-const CLAUDE_VISION_MODEL = "claude-opus-4-7"; // Claude Opus 4.7: mejor visión de alta resolución
+const GPT_VISION_MODEL = "gpt-5.5";          // GPT-5.5: segundo modelo (backup)
+const CLAUDE_VISION_MODEL = "claude-opus-4-7"; // Claude Opus 4.7: modelo principal
 const TEXT_FALLBACK_MODEL = "gpt-4o-mini";   // Fallback de texto (sin imagen) — más barato
+const PRIMARY_MODEL = "claude"; // Usar Claude como modelo principal para clasificación
 
 const TIPOS_DOCUMENTO = [
   "Bill of Lading (BL)",
@@ -27,6 +28,7 @@ const TIPOS_DOCUMENTO = [
   "Certificado de Origen",
   "Certificado Fitosanitario",
   "Certificado de Calidad",
+  "Certificado Sanitario (SEREMI)",
   "Documento de Transporte",
   "Mandato",
   "Otro",
@@ -53,12 +55,20 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const nroOperacion = formData.get("nro_operacion") as string;
+    const rutCliente = formData.get("rut_cliente") as string || "";
 
     if (!file) {
       return NextResponse.json({ error: "No se recibió archivo." }, { status: 400 });
     }
     if (!nroOperacion) {
       return NextResponse.json({ error: "Número de operación requerido." }, { status: 400 });
+    }
+
+    // Determinar el rut_cliente: si viene del form usarlo, sino buscar de la operación existente, sino usar el rut del usuario
+    let finalRutCliente = rutCliente;
+    if (!finalRutCliente) {
+      const opRow = await pgQuery<{ rut_cliente: string }>("SELECT rut_cliente FROM operaciones WHERE nro_operacion = $1", [nroOperacion]);
+      finalRutCliente = opRow[0]?.rut_cliente || session.rut;
     }
 
     const bytes = await file.arrayBuffer();
@@ -145,7 +155,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
       // Obtener últimos BLs procesados con datos validados (preferir los que tienen mbl_shipsgo)
       const prevDocs = await pgQuery<{ datos_extraidos: string; datos_extraidos_claude: string; tipo_documento: string }>(
         "SELECT datos_extraidos, datos_extraidos_claude, tipo_documento FROM documentos WHERE rut_cliente = $1 AND tipo_documento = 'Bill of Lading (BL)' ORDER BY created_at DESC LIMIT 15",
-        [session.rut]
+        [finalRutCliente]
       );
       
       // Agrupar ejemplos por naviera/freight forwarder
@@ -235,7 +245,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
         const navieras = ["ASIA SHIPPING", "ILS CARGO", "DANMAR", "MAERSK", "MSC", "CMA", "HAPAG", "COSCO", "ONE", "ZIM", "EVERGREEN", "HMM", "YANG MING", "WAN HAI", "OOCL"];
         return navieras.find(n => t.includes(n)) || "";
       })();
-      const ejemplosVerificados = await obtenerEjemplosBL(session.rut, navieraHint);
+      const ejemplosVerificados = await obtenerEjemplosBL(finalRutCliente, navieraHint);
       if (ejemplosVerificados) {
         blExamples += ejemplosVerificados;
         console.log("[docs] Ejemplos verificados agregados al prompt (naviera hint:", navieraHint || "ninguna", ")");
@@ -590,7 +600,10 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
         JSON.stringify(analysis || {}),
         JSON.stringify(claudeAnalysis || {}),
       ].filter(Boolean).join(" ").toUpperCase();
-      const tipoActual = String(analysis.tipo_documento || "");
+      const tipoActual = String(
+        (claudeAnalysis as Record<string, unknown>)?.tipo_documento || 
+        analysis.tipo_documento || ""
+      );
       console.log("[docs] CLASIFICACIÓN: tipo IA =", tipoActual,
         "| ORIGIN/ORIGEN:", /ORIGIN|ORIGEN/.test(textoClasif),
         "| CRITERIO DE ORIGEN:", /CRITERIO\s*DE\s*ORIGEN/.test(textoClasif),
@@ -607,8 +620,43 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       if (esBLConfiable || esInvoiceConfiable) {
         console.log("[docs] CLASIFICACIÓN: respetando tipo IA confiable (", tipoActual, ") — no se reclasifica");
       } else
-      // Packing List
-      if (/PACKING\s*LIST|LISTA\s*DE\s*EMPAQUE|LISTA\s*DE\s*EMBALAJE|PACKING\s*SLIP/.test(textoClasif)
+      // Bill of Lading — rescatar si la IA lo puso como "Otro" pero tiene keywords de BL
+      if (/BILL\s*OF\s*LADING|B\/L\s*N|CONOCIMIENTO\s*DE\s*EMBARQUE|SEA\s*WAYBILL|SHIPPED\s*ON\s*BOARD|FREIGHT\s*PREPAID|OCEAN\s*BILL/.test(textoClasif)
+          && tipoActual !== "Bill of Lading (BL)"
+          && tipoActual !== "Invoice (Factura Comercial)"
+          && tipoActual !== "Lista de Empaque (Packing List)") {
+        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Bill of Lading (BL)");
+        analysis.tipo_documento = "Bill of Lading (BL)";
+      } else
+      // Invoice — rescatar si tiene keywords de factura comercial
+      if (/COMMERCIAL\s*INVOICE|FACTURA\s*COMERCIAL|INVOICE\s*N|INVOICE\s*DATE|TOTAL\s*AMOUNT|UNIT\s*PRICE|PRECIO\s*UNITARIO/.test(textoClasif)
+          && !/PACKING|WEIGHT\s*LIST/.test(textoClasif)
+          && tipoActual !== "Invoice (Factura Comercial)"
+          && tipoActual !== "Bill of Lading (BL)"
+          && tipoActual !== "Lista de Empaque (Packing List)"
+          && tipoActual !== "Certificado de Origen") {
+        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Invoice (Factura Comercial)");
+        analysis.tipo_documento = "Invoice (Factura Comercial)";
+      } else
+      // Póliza de Seguro — rescatar si tiene keywords de seguro/póliza (ANTES de Packing List)
+      if (/INSURANCE\s*CERTIFICATE|INSURANCE\s*POLICY|POLIZA\s*DE\s*SEGURO|CERTIFICADO\s*DE\s*SEGURO|OPEN\s*CARGO\s*POLICY|MARINE\s*INSURANCE|INSURED\s*AMOUNT|MONTO\s*ASEGURADO|SUMA\s*ASEGURADA|CLAIM\s*AGENT/.test(textoClasif)
+          && tipoActual !== "Póliza de Seguro"
+          && tipoActual !== "Bill of Lading (BL)"
+          && tipoActual !== "Invoice (Factura Comercial)") {
+        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Póliza de Seguro");
+        analysis.tipo_documento = "Póliza de Seguro";
+      } else
+      // Certificado Sanitario SEREMI — CDA, SEREMI, Destinación Aduanera
+      if (/SEREMI|DESTINACI[OÓ]N\s*ADUANERA|\bCDA\b|CERTIFICADO\s*DE\s*DESTINACI|AUTORIDAD\s*SANITARIA/.test(textoClasif)
+          && tipoActual !== "Certificado Sanitario (SEREMI)"
+          && tipoActual !== "Bill of Lading (BL)"
+          && tipoActual !== "Invoice (Factura Comercial)") {
+        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Certificado Sanitario (SEREMI)");
+        analysis.tipo_documento = "Certificado Sanitario (SEREMI)";
+      } else
+      // Packing List (NO aplicar si el documento ES una póliza de seguro)
+      if (/PACKING\s*LIST|LISTA\s*DE\s*EMPAQUE|LISTA\s*DE\s*EMBALAJE|PACKING\s*SLIP|WEIGHT\s*LIST/.test(textoClasif)
+          && !/INSURANCE\s*(CERTIFICATE|POLICY)|POLIZA\s*DE\s*SEGURO|OPEN\s*CARGO\s*POLICY|MARINE\s*INSURANCE/.test(textoClasif)
           && tipoActual !== "Lista de Empaque (Packing List)") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Lista de Empaque (Packing List)");
         analysis.tipo_documento = "Lista de Empaque (Packing List)";
@@ -862,6 +910,10 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       // En el prefijo (letras), un 0 rodeado de letras no tiene sentido → convertir a O
       // El cross-validation entre modelos (mergeBLChars) resolverá si es Q u O
       fixed = fixed.replace(/^([A-Z])0([A-Z]{2,})/g, "$1O$2");  // letra-0-2+letras al inicio → O
+      // MSC siempre tiene 5 letras en el prefijo (MEDUO, MEDUM, MEDUW, etc.)
+      // Si detectamos 4 letras + "0" + 7 dígitos para prefijos MSC → el "0" es "O"
+      fixed = fixed.replace(/^(MEDU)0(\d{7})$/, "$1O$2");
+      fixed = fixed.replace(/^(MSCU|MSKU|TRIU|GCXU|MSDU)0(\d{7})$/, "$1O$2");
       return fixed;
     };
 
@@ -1459,7 +1511,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
 
     // Subir archivo a DigitalOcean Spaces
     const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const fileKey = `documentos/${session.rut}/${nroOperacion}/${Date.now()}_${safeFileName}`;
+    const fileKey = `documentos/${finalRutCliente}/${nroOperacion}/${Date.now()}_${safeFileName}`;
     let storageUrl = "";
     try {
       storageUrl = await uploadToSpaces(buffer, fileKey, mimeType);
@@ -1557,14 +1609,42 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
     console.log("  GPT numero_bl_master:", analysis.datos_extraidos?.numero_bl_master, "| numero_bl_house:", analysis.datos_extraidos?.numero_bl_house);
     console.log("  Claude numero_bl_master:", (claudeAnalysis as Record<string, unknown>)?.numero_bl_master, "| numero_bl_house:", (claudeAnalysis as Record<string, unknown>)?.numero_bl_house);
 
+    // Auto-crear operación si no existe (independiente de documentos)
+    // No crear si es temporal (TEMP_xxx) — se reasignará después
+    if (!nroOperacion.startsWith("TEMP_")) {
+      await pgQuery(
+        `INSERT INTO operaciones (nro_operacion, rut_cliente, estado) VALUES ($1, $2, 'abierta') ON CONFLICT (nro_operacion) DO NOTHING`,
+        [nroOperacion, finalRutCliente]
+      );
+    }
+
+    // Si es un BL, eliminar el BL anterior de esta operación (el nuevo es el corregido)
+    const tipoFinal = (claudeAnalysis as Record<string, unknown>)?.tipo_documento as string || analysis.tipo_documento;
+    if (tipoFinal === "Bill of Lading (BL)" && !nroOperacion.startsWith("TEMP_")) {
+      const blAnterior = await pgQuery<{ id: number; storage_url: string }>(
+        "SELECT id, storage_url FROM documentos WHERE nro_operacion = $1 AND tipo_documento = 'Bill of Lading (BL)'",
+        [nroOperacion]
+      );
+      if (blAnterior.length > 0) {
+        console.log(`[upload] Reemplazando BL anterior (id=${blAnterior[0].id}) por nuevo BL corregido`);
+        // Borrar del bucket
+        if (blAnterior[0].storage_url) {
+          try { const { deleteFromSpaces } = await import("@/lib/spaces"); await deleteFromSpaces(blAnterior[0].storage_url); } catch {}
+        }
+        await pgQuery("DELETE FROM documentos WHERE id = $1", [blAnterior[0].id]);
+      }
+    }
+
     const rows = await pgQuery(
-      `INSERT INTO documentos (rut_cliente, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, shipsgo_id, texto_completo, embedding, storage_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::vector, $11)
+      `INSERT INTO documentos (rut_cliente, rut_usuario, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, shipsgo_id, texto_completo, embedding, storage_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::vector, $12)
        RETURNING id, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, storage_url, created_at`,      [
+        finalRutCliente,
         session.rut,
         nroOperacion,
         file.name,
-        analysis.tipo_documento,
+        // Usar clasificación de Claude como principal si está disponible
+        (claudeAnalysis as Record<string, unknown>)?.tipo_documento as string || analysis.tipo_documento,
         JSON.stringify(combined),
         JSON.stringify(claudeAnalysis),
         JSON.stringify(shipsgoData),
@@ -1580,7 +1660,41 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       const tieneMaster = combined.numero_bl_master || combined.numero_bl;
       if (tieneMaster) {
         // fuente "auto" porque aún no está verificado manualmente; se actualizará a "shipsgo"/"flete_aprobado" después
-        guardarEjemploBL(session.rut, combined, "auto", false).catch(() => {});
+        guardarEjemploBL(finalRutCliente, combined, "auto", false).catch(() => {});
+
+        // Enviar automáticamente a ShipsGo para obtener tracking
+        const docId = rows[0].id;
+        const blNumber = String(tieneMaster);
+        const shipsgoToken = process.env.SHIPSGO_API_KEY;
+        if (shipsgoToken && blNumber) {
+          (async () => {
+            try {
+              console.log("[upload] Enviando BL a ShipsGo:", blNumber);
+              const createRes = await fetch("https://api.shipsgo.com/v2/ocean/shipments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Shipsgo-User-Token": shipsgoToken },
+                body: JSON.stringify({ booking_number: blNumber }),
+              });
+              const createJson = await createRes.json();
+              const shipsgoId = createJson.shipment?.id;
+              if (shipsgoId) {
+                await pgQuery("UPDATE documentos SET shipsgo_id = $1 WHERE id = $2", [shipsgoId, docId]);
+                // Consultar detalles
+                const detailRes = await fetch(`https://api.shipsgo.com/v2/ocean/shipments/${shipsgoId}`, {
+                  headers: { "X-Shipsgo-User-Token": shipsgoToken },
+                });
+                if (detailRes.ok) {
+                  const detailJson = await detailRes.json();
+                  const shipsgoData = detailJson.shipment || {};
+                  await pgQuery("UPDATE documentos SET datos_shipsgo = $1 WHERE id = $2", [JSON.stringify(shipsgoData), docId]);
+                  console.log("[upload] ShipsGo data guardada para BL:", blNumber, "id:", shipsgoId);
+                }
+              }
+            } catch (err) {
+              console.error("[upload] ShipsGo auto-send error:", err instanceof Error ? err.message : err);
+            }
+          })();
+        }
       }
     }
 

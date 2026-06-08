@@ -122,16 +122,8 @@ export async function buscarManifiesto(
   for (const { anho, mes } of meses) {
     try {
       const rows = await consultarProgramacion(codigoPuerto, anho, mes, "I");
-      // Match exacto por viaje
-      let match = rows.find(r => r.viaje.toUpperCase().replace(/\s+/g, "") === viajeTarget);
-      // Si se dio nombre de nave, validar también
-      if (match && naveNombre) {
-        const naveT = naveNombre.toUpperCase().replace(/\s+/g, " ").trim();
-        // si el nombre difiere mucho igual aceptamos por viaje, pero log
-        if (!match.nave.toUpperCase().includes(naveT.split(" ")[0])) {
-          console.log("[manifiesto] viaje coincide pero nave difiere:", match.nave, "vs", naveNombre);
-        }
-      }
+      // Solo match exacto por viaje
+      const match = rows.find(r => r.viaje.toUpperCase().replace(/\s+/g, "") === viajeTarget);
       if (match) {
         console.log(`[manifiesto] Encontrado: ${match.manifiesto} (${match.nave} / ${match.viaje}) en ${mes}/${anho}`);
         return match;
@@ -140,6 +132,7 @@ export async function buscarManifiesto(
       console.error(`[manifiesto] Error consultando ${mes}/${anho}:`, err instanceof Error ? err.message : err);
     }
   }
+
   console.log("[manifiesto] No se encontró viaje", viaje, "en", puertoNombre, "(3 meses)");
   return null;
 }

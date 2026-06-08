@@ -1,0 +1,1229 @@
+<html>
+<head>
+<title>C�lculos Item Mercanc�a</title>
+<link rel="stylesheet" href="../css/din.css" type="text/css">
+<script language="javascript" src="/js/formcheck.js"></script>
+<script language="javascript" src="/js/NumberFormat.js"></script>
+<script language="JavaScript">
+
+String.prototype.strpad=function(total, relleno){
+valor=this;
+while(valor.length<total)
+	valor=relleno+valor;
+
+return valor;
+}
+
+function rebajaAdval()
+{
+		document.frm.recarga_ventana.value='1';
+		
+		if(document.frm.rebaja_advalorem.value=='si')
+			document.frm.advalorem.value='0';
+		if(document.frm.rebaja_advalorem.value=='no')
+			document.frm.advalorem.value=window.opener.document.frm.mer_porc_advalorem.value;
+		
+		document.frm.action="/modulos/din/dus_encabezado/trae_cuenta.php";
+		document.frm.submit();
+}
+</script>
+</head>
+<body>
+
+   <script language="javascript">
+      var lcta = new Array();
+      var lval = new Array();
+      var lobs = new Array();
+			var valor_fep;
+
+			function bencina(n) 
+			{
+				if (!isFloat(n.value)) 
+				{
+					alert("�Debe ingresar un n�mero en este campo!");
+					n.value='0.00';
+					n.focus();
+					return;
+				}
+				adic_gasolina=4.000000;
+				utm         = 71506.000000;
+				valor = utm / 894.790000 * adic_gasolina * n.value/1000;
+			
+				posicion=-1;
+				for (i=0; i<lcta.length; i++)
+				{
+					if (lcta[i]=="201") 
+					{
+						lval[i]=valor;
+						document.frm.valor_bencina.value = valor;
+						posicion=i+1;
+						break;
+					}
+				}
+			
+				valor=0.0000*n.value/1000;
+				valor_fep = valor;
+				//window.opener.document.frm.mer_obs4.value = valor;
+			
+			 	if (valor>0)
+			  	signo='+';
+			 	else
+			 	{
+			    signo='-';
+			    valor=-valor;
+			 	}
+				lcta[posicion]=signo;
+				lval[posicion]=valor;
+			}
+
+      function diesel(n) 
+      {
+         if (!isFloat(n.value)) 
+         {
+            alert("�Debe ingresar un n�mero en este campo!");
+            n.value='0.00';
+            n.focus();
+            return;
+         }
+         adic_diesel=1.500000;
+         utm        =71506.000000;
+         valor = utm / 894.790000 * adic_diesel * n.value / 1000;
+
+         posicion=-1;
+         for (i=0; i<lcta.length; i++)
+            if (lcta[i]=="211") {
+               lval[i]=valor;
+               document.frm.valor_diesel.value = valor;
+               posicion=i+1;
+               break;
+            }
+
+        if ($fep_diesel>0) {
+           valor=0.2647*n.value/1000;
+					 valor_fep = valor;
+           if (valor>0)
+              signo='+';
+           else {
+              signo='-';
+              valor=-valor;
+           }
+           lcta[posicion]=signo;
+           lval[posicion]=valor;
+           //lobs[posicion]="";
+        }
+      }
+
+      function kerosene(n) 
+      {
+      	
+         if (!isFloat(n.value)) 
+         {
+            alert("�Debe ingresar un n�mero en este campo!");
+            n.value='0.00';
+            n.focus();
+            return;
+         }
+         valor =0.0000*n.value/1000;
+
+         valor=Math.round(valor*100)/100;
+         document.frm.valor_kerosene.value=valor;
+         valor_fep = valor;
+
+
+         posicion=-1;
+         for (i=0; i<lcta.length; i++)
+            if (lobs[i]=="KEROSENE") {
+               posicion=i;
+               break;
+            }
+
+         if (posicion>=0) {
+            if (valor>0)
+               signo='+';
+            else {
+               signo='-';
+               valor=-valor;
+            }
+
+            lcta[posicion]=signo;
+            lval[posicion]=valor;
+         }
+      }
+
+      function petro_comb(n) 
+      {
+         if (!isFloat(n.value)) 
+         {
+            alert("�Debe ingresar un n�mero en este campo!");
+            n.value='0.00';
+            n.focus();
+            return;
+         }
+         valor =0.0000*n.value/1000;
+
+         valor=Math.round(valor*100)/100;
+         document.frm.valor_kerosene.value=valor;
+         valor_fep = valor;
+
+
+         posicion=-1;
+         for (i=0; i<lcta.length; i++)
+            if (lobs[i]=="PETRO_COMB") {
+               posicion=i;
+               break;
+            }
+
+         if (posicion>=0) {
+            if (valor>0)
+               signo='+';
+            else {
+               signo='-';
+               valor=-valor;
+            }
+
+            lcta[posicion]=signo;
+            lval[posicion]=valor;
+         }
+      }
+
+      function nafta(n) 
+      {
+         if (!isFloat(n.value)) 
+         {
+            alert("�Debe ingresar un n�mero en este campo!");
+            n.value='0.00';
+            n.focus();
+            return;
+         }
+         valor =0.0000*n.value/1000;
+
+         valor=Math.round(valor*100)/100;
+         document.frm.valor_kerosene.value=valor;
+         valor_fep = valor;
+
+
+         posicion=-1;
+         for (i=0; i<lcta.length; i++)
+            if (lobs[i]=="NAFTA") {
+               posicion=i;
+               break;
+            }
+
+         if (posicion>=0) {
+            if (valor>0)
+               signo='+';
+            else {
+               signo='-';
+               valor=-valor;
+            }
+
+            lcta[posicion]=signo;
+            lval[posicion]=valor;
+         }
+      }
+
+      function gas(n) 
+      {
+         if (!isFloat(n.value)) 
+         {
+            alert("�Debe ingresar un n�mero en este campo!");
+            n.value='0.00';
+            n.focus();
+            return;
+         }
+         valor =0.0000*n.value/1000;
+
+         valor=Math.round(valor*100)/100;
+         document.frm.valor_kerosene.value=valor;
+         valor_fep = valor;
+
+
+         posicion=-1;
+         for (i=0; i<lcta.length; i++)
+            if (lobs[i]=="GAS") {
+               posicion=i;
+               break;
+            }
+
+         if (posicion>=0) {
+            if (valor>0)
+               signo='+';
+            else {
+               signo='-';
+               valor=-valor;
+            }
+
+            lcta[posicion]=signo;
+            lval[posicion]=valor;
+         }
+      }
+
+			function alfombra(n)
+			{
+				//Valor para ver si aplica impuesto (valor aduanero + iva + mercanc�a usada)
+				valor=24344.38;
+				base_imponible = 24344.38;
+			
+				for (i=0; i < lcta.length; i++)
+				{
+					if (lcta[i]=='223' || lcta[i]=='116')
+						base_imponible = base_imponible + parseFloat(lval[i]);
+					if (lcta[i]=='223' ||lcta[i]=='116' || lcta[i]=='178')
+						valor = valor + parseFloat(lval[i]);
+				}
+				//Calculamos el iva
+				iva		=	Math.round(base_imponible * 19.000000)/100;
+				valor	=	valor + iva;
+			
+				document.frm.valor_alfombra.value=0;
+			
+				valor_mt2	=	valor/n.value;
+			
+				if(((valor_mt2*894.790000)/ 71506.000000)>2)
+				{
+					//Aplica impuesto
+					for (i=0; i < lcta.length; i++)
+						if (lobs[i]=='ALFOMBRA')
+						{
+							lval[i]=base_imponible*(0.150000);
+							document.frm.valor_alfombra.value=lval[i];
+							break;
+						}
+				}
+			}
+
+      function puro() 
+      {
+        pvd	=	parseFloat(document.frm.pvdoc.value)/894.790000;
+        cd  = document.frm.cant_doc.value;
+
+         if (!isFloat(pvd)) {
+            alert("�Debe ingresar un n�mero en este campo!");
+            document.frm.pvdoc.value='0.00';
+            document.frm.pvdoc.focus();
+            return;
+         }
+         if (!isFloat(cd)) {
+            alert("�Debe ingresar un n�mero en este campo!");
+            document.frm.cant_doc.value='0.00';
+            document.frm.cant_doc.focus();
+            return;
+         }
+         //valor =$adic_tabaco_puro*n.value;
+         valor =0.526000*(pvd*cd);
+
+         for (i=0; i<lcta.length; i++)
+            if (lcta[i]=="195") {
+               lval[i]=valor;
+               document.frm.valor_puro.value = valor;
+               break;
+            }
+      }
+
+      function cigarrillo(n) 
+      {
+         if (!isFloat(n.value)) 
+         {
+            alert("�Debe ingresar un n�mero en este campo!");
+            n.value='0.00';
+            n.focus();
+            return;
+         }
+         /*valor =(0.300000*parseFloat(document.frm.upaq.value))*n.value/894.790000;*/
+       valor = ( cortar_decimales_sin_redondear((parseFloat(document.frm.upaq.value)/894.790000),4 ) ) * n.value * 0.300000;
+       
+
+         for (i=0; i<lcta.length; i++)
+            if (lcta[i]=="195") {
+               //lval[i]=valor;
+
+               document.frm.valor_cigarrillo.value = valor;
+               lval[i]=valor;
+               break;
+            }
+      }
+       
+      function cigarrilloEspecifico() {
+               if (!isFloat(document.frm.cantidad_ciga.value)) {
+                  alert("�Debe ingresar un n�mero en este campo!");
+                  n.value='0.00';
+                  n.focus();
+                  return;
+               }
+         
+         valor =0.0010304240*parseFloat(document.frm.cantidad_ciga.value)*71506.000000;
+
+         for (i=0; i<lcta.length; i++)
+            if (lcta[i]=="295") {
+               //lval[i]=valor;
+
+               document.frm.valor_imp_cigarrillo.value = valor;
+               lval[i]=valor;
+               break;
+            }
+      }
+      
+
+      function picado(n) 
+      {
+         if (!isFloat(n.value)) 
+         {
+            alert("�Debe ingresar un n�mero en este campo!");
+            n.value='0.00';
+            n.focus();
+            return;
+         }
+         //valor =$adic_tabaco_picado*n.value;
+         cantidad                        =        document.frm.cant_unid.value;
+         valor_unidad        =        document.frm.pu.value;
+         //valor                                = ((cantidad*valor_unidad)/894.790000)* 0.597000;
+         valor                                = ( cortar_decimales_sin_redondear((valor_unidad/894.790000),4) * cantidad ) * 0.597000;
+         
+         for (i=0; i<lcta.length; i++)
+            if (lcta[i]=="195") {
+               lval[i]=valor;
+               document.frm.valor_picado.value = valor;
+               break;
+            }
+      }
+
+			function Aceptar() 
+			{
+								
+								//A dos decimales
+				if ((document.frm.usada[1].checked)||(document.frm.usada[2].checked))
+				{
+					lcta[lcta.length] = '116';
+					lobs[lobs.length] = '5';
+					
+					if(document.frm.usada[1].checked)
+						lval[lval.length] = (0.500000*0)*24344.38/100;
+					else
+						lval[lval.length] = 0;
+				}
+				
+				//es bienDeCapital
+								for (i=0; i< lcta.length; i++){
+					
+					lval[i]=(lval[i]*100)/100;
+					
+				}	
+				
+				for (i=0; i< lcta.length; i++)
+				{
+					
+					if (lobs[i]=='LUJO')
+					{
+						lobs[i]="";
+						/*lval[i]=(24344.38+lval[0])*(0.150000);*/
+						lval[i]=(document.frm.usada[1].checked)||(document.frm.usada[2].checked)? (24344.38+lval[0]+0)*(0.150000):(24344.38+lval[0])*(0.150000);
+					}
+					
+					if (lobs[i]=='PIROTECNIA')
+					{
+						lobs[i]="";
+						//Base imponible
+						valor=24344.38;
+						
+						for (ii=0; ii < lcta.length; ii++)
+							if (lcta[ii]=='179' || lcta[ii]=='197' || lcta[ii]=='223' ||	lcta[ii]=='116' || lcta[ii]=='224' || lcta[ii]=='222' || lcta[ii]=='195' || lobs[ii]=='KEROSENE' || lobs[ii]=='PETRO_COMB' || lobs[ii]=='NAFTA' || lobs[ii]=='GAS')
+								valor = valor + lval[ii];
+							
+							//lval[i]=valor*$adic_pirotecnia;
+							lval[i]=24344.38*0.500000;
+					}
+					
+					
+					if (lobs[i]=='AZUCAR')
+					{
+						lobs[i]="";
+						quitar = 0;
+						switch(document.frm.tipo_azucar.value)
+						{
+							case '1'://cruda
+								if (aplica_baz_cruda==1)
+								{
+									if(aplica_derecho_baz_cruda==1)
+									{
+										lcta[i]	=	"222";
+										lval[i]=valor_baz_cruda;
+										valor_porc_222	=	0;
+									}
+									else
+									{
+										lval[i]=valor_baz_cruda;
+										valor_porc_222	= "0";
+									}
+									
+									if(aplica_descuento_baz_cruda==1)
+									{
+										lcta[i]	=	"222";
+										if (lval[0] > (valor_baz_cruda*-1))
+											lval[i]	=	valor_baz_cruda*-1;
+										else
+											lval[i]	=	lval[0];
+										
+										valor_porc_222	= 0;
+									}
+									else
+									{
+										lcta[i]	=	"222";
+										if (lval[0] > (valor_baz_cruda*-1))
+											lval[i]	=	valor_baz_cruda;
+										else
+											lval[i]	=	lval[0];
+										
+										valor_porc_222	=	0;
+									}
+								}
+								else
+									quitar	=	1;
+							break;
+							case '2'://grado 1 � 2
+								if (aplica_baz_12==1)
+								{
+									if(aplica_derecho_baz_12==1)
+									{
+										lcta[i]	=	"222";
+										lval[i]=valor_baz_12;
+										valor_porc_222	=	0;
+									}
+									else
+									{
+										lcta[i]	=	"222";
+										lval[i]=valor_baz_12;
+										valor_porc_222	=	"0";
+									}
+									if(aplica_descuento_baz_12==1)
+									{
+										lcta[i]	=	"222";
+										if (lval[0] > (valor_baz_12*-1))
+											lval[i]	=	valor_baz_12 *-1;
+										else
+											lval[i]	=	lval[0];
+										
+										valor_porc_222	=0;
+									}
+									else
+									{
+										lcta[i]	=	"222";
+										if (lval[0] > (valor_baz_12*-1))
+											lval[i]	=	valor_baz_12;
+										else
+											lval[i]	=	lval[0];
+										
+										valor_porc_222	= 0;
+									}
+								}
+								else
+									quitar	=	1;
+							break;
+							case '3'://grado 3,4 o superior
+								if (aplica_baz_34s==1)
+								{
+									if(aplica_derecho_baz_34s==1)
+									{
+										lcta[i]	=	"222";
+										lval[i]=valor_baz_34s;
+										valor_porc_222	=	0;
+									}
+									else
+									{
+										lcta[i]	=	"222";
+										lval[i]=valor_baz_34s;
+										valor_porc_222	=	"0";
+									}
+									if(aplica_descuento_baz_34s==1)
+									{
+										lcta[i]	=	"222";
+										if (lval[0] > (valor_baz_34s*-1))
+											lval[i]	=	valor_baz_34s*-1;
+										else
+											lval[i]	=	lval[0];
+										
+										valor_porc_222	=	0;
+									}
+									else
+									{
+										lcta[i]	=	"222";
+										if (lval[0] > (valor_baz_34s*-1))
+											lval[i]	=	valor_baz_34s;
+										else
+											lval[i]	=	lval[0];
+										
+										valor_porc_222	=	0;
+									}
+								}
+								else
+									quitar	=	1;
+							break;
+						}
+						if (quitar==1)
+						{
+							lval.splice(i,1);
+							lcta.splice(i,1);
+							lobs.splice(i,1);
+						}
+						else //verificar si pasa el tope
+						{
+							valor        =        0;
+							for(j=0;j<lval.length-1;j++)
+								valor+=lval[j];
+							
+							if(valor >24344.38*(98.00/100))
+								lval[i]-= valor - (24344.38*(98.00/100));
+						}
+					}
+					
+					if (lobs[i]=="TRIGO")
+					{
+						lobs[i]="";
+						if (aplica_trigo==1)
+						{
+							if(aplica_derecho_trigo==1)
+							{
+								lval[i]=valor_trigo;
+								valor_porc_222	=	'';
+							}
+							else
+							{
+								lval[i]=valor_trigo;
+								valor_porc_222	=	0;
+							}
+							if(aplica_descuento_trigo==1)
+							{
+								lcta[i]	=	"230";
+								if (lval[0] > (valor_trigo*-1))
+									lval[i]	=	valor_trigo*-1;
+								else
+									lval[i]	=	lval[0];
+							
+								valor_porc_222	= "0";
+							}
+							else
+							{
+								lcta[i]	=	"222";
+								lval[i]	=	valor_trigo;
+								valor_porc_222	=	'';
+							}
+						}
+						else
+						{
+							if (aplica_harina==1)
+							{
+								if(aplica_derecho_harina==1)
+								{
+									lval[i]=valor_harina;
+									valor_porc_222	=	'';
+								}
+								else
+								{
+									lval[i]=valor_harina;
+									valor_porc_222	= "0";
+								}
+								if(aplica_descuento_harina==1)
+								{
+									lcta[i]	=	"230";
+									if (lval[0] > (valor_harina*-1))
+										lval[i]	=	valor_harina*-1;
+									else
+										lval[i]	=	lval[0];
+								
+									valor_porc_222	= "0";
+								}
+								else
+								{
+									lcta[i]	=	"222";
+									if (lval[0] > (valor_harina*-1))
+										lval[i]	=	valor_harina;
+									else
+										lval[i]	=	lval[0];
+									
+									valor_porc_222	=	'';
+								}
+							}
+						}
+					}
+					
+					if (lobs[i]=='KEROSENE' || lobs[i]=='PETRO_COMB' || lobs[i]=='NAFTA' || lobs[i]=='GAS') 
+					{
+						lobs[i]="25";
+					}
+					
+					if (lobs[i]=='RETIVA') 
+					{
+						if(document.frm.retenedor[0].checked)
+						{
+							lobs[i]="33";
+							//Base imponible
+							valor=24344.38;
+							
+							for (ii=0; ii < lcta.length; ii++)
+								if (lcta[ii]=='197' || lcta[ii]=='223' ||	lcta[ii]=='116' || lcta[ii]=='224' ||	lcta[ii]=='222' || lcta[ii]=='195' ||	lobs[ii]=='KEROSENE' || lobs[ii]=='PETRO_COMB' || lobs[ii]=='NAFTA' || lobs[ii]=='GAS' || lobs[ii]=='RETIVA')
+									valor = valor + lval[ii];
+								
+								lval[i]=Math.round(valor*0.050000*100)/100;
+						}
+						else
+						{
+							//debe quitarse del arreglo	
+							lcta.splice(i,1);
+							lval.splice(i,1);
+							lobs.splice(i,1);
+						}
+					}
+					
+					if (lobs[i]=='LISIADO')
+					{
+						lobs[i]="";
+						ad_valorem_item=lval[0];
+						lval[i]=Math.round(ad_valorem_item*0.5*100)/100;
+					}
+					
+					if (lcta[i]=='182')
+					{
+						if(!document.frm.impuesto182.checked)
+						{
+							//debe quitarse del arreglo
+							lcta.splice(i,1);
+							lval.splice(i,1);
+							lobs.splice(i,1);
+						}
+					}
+					
+					if (lcta[i]=='179')
+					{
+						if(document.frm.impuesto179)
+						{
+							if(!document.frm.impuesto179.checked)
+							{
+								//debe quitarse del arreglo
+								if(lobs[i]!='ALFOMBRA'){
+								lcta.splice(i,1);
+								lval.splice(i,1);
+								lobs.splice(i,1);
+								}
+							}	
+						}
+					}
+					
+											
+	
+						
+					
+						
+				}
+					window.opener.document.frm.mer_porc_advalorem.value='';
+					window.opener.document.frm.mer_cuenta_advalorem.value='';
+					window.opener.document.frm.mer_mto_cta_advalorem.value='0';
+					window.opener.document.frm.mer_porc_otro1.value='';
+					window.opener.document.frm.mer_cod_otro1.value='';
+					window.opener.document.frm.mer_monto_impto_otro1.value='0';
+					window.opener.document.frm.mer_porc_otro2.value='';
+					window.opener.document.frm.mer_cod_otro2.value='';
+					window.opener.document.frm.mer_monto_impto_otro2.value='0';
+					window.opener.document.frm.mer_porc_otro3.value='';
+					window.opener.document.frm.mer_cod_otro3.value='';
+					window.opener.document.frm.mer_monto_impto_otro3.value='0';
+					window.opener.document.frm.mer_porc_otro4.value='';
+					window.opener.document.frm.mer_cod_otro4.value='';
+					window.opener.document.frm.mer_monto_impto_otro4.value='0';
+					valoraduanero=24344.38;
+					kk=0;
+					
+					//Advalorem
+					if (lcta.length>=1) 
+					{
+						kk=0;
+						//alert(parseFloat(lval[0]*100/valoraduanero));
+						window.opener.document.frm.mer_cuenta_advalorem.value=lcta[0];
+						//window.opener.document.frm.lmer_cuenta_advalorem.value=lcta[0];
+						window.opener.document.frm.mer_mto_cta_advalorem.value=lval[0].toFixed(2);
+						window.opener.document.frm.mer_porc_advalorem.value=(parseFloat(document.frm.advalorem.value)).toFixed(2);
+					}
+					
+					ad_valorem	=	parseFloat(lval[0].toFixed(2));
+					
+					//alert(document.frm.dias.value);
+					if (lcta.length>=2) 
+					{ 
+						kk=1;
+						switch (lcta[1]) 
+						{
+							case '222':
+								window.opener.document.frm.mer_porc_otro1.value	=	valor_porc_222;
+								window.opener.document.frm.mer_signo_otro1.selectedIndex	= (aplica_descuento_baz_cruda==1) ? 1 : 0;
+							break;
+							case '230':
+								window.opener.document.frm.mer_porc_otro1.value	=	valor_porc_222;
+								window.opener.document.frm.mer_signo_otro1.selectedIndex	=	1;
+							break;
+							case '224':
+								window.opener.document.frm.mer_porc_otro1.value	=	valor_porc_222;
+								window.opener.document.frm.mer_signo_otro1.selectedIndex	=	0;
+							break;
+							case '201':
+								window.opener.document.frm.mer_porc_otro1.value	=	"4.000000";
+								break;
+							case '211':
+								window.opener.document.frm.mer_porc_otro1.value	=	"1.500000";
+							break;
+							case '115':
+								window.opener.document.frm.mer_porc_otro1.value	=	"10.000000";
+							break;
+							case 179:
+							case '179':
+								window.opener.document.frm.mer_porc_otro1.value	=	"15.000000";
+							break;
+							case '182':
+								window.opener.document.frm.mer_porc_otro1.value	=	(0.000000*100);
+							break;
+							case '-':
+								window.opener.document.frm.mer_porc_otro1.value	=	"";
+								window.opener.document.frm.mer_signo_otro1.selectedIndex	=	1;
+							break;
+							case '229':
+								n=document.frm.dias;
+								if (n.value>=1  && n.value<=15)  tasa = 2.5;
+								if (n.value>=16 && n.value<=30)  tasa = 5;
+								if (n.value>=31 && n.value<=60)  tasa = 10;
+								if (n.value>=61 && n.value<=90)  tasa = 15;
+								if (n.value>=91 && n.value<=120) tasa = 20;
+								if (n.value>=121)                tasa = 100;
+								window.opener.document.frm.mer_porc_otro1.value="12";
+							break;
+							case '116':
+								window.opener.document.frm.mer_porc_otro1.value	=	"0";
+							break;
+							case '195':
+															break;
+							default :
+							
+								window.opener.document.frm.mer_porc_otro1.value=parseFloat(lval[1]*100/(valoraduanero+ad_valorem)).toFixed(6);
+						}
+						
+						window.opener.document.frm.mer_cod_otro1.value=lcta[1];
+						window.opener.document.frm.mer_monto_impto_otro1.value=(lcta[1]!='115')? lval[1].toFixed(2) : cortar_decimales_sin_redondear(lval[1],2);
+					}
+					
+					if (lcta.length>=3)
+					{
+						kk=2;
+						switch (lcta[2]) 
+						{
+							case '222':
+								window.opener.document.frm.mer_porc_otro2.value	=	valor_porc_222;
+							break;
+							case '201':
+								window.opener.document.frm.mer_porc_otro1.value	=	"4.000000";
+							break;
+							case '211':
+								window.opener.document.frm.mer_porc_otro1.value	=	"1.500000";
+							break;
+							case '115':
+								window.opener.document.frm.mer_porc_otro2.value	=	"10.000000";
+							break;
+							case 179:
+							case '179':
+								window.opener.document.frm.mer_porc_otro2.value	=	"15.000000";
+							break;
+							case '182':
+								window.opener.document.frm.mer_porc_otro2.value	=	"(0.000000*100)";
+							break;
+							case '-':
+								window.opener.document.frm.mer_porc_otro2.value	=	"";
+								window.opener.document.frm.mer_signo_otro2.selectedIndex	=	1;
+							break;
+							case '229':
+								n=document.frm.dias;
+								if (n.value>=1  && n.value<=15)  tasa = 2.5;
+								if (n.value>=16 && n.value<=30)  tasa = 5;
+								if (n.value>=31 && n.value<=60)  tasa = 10;
+								if (n.value>=61 && n.value<=90)  tasa = 15;
+								if (n.value>=91 && n.value<=120) tasa = 20;
+								if (n.value>=121)                tasa = 100;
+								window.opener.document.frm.mer_porc_otro2.value="12";
+							break;
+							case '116':
+								window.opener.document.frm.mer_porc_otro2.value	=	"0";
+							break;
+							case '195':
+															break;
+							default :
+								window.opener.document.frm.mer_porc_otro2.value=parseFloat(lval[2]*100/(valoraduanero+ad_valorem)).toFixed(6);
+						}
+						
+						window.opener.document.frm.mer_cod_otro2.value=lcta[2];
+						window.opener.document.frm.mer_monto_impto_otro2.value=lval[2].toFixed(2);
+					}
+					
+					if (lcta.length>=4)
+					{ 
+						kk=3;
+						switch (lcta[3])
+						{
+							case '222':
+								window.opener.document.frm.mer_porc_otro3.value	=	valor_porc_222;
+							break;
+							case '201':
+								window.opener.document.frm.mer_porc_otro1.value	=	"4.000000";
+							break;
+							case '211':
+								window.opener.document.frm.mer_porc_otro1.value	=	"1.500000";
+							break;
+							case '115':
+								window.opener.document.frm.mer_porc_otro3.value	=	"10.000000";
+							break;
+							case 179:
+							case '179':
+								window.opener.document.frm.mer_porc_otro3.value	=	"15.000000";
+							break;
+							case '182':
+								window.opener.document.frm.mer_porc_otro3.value	=	"";
+							break;
+							case '-':
+								window.opener.document.frm.mer_porc_otro3.value	=	"";
+								window.opener.document.frm.mer_signo_otro3.selectedIndex	=	1;
+							break;
+							case '229':
+								n=document.frm.dias;
+								if (n.value>=1  && n.value<=15)  tasa = 2.5;
+								if (n.value>=16 && n.value<=30)  tasa = 5;
+								if (n.value>=31 && n.value<=60)  tasa = 10;
+								if (n.value>=61 && n.value<=90)  tasa = 15;
+								if (n.value>=91 && n.value<=120) tasa = 20;
+								if (n.value>=121)                tasa = 100;
+								window.opener.document.frm.mer_porc_otro3.value="12";
+							break;
+							case '116':
+								window.opener.document.frm.mer_porc_otro3.value	=	"0";
+							break;
+							case '195':
+															break;
+							default :
+								window.opener.document.frm.mer_porc_otro3.value=parseFloat(lval[3]*100/(valoraduanero+ad_valorem)).toFixed(6);
+						}
+						
+						window.opener.document.frm.mer_cod_otro3.value=lcta[3];
+						window.opener.document.frm.mer_monto_impto_otro3.value=lval[3].toFixed(2);
+					}
+					
+					if (lcta.length>=5) 
+					{ 
+						kk=4;
+						switch (lcta[4]) 
+						{
+							case '222':
+								window.opener.document.frm.mer_porc_otro4.value	=	valor_porc_222;
+							break;
+							case '201':
+								window.opener.document.frm.mer_porc_otro1.value	=	"4.000000";
+							break;
+							case '211':
+								window.opener.document.frm.mer_porc_otro1.value	=	"1.500000";
+							break;
+							case '115':
+								window.opener.document.frm.mer_porc_otro4.value	=	"10.000000";
+							break;
+							case 179:
+							case '179':
+								window.opener.document.frm.mer_porc_otro4.value	=	"15.000000";
+							break;
+							case '182':
+								window.opener.document.frm.mer_porc_otro4.value	=	"";
+							break;
+							case '-':
+								window.opener.document.frm.mer_porc_otro4.value	=	"";
+								window.opener.document.frm.mer_signo_otro4.selectedIndex	=	1;
+							break;
+							case '229':
+								n=document.frm.dias;
+								if (n.value>=1  && n.value<=15)  tasa = 2.5;
+								if (n.value>=16 && n.value<=30)  tasa = 5;
+								if (n.value>=31 && n.value<=60)  tasa = 10;
+								if (n.value>=61 && n.value<=90)  tasa = 15;
+								if (n.value>=91 && n.value<=120) tasa = 20;
+								if (n.value>=121)                tasa = 100;
+								window.opener.document.frm.mer_porc_otro4.value="12";
+							break;
+							case '116':
+								window.opener.document.frm.mer_porc_otro4.value	=	"0";
+							break;
+							case '195':
+															break;
+							default :
+								window.opener.document.frm.mer_porc_otro3.value=parseFloat(lval[4]*100/(valoraduanero+ad_valorem)).toFixed(6);
+						}
+						
+						window.opener.document.frm.mer_cod_otro4.value=lcta[4];
+						window.opener.document.frm.mer_monto_impto_otro4.value=lval[4].toFixed(2);
+					}
+					
+					//Seteo valores de observaciones
+					n=1;
+					     
+					for (k=0; k < lobs.length; k++)
+					{
+						
+						if (lobs[k]!="") 
+						{
+							
+							if (!((window.opener.document.frm.mer_cod_obs1.value==lobs[k])||(window.opener.document.frm.mer_cod_obs2.value==lobs[k])||(window.opener.document.frm.mer_cod_obs3.value==lobs[k])||(window.opener.document.frm.mer_cod_obs4.value==lobs[k])))
+							{
+								for (i=1;i<=4;i++)
+								{
+									if (eval("window.opener.document.frm.mer_cod_obs"+i+".value")=="")
+									{
+										
+										eval("window.opener.document.frm.mer_cod_obs"+i+".value='"+lobs[k]+"'");
+					          eval("window.opener.document.frm.lmer_cod_obs"+i+".value='"+lobs[k]+"'");
+					          
+					          if(lobs[k]=='ALFOMBRA')
+					          {
+					          	eval("window.opener.document.frm.mer_cod_obs"+i+".value=3");
+					          	eval("window.opener.document.frm.lmer_cod_obs"+i+".value=3");	
+					          }
+					          
+					          if(lobs[k]==4)
+					          {
+					          	valor_obs_4	=	parseFloat(document.frm.monto_mano_obra.value).toFixed(2);
+					          	eval("window.opener.document.frm.mer_obs"+i+".value='"+valor_obs_4.strpad(13,'0')+"'");
+					          }
+					          else
+					          {
+					          	if(lobs[k]==61)
+					          	{
+					          		eval("window.opener.document.frm.mer_obs"+i+".value=''");
+					          	}
+					          	else
+					          	{
+					          		if(lobs[k]==41)
+					          		{
+					          			valor_fep		=	Math.abs(valor_fep)+"";
+					          			arrValorFep	=	valor_fep.split(".");
+					          			
+					          			valorFepParteEntera		=	arrValorFep[0];
+					          			if(arrValorFep.length>1)
+					          				valorFepParteDecimal	=	arrValorFep[1];
+					          			else
+					          				valorFepParteDecimal	=	"";
+					          			
+					          			//redondeo a 8 parte entera de cantidad
+					          			while (valorFepParteEntera.length<8)
+					          				valorFepParteEntera = "0" + valorFepParteEntera;
+					          			
+					          			//redondeo a 6 parte decimal de cantidad
+					          			while (valorFepParteDecimal.length<2)
+					          				valorFepParteDecimal = valorFepParteDecimal + "0";
+					          			
+					          			fepFinal	=	valorFepParteEntera + "." + valorFepParteDecimal;
+					          			eval("window.opener.document.frm.mer_obs"+i+".value='"+fepFinal+"'");
+					          		}
+					          		else
+					          		{
+					          			eval("window.opener.cambia_obs(window.opener.document.frm.lmer_cod_obs"+i+")");
+					          		}
+					          	}
+					          }
+					          break;
+					        }
+					      }
+					    }
+					    
+
+					    
+					  }
+					}
+					
+					//Ahora el iva
+					valor=24344.38+0;
+					for (i=0; i < lcta.length; i++)
+					{
+						
+						
+						if (lcta[i]=='197' || lcta[i]=='223' || lcta[i]=='115' || lcta[i]=='116' || lcta[i]=='224' || lcta[i]=='222' || lcta[i]=='195' || lobs[i]=='41')
+						{
+							if(lcta[i]=='115')
+								valor = valor + parseFloat(document.frm.monto_mano_obra.value);
+							else
+								valor = valor + parseFloat((lval[i].toFixed(2)));
+						}
+						if(lcta[i]=='-')
+							valor = valor- parseFloat((lval[i].toFixed(2)));
+							
+						if(lcta[i]=='222' && (aplica_descuento_baz_cruda==1 ||  aplica_descuento_baz_12==1 ||  aplica_descuento_baz_34s==1) )
+						{		
+							valor = parseFloat(valor) -  parseFloat((lval[i].toFixed(2))*2 );
+							//alert("con resta "+valor);	
+						}			
+					}
+					
+					//Incorporo el iva
+					//lcta[lcta.length] = $dscp_iva;
+					//lval[lval.length] = valor*$iva;
+					//lobs[lobs.length] = "";
+					
+					valor=valor*(19.000000/100);
+					//valor=Math.round(valor*100)/100;
+					//valor=redondear(valor,2);
+					NF	= new NumberFormat(valor);
+					NF.setCommas(false);
+					valor	=	NF.toFormatted();
+					
+					//alert(valor);
+					kk++;
+					iva = 19.000000;
+					eval("window.opener.document.frm.mer_porc_otro"+kk+".value=iva.toFixed(6)");
+					eval("window.opener.document.frm.mer_cod_otro"+kk+".value='178'");
+					eval("window.opener.document.frm.mer_monto_impto_otro"+kk+".value=valor");
+					
+					//prorrat = window.opener.document.frm.prorrat_peso.value;
+					ume_id  = window.opener.document.frm.ume_id.value;
+					
+					//alert("prorrateo="+prorrat+" ume_id="+ume_id);
+					
+					//asigno valores de sobretasa (0 o 1)
+					aplica_sobre_tasa = document.frm.aplica_sobre_tasa.value;
+					if(aplica_sobre_tasa=='1')
+					{
+						var linea='';
+						//busco casillero vacio
+						for(var i=1;i<=4;i++)
+						{
+							if(eval("window.opener.document.frm.mer_cod_otro"+i).value=='')
+							{
+								linea=i;
+								break;	
+							}
+							
+						}
+						
+						//ingreso valores a la linea vacia.
+						if(linea!=""){
+						eval("window.opener.document.frm.mer_cod_otro"+i).value						=document.frm.cgcp_id_tasa.value;
+						eval("window.opener.document.frm.mer_porc_otro"+i).value					=document.frm.dpso_tasa.value;
+						eval("window.opener.document.frm.mer_signo_otro"+i).value					='+';
+						eval("window.opener.document.frm.mer_monto_impto_otro"+i).value		=document.frm.valor_sobretasa.value;
+						}
+					}
+					
+					for (k=0; k < lobs.length; k++){
+						
+					 if (lobs[k]=='ALFOMBRA')
+						{
+							if(lval[k]==0 && lcta[k]==179)
+								eval("window.opener.document.frm.mer_porc_otro"+k).value	="0.000";
+							lobs[k]="";	
+						}
+					}
+					
+								//beneficio transitorio del 01/04/2020 al 30/06/2020
+	/*						
+			let form_id = '15';
+			let fpg_id  = '4';
+			let dus_fecha_aceptacion = '2026-06-01';
+			
+			if(form_id=='15' || form_id=='17'){
+				if( dus_fecha_aceptacion >= '2020-04-01' &&  dus_fecha_aceptacion <= '2020-06-30' && ( fpg_id=='7' || fpg_id=='31') )
+				{
+					for(var i=1 ; i<=4 ; i++)
+					{ 
+						if( eval("window.opener.document.frm.mer_cod_otro"+i).value	=='178' )
+						{
+							eval("window.opener.document.frm.mer_cod_otro"+i).value ='700';
+						}
+					}
+					
+				}
+			}		
+		*/		
+					despliega("id_aceptar",false);
+					window.close();
+			}
+			
+			function Aceptar229() 
+			{
+				window.opener.document.frm.mer_porc_advalorem.value='';
+				window.opener.document.frm.mer_cuenta_advalorem.value='';
+				window.opener.document.frm.mer_mto_cta_advalorem.value='0';
+				window.opener.document.frm.mer_porc_otro1.value='';
+				window.opener.document.frm.mer_cod_otro1.value='';
+				window.opener.document.frm.mer_monto_impto_otro1.value='0';
+				window.opener.document.frm.mer_porc_otro2.value='';
+				window.opener.document.frm.mer_cod_otro2.value='';
+				window.opener.document.frm.mer_monto_impto_otro2.value='0';
+				window.opener.document.frm.mer_porc_otro3.value='';
+				window.opener.document.frm.mer_cod_otro3.value='';
+				window.opener.document.frm.mer_monto_impto_otro3.value='0';
+				window.opener.document.frm.mer_porc_otro4.value='';
+				window.opener.document.frm.mer_cod_otro4.value='';
+				window.opener.document.frm.mer_monto_impto_otro4.value='0';
+				valoraduanero=24344.38;
+				n=document.frm.dias;
+				if (n.value>=1  && n.value<=15)  tasa = 2.5;
+				if (n.value>=16 && n.value<=30)  tasa = 5;
+				if (n.value>=31 && n.value<=60)  tasa = 10;
+				if (n.value>=61 && n.value<=90)  tasa = 15;
+				if (n.value>=91 && n.value<=120) tasa = 20;
+				if (n.value>=121)                tasa = 100;
+
+				window.opener.document.frm.mer_porc_otro1.value=parseFloat(tasa).toFixed(6);
+				window.opener.document.frm.mer_cod_otro1.value=lcta[0];
+				window.opener.document.frm.mer_monto_impto_otro1.value=parseFloat(lval[0]).toFixed(2);//window.opener.document.frm.mer_monto_impto_otro1.value=parseFloat(lval[0]).toFixed(2);
+				window.close();
+			}
+	 </script>
+<form name='frm' method=get>
+<input type=hidden name=recarga_ventana value=''>
+<input type=hidden name='mer_cod_arancel' value='39014000' >
+<input type=hidden name='mer_sig_ajuste' value='' >
+<input type=hidden name='mer_monto_ajuste_item' value='' >
+<input type=hidden name='cif' value='24344.38' >
+<input type=hidden name='lib_base' value='1' >
+<input type=hidden name='lib_nid' value='190248' >
+<input type=hidden name='lbac_nid' value='0' >
+<input type=hidden name='dus_tipo_envio' value='2' >
+<input type=hidden name='tio_id ' value=' ' >
+<input type=hidden name='pais_id' value='' >
+<input type=hidden name='mer_cantidad' value='' >
+<table align=center border=0 bgcolor=#AABBCC cellspacing=0 cellpadding=6>
+<tr><td>Partida</td><td>39014000</td><td>&nbsp;</td></tr>
+<tr><td>Descripci�n</td><td>- Copol�meros de etileno y alfa-olefina de densidad inferior a 0,94</td><td>&nbsp;</td></tr>
+<tr><td>Valor aduanero</td><td align=right>24,344.38</td><td>&nbsp;</td></tr>
+<input type='hidden' name='advalorem' value='0'><input type='hidden' name='aplica_sobre_tasa' value=0><tr><td>AdValorem(0.00%)</td><td align=right>0.00</td><td>223</td></tr>
+<script language="javascript">
+	lcta[lcta.length] = '223';
+	lval[lval.length] = '0';
+	lobs[lobs.length] = '';
+</script>
+		<script language="javascript">
+				
+				aplica_baz_cruda =	0;
+				aplica_baz_12    =	0;
+				aplica_baz_34s   =	0;
+				
+				aplica_derecho_baz_cruda   = 0;
+				aplica_descuento_baz_cruda = 0;
+				
+				
+				aplica_derecho_baz_12      = 0;
+				aplica_descuento_baz_12    = 0;
+				
+				
+				aplica_derecho_baz_34s     = 0;
+				aplica_descuento_baz_34s   = 0;
+				
+				
+				
+				
+				
+			</script>
+		<tr><td>Mercanc&iacute;a usada</td><td colspan="2"><input type="radio" name="usada" value="0" checked>No&nbsp;&nbsp;&nbsp;<input type="radio" name="usada" value="1">S&iacute;, con c�lculo&nbsp;&nbsp;&nbsp;<input type="radio" name="usada" value="2">S&iacute;, sin c�lculo</td></tr>
+</table><center><input type='button' id=id_aceptar value='Aceptar' onclick='Aceptar()' class='botones'></center>
+</form>
+</body>
+<script language="JavaScript">
+if ((window.opener.document.frm.mer_cod_otro1.value=="116")||(window.opener.document.frm.mer_cod_otro2.value=="116")||(window.opener.document.frm.mer_cod_otro3.value=="116")||(window.opener.document.frm.mer_cod_otro4.value=="116"))
+document.frm.usada[1].checked=true;
+</script>
+</html>

@@ -18,6 +18,15 @@ type MenuItem = {
 };
 
 function getMenuItems(user: SessionPayload): MenuItem[] {
+  // Ejecutivo: solo Dashboard + Customer Services
+  if (user.rol === "ejecutivo") {
+    return [
+      { label: "Home", href: "/dashboard", icon: HomeIcon },
+      { label: "Customer Services", href: "/dashboard/customer-services", icon: DocIcon },
+    ];
+  }
+
+  // Cliente: Dashboard + Exportaciones + Importaciones
   const items: MenuItem[] = [
     { label: "Home", href: "/dashboard", icon: HomeIcon },
     {
@@ -34,11 +43,12 @@ function getMenuItems(user: SessionPayload): MenuItem[] {
     ] },
   ];
 
-  if (user.rol_prealertas === 1) {
+  // Admin: todo
+  if (user.rol === "admin") {
     items.push({ label: "Prealertas", href: "/dashboard/prealertas", icon: DocIcon });
+    items.push({ label: "Customer Services", href: "/dashboard/customer-services", icon: DocIcon });
+    items.push({ label: "Rastrea tu Contenedor", href: "/dashboard/tracking", icon: TrackingIcon });
   }
-
-  items.push({ label: "Rastrea tu Contenedor", href: "/dashboard/tracking", icon: TrackingIcon });
 
   return items;
 }

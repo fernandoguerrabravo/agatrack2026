@@ -1,0 +1,1266 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="iso-8859-1"><meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>AduanaNetfguerragodoy :: </title>
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta name="google" content="notranslate"><link rel="stylesheet" type="text/css" href=/temas_formulario/azul_piedrav2/css/css-bootstrap-mingsi.css /><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/temas_formulario/azul_piedrav2/css/estilo_base.css" type="text/css"  media="all" />
+<link rel="stylesheet" type="text/css" href=/temas_formulario/azul_piedrav2/css/estilo.css /><link rel="shortcut icon" href="https://fguerragodoy.aduananet2.cl/favicon.ico" />
+		<link href="/js/multiple-select/multiple-select.css" rel="stylesheet"/>
+		<link rel="stylesheet" type="text/css" href="/inc/highslide/highslide/highslide.css" />
+		<link rel="stylesheet" href="/js/jquery-ui-1.11.1/jquery-ui-1.12.1.css">
+		<link rel="stylesheet" href="/js/sweetalert2.min.css">
+		<link rel="stylesheet" type="text/css" href="/navbar/navbar.css" />
+		<script src="/js/sweetalert2.min.js"></script>
+		<script language="JavaScript" src="/inc/highslide/highslide/highslide-full.js"></script>
+		<script src="/js/jquery-2.1.3/jquery.min.js"></script>		
+		<script src="/js/bootstrap/3.2.0/js/bootstrap.min.js"></script>				
+		<script src="/js/jquery-ui-1.11.1/jquery-ui.js"></script>
+		<script src="/navbar/navbar.js"></script>
+		<script src="/js/formcheck.js"></script>
+		
+		
+		<script>
+			hs.graphicsDir = '/inc/highslide/highslide/graphics/';
+			hs.wrapperClassName = 'draggable-header';
+		$(function () {
+		      $(document).tooltip({
+		          content: function () {
+		              return $(this).prop('title');
+		          }
+		      });
+		  });
+  	
+  	 $( function() {
+    	$( "#tabs" ).tabs();
+    } );
+    
+   	</script>
+
+	
+  	
+  	<link rel="stylesheet" href="../css/din.css" type="text/css" />
+	<script language="JavaScript" src="../../../js/formchek.js" ></script>
+	</head>
+
+<body leftmargin="1" topmargin="2">
+
+                <nav class="navbar navbar-inverse navbar-static-top marginBottom-0" role="navigation">
+            <div class="navbar-header">
+                <div id="logo-navbar-responsive" class="logo-navbar-responsive">
+                    <img src="/temas/fguerragodoy/img/logo_clnte.jpg" alt="Logo">
+                </div>
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+            </div>
+            
+            <div class="collapse navbar-collapse" id="navbar-collapse-1">
+                <ul class="nav navbar-nav">
+<li>
+	<a href="#"   class="nivel1menu dropdown-toggle" data-toggle="dropdown">Despachos<b class="caret"></b></a>
+	<ul class="dropdown-menu multi-level"><li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">DIN</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/lista.php">DIN - Despachos en curso</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/lista.php?term=1">DIN - Despachos terminados</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/din/archivo_sna.php">Carga respuesta DIN-SNA</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/aclarac_din/lista.php">Aclaraci�n DIN en curso</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/aclarac_din/lista.php?term=1">Aclaracion DIN terminadas</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/din/impresion_masiva/index.php">Impresi�n  masiva</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">DUS</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/dus/dus_encabezado/lista.php">DUS - Despachos en curso</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/dus/dus_encabezado/lista.php?term=1">DUS - Despachos terminados</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/dus/archivo_sna.php">Carga respuesta DUS-SNA</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/aclarac_dus/lista.php">Aclaraci�n DUS en curso</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/aclarac_dus/lista.php?term=1">Aclaracion DUS terminadas</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/dus/impresion_masiva/index.php">Impresi�n masiva</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">DTI</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/transito/lista.php">DTI - En Curso</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/transito/lista.php?term=1">DTI - Terminadas</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Libro Circunstanciado</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/libro/libro/lista.php">Libro Circunstanciado</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/libro/imp_libro.php">Borrador Libro Circunstanciado</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/libro/imp_despachos.php">Reporte de Despachos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/libro/imp_libro_original.php">Imprimir Libro circunstanciado</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Descriptores</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/dsc_mercancia/lista.php">Descriptor Mercanc�as</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/gen_descriptor.php">TXT Descriptores</a></li>
+</ul>
+</li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/partidas/lista.php">Partidas arancelarias</a></li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Formulario 09</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/f09/lista.php">Formulario 09 - Crear/Editar</a></li>
+</ul>
+</li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/impresion_paridad.php">Reporte paridad</a></li>
+</ul>
+</li>
+<li>
+	<a href="#"   class="nivel1menu dropdown-toggle" data-toggle="dropdown">Contabilidad<b class="caret"></b></a>
+	<ul class="dropdown-menu multi-level"><li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Remesas recibidas</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/ingresos/lista.php">Ing. Remesas y Pago de factura</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/ingresos/formulario_masivo.php">Pago Masivo de factura</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/traspaso/pagar_despacho_con_saldo/formulario.php">Asig. Saldo a Remesa o Factura</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/dep_cheque_cartera/lista.php">Dep. Cheque en Cartera</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Pagos de la Agencia</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/egreso/cheque/lista.php">Confecci�n de cheques</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/egreso/cheque/anulacion/lista.php">Anulaci�n de cheques</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/egreso/efectivo/lista.php">Pagos en Efectivo</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/desembolsos_sin_cancelar/lista.php">Desembolsos sin cancelar</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Pago Directo</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/pago_directo/lista.php">Ingreso de Pagos Directos</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Comprobante</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/comprobante/lista.php">Crear/Editar Comprobantes</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/imp_compro.php">Imp. de Comprobantes Contables</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Compras y Honorarios</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/compras/honorarios/libro_honorarios.php">Ingreso Honorarios</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/compras/libro_compra/libro_compra.php">Ingreso Compras</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/compras/libro_compra/envio_libro_compra/seleccion_cmp.php">Envio L. Compra</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Reportes</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/imp_balance.php">Impresi�n de Balance</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/imp_libro.php">Impresi�n de Libros</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/informes_contables.php">Informes contables</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/por_cuenta_analisis/listado.php">An�lisis de cuenta</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/por_despacho/listado.php">An�lisis por Despacho</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/por_documento/listado.php">Busqueda Documento Externo</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/cliente-proveedor/listado.php">An�lisis por Cliente - Proveedor</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/imp_certificados.php">Impresi�n de Certificados</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/impresion_paridad.php">Reporte paridad</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/foliador/index.php">Foliar Hoja Blanca</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/evento/lista.php">Seguimiento de comprobantes</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Solicitud de Remesas</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/solicitud_fondos/lista.php">Solicitud de Remesas</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Facturaci�n</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/lista.php">DIN-Preparar factura DIN</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/impresion.php">-------Imprimir factura DIN</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/reimpresion.php">-------Reimprimir factura DIN</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/exenta/lista.php">DUS-Preparar factura DUS</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/exenta/impresion.php">-------Imprimir factura DUS</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/exenta/reimpresion.php">-------Reimprimir factura DUS</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/debito/lista.php">N.D�bito-Preparaci�n N.D.</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/debito/impresion.php">-------Impresi�n N.D.</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/debito/reimpresion.php">-------Reimprimir N.D.</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/credito/lista.php">N.Cr�dito-Preparaci�n N.C.</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/credito/impresion.php">-------Impresi�n N.C.</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/credito/reimpresion.php">-------Reimprimir N.C.</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/guia_despacho/lista.php">GUIA -Preparar Guia de Despacho</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/guia_despacho/impresion_guia.php">-------Impresi�n GUIA</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/guia_despacho/reimpresion.php">-------Reimprimir GUIA</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/cobranza/lista.php">Cobranza-Preparaci�n Cobranza</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/cobranza/impresion.php">-------Impresi�n Nota de Cobranza</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/cobranza/reimpresion.php">-------Reimprimir Nota de Cobranza</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/descuento/lista.php">N. Descuento-Preparaci�n N.D</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/descuento/impresion.php">-------Impresi�n Nota de Descuento</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/descuento/reimpresion.php">-------Reimprimir Nota de Descuento</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Cartas</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/acuse_recibo/lista.php">Acuse de Recibo</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/envio_documentos/lista.php">Env�o Documentos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/carta_reclamo/lista.php">Reclamo</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/cartas/index.php">Reportes</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Cuenta Corriente</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cta_cte/cliente/index.php">Cliente</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cta_cte/proveedor/lista.php">Proveedor</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Remuneraciones</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/lista.php">Preparar Liquidaciones</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/lista_impresas.php">Liquidaciones Impresas</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/comprobantes/crear_comprobantes.php">Crear Comprobante</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/anticipos/lista.php">Anticipos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/reportes/index.php">Reportes Instituciones</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/nomina_trabajadores/index.php">N�mina de Trabajadores</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Conciliaci�n</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/conciliacion/lista.php">Cheques por conciliar</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/desconciliacion/lista.php">Documentos conciliados</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/conciliacion/desconciliar_cartola/lista.php">Desconciliar cartola</a></li>
+</ul>
+</li>
+<li><a href="https://fguerragodoy.aduananet2.cl/">Detalle de Informes Contables</a></li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Documentos Electronicos</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_emitidos/lista.php">Documentos  Emitidos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_recibidos/lista.php">Documentos Recibidos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_recibidos/lista.php?dte_reci_ingresado=1">Documentos Contabilizados</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_recibidos/lista.php?dte_guias=1">Gu�as Despacho Recibidas </a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_recibidos/lista.php?dte_reci_estado_comercial=2">Documentos Rechazados</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/carga_masiva_complemento_libros/ver_libro_compra_venta_sii.php">Consulta Registro Libros SII</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/carga_masiva_complemento_libros/carga_masivo_complementos.php">Complemento libro SII</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/boleta_electronica/consumo_folio/lista.php">Consumo de folios enviados</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/boleta_electronica/consumo_folio/formulario.php">Envio Consumo de Folios</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/libros_compra_venta/lista.php">Listado libros enviados SII</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_cedidos/lista.php">Ceder Documentos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/otros/impresion_masiva_pdf.php">Muestra impresa masiva DTE</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+	<a href="#"   class="nivel1menu dropdown-toggle" data-toggle="dropdown">Comex<b class="caret"></b></a>
+	<ul class="dropdown-menu multi-level"><li><a href="https://fguerragodoy.aduananet2.cl/modulos/comex/orden_compra/lista.php">Apertura de carpeta</a></li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/comex/index_rs.php">Op. de reg. suspensivo</a></li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/comex/form_reporte_regimen_sus.php">Reporte Mercanc�as RS</a></li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Certificados</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/certificados/lista.php">Origen</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/certificados/fitosanitario/lista.php">Certificados Fitosanitario</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/certificados/mandatos/lista.php">Mandato de Poder</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cliente_mandato/lista.php">Mandato Exportaci�n</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Memorandum</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/comex/memor/lista.php">Memorandum</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">IVV</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/rendiciones/index.php">Rendiciones</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/comisiones/index.php">Comisiones</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/deducibles/index.php">Deducibles</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/liquidaciones/index.php">Liquidaciones</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/ivv/index.php">IVV</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/despachos/index.php">Despachos</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Carga Despacho</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/comex/carga_txt/rockwell/index.php">Rockwell</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+	<a href="#"   class="nivel1menu dropdown-toggle" data-toggle="dropdown">Reportes<b class="caret"></b></a>
+	<ul class="dropdown-menu multi-level"><li><a href="https://fguerragodoy.aduananet2.cl/modulos/extranet/resumen_operaciones/lista.php">Resumen de operaciones</a></li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/extranet/vcto_regim_suspensivos.php">Vcto. Reg. Suspensivos</a></li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/extranet/vcto_pagos_diferidos_normal.php">Vcto. Pagos Diferidos</a></li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Vencimientos DIN - DUS</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/extranet/vencimientos/dus/lista.php">DUS Primer envio</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/extranet/vencimientos/dus/lista_reg.php">DUS Reg. Suspensivos</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Seguimiento Despachos</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/libro/seguimiento/lista.php">Eventos</a></li>
+</ul>
+</li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/extranet/tracking.php">Tracking de Operaciones</a></li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Tracking Guias Despacho</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/extranet/guia_despacho/lista.php">Tracking Guia de Despacho / Lista</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/extranet/index.php">Reporte</a></li>
+</ul>
+</li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/extranet/reportes_dinamicos/informes.php">Reportes Dinamicos</a></li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/extranet/reporte_despachos.php">Reporte Diario</a></li>
+</ul>
+</li>
+<li>
+	<a href="#"   class="nivel1menu dropdown-toggle" data-toggle="dropdown">Clasificacion Arancelaria<b class="caret"></b></a>
+	<ul class="dropdown-menu multi-level"><li><a href="https://fguerragodoy.aduananet2.cl/modulos/clasificacion_arancelaria/redirect.php">Ir al Portal</a></li>
+</ul>
+</li>
+<li>
+	<a href="#"   class="nivel1menu dropdown-toggle" data-toggle="dropdown">Info. Clientes<b class="caret"></b></a>
+	<ul class="dropdown-menu multi-level"><li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Despachos</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/comex/orden_compra/lista.php">Apertura de Carpeta</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/extranet/tracking.php">Tracking De Operaciones</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/extranet/vcto_regim_suspensivos.php">Reg. Suspensivos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/info_cliente/despachos/regimen_importacion_index.php">Regimen de Importaci�n</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/extranet/guia_despacho/lista.php">Tracking Guia de Despacho / Lista</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Informaci�n Contable</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cta_cte/cliente/lista.php">Cuenta Corriente</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/info_cliente/informacion_contable/totales_factura_index.php">Totales Por Factura</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/info_cliente/informacion_contable/desembolso_index.php">Desembolsos</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Res�menes Estad�sticos</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/info_cliente/estadistica/index.php">Reportes</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+	<a href="#"   class="nivel1menu dropdown-toggle" data-toggle="dropdown">Administraci�n<b class="caret"></b></a>
+	<ul class="dropdown-menu multi-level"><li><a href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/param_sist/formulario.php">Par�metros Sistema</a></li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Config. Contabilidad</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/agente/lista.php">Agente</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/apoderado/lista.php">Apoderado</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/agencia/lista.php">1 Agencia</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/datos_contab.php">2 Comprobantes</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cuenta/lista.php">3 Plan de Cuenta</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cuenta_nivel.php">3 Estructura del plan de cuenta</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/enlace_cuentas/v2/listav2.php">4 Enlace de cuentas</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cfactura/lista.php">5 Cheques Varios</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cfactura2_subconcepto/lista.php">5 Subcuentas de Desembolsos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cfactura2/lista.php">5 Cheque Factura despachos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/centro/lista.php">5 Centro de Costo</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/doc_pago.php">8 Documentos de Pago</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/periodo/mod_cierre_global/lista.php">Periodo Contable</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/periodo/mod_cierre_auxiliar/lista.php">Ver Reservas Periodo</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/banco/lista.php">Bancos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/asiento_inicial/asiento_inicial.php">Asiento Inicial</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/contabilidad/anular_comprobantes_libres.php">Anular comprobantes libres</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/representante_legal/lista.php">Representante Legal</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cargo/lista.php">Cargos</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Mant. de Usuarios</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cliente/lista.php">Clientes</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/empleado/lista.php">Empleados</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/proveedor/lista.php">Proveedores</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cuenta_analisis/lista.php">C�digos de Analisis</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/perfil/lista.php">Perfiles</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/permisos.php">Permisos de Acceso</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/usuario/lista.php">Usuarios</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/comisionista/lista.php">Comisionista</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/usuario/clave/lista.php">Mantenci�n de Claves</a></li>
+</ul>
+</li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Mant. de Despachos</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/nave/lista.php">Naves</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/puerto/lista.php">Puertos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/obs_item/lista.php">Obs. de Item</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/transportista/lista.php">Transportista</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/consignatario/lista.php">Consignatarios</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/vbueno/lista.php">Vistos Buenos</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/tipo_bulto/lista.php">Tipos de Bulto</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/transportista_nac/lista.php">Transportista Nacional</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/nid_anuladas.php">Nid anuladas</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/nid_reserva.php">Nid Reserva</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/compania_seguro/lista.php">C�as. de Seguros</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/impresion_paridad.php">Reporte Paridad</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/lbac_nid_reserva.php">Reserva libro de aclaraciones</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/concepto_desembolso/lista.php">Concepto Desembolso</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/concepto_gasto/lista.php">Concepto Gasto</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/proveedor_concept_desembolso/lista.php">Proveedor concepto desembolso</a></li>
+</ul>
+</li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/modulo/lista.php">Nombres del Menu</a></li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Categor�as Honorarios</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cat_pago_din/index.php">Din - Categor�as</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cat_pago_dus/index.php">Dus - Categor�as</a></li>
+</ul>
+</li>
+<li><a href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/rango_sii/lista.php">Rangos documentos SII</a></li>
+<li class="dropdown-submenu">
+<a tabindex="-1" href="#" class="dropdown-toggle" data-toggle="dropdown">Conf. Remuneraciones</a>
+<ul class="dropdown-menu">
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_afp/lista.php">Afp</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_isapre/lista.php">Salud</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_carga_familiar/lista.php">Carga Familiar</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_mutual/lista.php">Mutual</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_ccaf/lista.php">Caja de Compesaci�n</a></li>
+<li><a tabindex="-1" href="https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_reforma_previsional/lista.php">Incremento gradual cotizaci�n hasta el 8,5% entre 2025-2033</a></li>
+</ul>
+</li>
+</ul>
+</li>
+                </ul>
+            </div><!-- /.navbar-collapse -->
+        </nav>	
+		<script language="JavaScript">
+<!--
+function MM_openBrWindow(theURL,winName,features) { //v2.0
+  window.open(theURL,winName,features);
+}
+//-->
+</script>
+
+
+<table width="99%" border="0" cellspacing="0" cellpadding="0" class="titHeader">
+  <!--<tr>
+    <td colspan="4" ><img src="/temas/fguerragodoy/img/spacer.gif" width="8" height="20"></td>
+  </tr>--->
+  <tr>
+  	<td style="padding: 10px 0px 10px 10px;" nowrap>
+    	<!--<img src="/img/logo_gsisa.png" id="logo1">-->
+    	    	<img  id="imgLogo" src="/temas/fguerragodoy/img/logo_clnte.jpg">    	
+    </td>
+    <td width="885" class="titHeader"  align="center"></td>
+	<td width="8" class="titHeader" valign="bottom"  height="18" style="padding: 10px 5px 10px 5px;">
+		
+	<table id="id_dashboard" class="table_responsive" cellspacing="0" cellpadding="0" border="0">
+		<tbody><tr>
+			<td>	
+			  <table class="table_responsive" cellspacing="0" cellpadding="0" border="0">
+						<tbody>
+						<tr>
+														<td colspan="3" nowrap="">
+								<a href="/dashboard.php" ><img src="/img/dash.png" title="Dashboard - Tablero de Control"></a>
+								<!---<a href="/dashboard.php" class="titulo3" >DASHBOARD</a>--->
+								</td>
+													 <td colspan="3" nowrap=""><div style="font-size:14px;color:#4080BF;text-align:center"><b><u>Soporte</u></b></div><br><div style="font-size:12px;color:#4080BF;text-align:center"> Si necesita asistencia, <br>escr�benos a <b>soporte@gsisa.cl</b><br><div> </td>						</tr>	
+						<tr>
+							<td colspan="7" nowrap="">&nbsp</td>
+						</tr>	
+					</tbody>
+				</table>
+			</td>
+		</tr>
+  	</tbody>
+  </table>
+    </td>
+    <td width="8" class="titHeader" style="vertical-align: middle;" height="18">
+    
+		<table border="0" id="id_indicadores" class="table_responsive" cellspacing="0" cellpadding="0">
+		<tr>
+			<td>	
+			  	<table border="0" class="table_responsive" cellspacing="0" cellpadding="0"><tr><td colspan="7" nowrap><b>02 de Junio del 2026</b></td>
+						</tr>	
+						<tr>
+							<td nowrap>D�lar Observado</td>
+							<td nowrap>:</td>
+							<td align="right">892,91</td>
+							<td nowrap>&nbsp&nbsp</td>
+							<td>Euro</td>
+							<td nowrap>:</td>
+							<td align="right">1.038,75</td>
+						</tr>	
+						<tr>
+							<td>UF</td>
+							<td nowrap>:</td>
+							<td align="right">40.644,55</td>
+							<td nowrap>&nbsp&nbsp</td>
+							<td>UTM</td>
+							<td nowrap>:</td>
+							<td align="right">71.506,00</td>
+						</tr>	
+					</table>
+			</td>
+		</tr>
+  </table>
+    	
+    		 
+    	
+    </td>
+	<td style="padding: 10px 5px 10px 5px;" >
+				<img src="/img/logo2.png" id="logo2">
+				
+	</td>
+  </tr>
+</table>
+		<table width="99%" border="0" class="menu_horizontal">
+		<tr>
+
+    <td width="52%">
+    	<label><label  title='Usuario Activo' class="glyphicon glyphicon-user"></label> fernando</label><label id='infoPerfil'>(ADMINISTRADOR)</label>&nbsp&nbsp&nbsp<label><p  title='Cerrar Sesi�n' class="glyphicon glyphicon-off white" onClick="javascript:location.href='/modulos/usuarios/cerrar.php'"></p></label>&nbsp&nbsp&nbsp<label><a href="#"><p  title='Modificar Clave Usuario' class="glyphicon glyphicon-edit" onClick="javascript:location.href='/modulos/usuarios/modificar.php'"></p></a></label>    </td>
+
+    <td align="center" nowrap width="5%">
+    	<a href='https://fguerragodoy.aduananet2.cl'><p  title='Ir al Inicio' class="glyphicon glyphicon-home" onClick="javascript:location.href='https://fguerragodoy.aduananet2.cl'"></p></a>&nbsp&nbsp&nbsp
+    	    	<img src="https://fguerragodoy.aduananet2.cl/img/mano_der.png"><a title="Sistema de Asistencia y soporte al cliente" target="_blank" href="https://soporte.gsisa.cl/open.php" class="mhItems">Soporte Ticket</a>&nbsp
+    	
+    </td>
+
+    <td align="center" nowrap width="1%"><span class="glyphicon glyphicon-minus"></span></td>
+
+    <td align="center" nowrap width="5%"><a target="aduana" href="https://erosprod.aduana.cl/dinint_login.jsp" class="mhItems">Aduana</a></td>
+    <td align="center" nowrap width="1%"><span class="glyphicon glyphicon-minus"></span></td>
+
+    <td align="center" nowrap width="5%"><a target="aduana" href="http://comext.aduana.cl:7001/DespachadoresWeb/" class="mhItems">Aduana</a></td>
+    <td align="center" nowrap width="1%"><span class="glyphicon glyphicon-minus"></span></td>
+
+
+    <td align="center" nowrap width="5%"><a href="#" class="mhItems" onClick="MM_openBrWindow('/modulos/calculadora/index.php','_blank','width=620,height=260')" >Convertidor</a></td>
+
+    <td align="center" nowrap width="1%"><!--<span class="glyphicon glyphicon-minus"></span>--></td>
+    
+
+    <td align="center" nowrap width="5%"><select name="modulo_seleccion[]" id="select_modulo" multiple ><option value="1|100109|https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/lista.php" >Despachos / DIN / DIN - Despachos en curso</option><option value="1|100112|https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/lista.php?term=1" >Despachos / DIN / DIN - Despachos terminados</option><option value="1|100121|https://fguerragodoy.aduananet2.cl/modulos/din/archivo_sna.php" >Despachos / DIN / Carga respuesta DIN-SNA</option><option value="1|100126|https://fguerragodoy.aduananet2.cl/modulos/aclarac_din/lista.php" >Despachos / DIN / Aclaraci�n DIN en curso</option><option value="1|100146|https://fguerragodoy.aduananet2.cl/modulos/aclarac_din/lista.php?term=1" >Despachos / DIN / Aclaracion DIN terminadas</option><option value="1|100160|https://fguerragodoy.aduananet2.cl/modulos/din/impresion_masiva/index.php" >Despachos / DIN / Impresi�n  masiva</option><option value="1|100217|https://fguerragodoy.aduananet2.cl/modulos/dus/dus_encabezado/lista.php" >Despachos / DUS / DUS - Despachos en curso</option><option value="1|100235|https://fguerragodoy.aduananet2.cl/modulos/dus/dus_encabezado/lista.php?term=1" >Despachos / DUS / DUS - Despachos terminados</option><option value="1|100251|https://fguerragodoy.aduananet2.cl/modulos/dus/archivo_sna.php" >Despachos / DUS / Carga respuesta DUS-SNA</option><option value="1|100253|https://fguerragodoy.aduananet2.cl/modulos/aclarac_dus/lista.php" >Despachos / DUS / Aclaraci�n DUS en curso</option><option value="1|100254|https://fguerragodoy.aduananet2.cl/modulos/aclarac_dus/lista.php?term=1" >Despachos / DUS / Aclaracion DUS terminadas</option><option value="1|100255|https://fguerragodoy.aduananet2.cl/modulos/dus/impresion_masiva/index.php" >Despachos / DUS / Impresi�n masiva</option><option value="0|100281|https://fguerragodoy.aduananet2.cl/modulos/dus/dus_vencimiento/lista.php" >Despachos / DUS / DUS PRORROGA</option><option value="1|100301|https://fguerragodoy.aduananet2.cl/modulos/transito/lista.php" >Despachos / DTI / DTI - En Curso</option><option value="1|100314|https://fguerragodoy.aduananet2.cl/modulos/transito/lista.php?term=1" >Despachos / DTI / DTI - Terminadas</option><option value="1|100401|https://fguerragodoy.aduananet2.cl/modulos/libro/libro/lista.php" >Despachos / Libro Circunstanciado / Libro Circunstanciado</option><option value="1|100405|https://fguerragodoy.aduananet2.cl/modulos/libro/imp_libro.php" >Despachos / Libro Circunstanciado / Borrador Libro Circunstanciado</option><option value="1|100407|https://fguerragodoy.aduananet2.cl/modulos/libro/imp_despachos.php" >Despachos / Libro Circunstanciado / Reporte de Despachos</option><option value="1|100409|https://fguerragodoy.aduananet2.cl/modulos/libro/imp_libro_original.php" >Despachos / Libro Circunstanciado / Imprimir Libro circunstanciado</option><option value="1|100501|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/dsc_mercancia/lista.php" >Despachos / Descriptores / Descriptor Mercanc�as</option><option value="1|100502|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/gen_descriptor.php" >Despachos / Descriptores / TXT Descriptores</option><option value="1|100900|https://fguerragodoy.aduananet2.cl/modulos/partidas/lista.php" >Despachos / Despachos / Partidas arancelarias</option><option value="1|101001|https://fguerragodoy.aduananet2.cl/modulos/f09/lista.php" >Despachos / Formulario 09 / Formulario 09 - Crear/Editar</option><option value="1|101100|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/impresion_paridad.php" >Despachos / Despachos / Reporte paridad</option><option value="0|101202|https://fguerragodoy.aduananet2.cl/modulos/bdf/ingreso_facturas_bdf/lista.php" >Despachos / Factura BDF / Preparar Factura BDF</option><option value="0|101208|https://fguerragodoy.aduananet2.cl/modulos/bdf/ingreso_masivo/ingreso_fechas/ingreso_de_fechas.php" >Despachos / Factura BDF / Ingreso Masivo de Fecha</option><option value="0|101209|https://fguerragodoy.aduananet2.cl/modulos/bdf/ingreso_masivo/ingreso_otros_datos/ingreso_de_otros_datos.php" >Despachos / Factura BDF / Ingreso Masivo de Otros Datos</option><option value="0|101210|https://fguerragodoy.aduananet2.cl/modulos/bdf/ingreso_masivo/ingreso_observaciones/ingreso_de_observaciones.php" >Despachos / Factura BDF / Ingreso Masivo de Obs.</option><option value="0|101211|https://fguerragodoy.aduananet2.cl/modulos/bdf/reporte_mercancias/reporte_de_mercancias.php" >Despachos / Factura BDF / Reporte de Mercancias</option><option value="0|101401|https://fguerragodoy.aduananet2.cl/modulos/sicex/dus/lista.php" >Despachos / SICEX / DUS / Despachos / Procesamiento RUCE</option><option value="0|101402|https://fguerragodoy.aduananet2.cl/modulos/sicex/dus/listaAnulados.php" >Despachos / SICEX / DUS / RUCEs Anulados</option><option value="0|101403|https://fguerragodoy.aduananet2.cl/modulos/sicex/lista_dus.php" >Despachos / SICEX / DUS / XML procesos</option><option value="0|101404|https://fguerragodoy.aduananet2.cl/modulos/sicex/dus/listaProrroga.php" >Despachos / SICEX / DUS / Pr�rroga Legalizaci�n</option><option value="1|200101|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/ingresos/lista.php" >Contabilidad / Remesas recibidas / Ing. Remesas y Pago de factura</option><option value="1|200102|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/ingresos/formulario_masivo.php" >Contabilidad / Remesas recibidas / Pago Masivo de factura</option><option value="1|200103|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/traspaso/pagar_despacho_con_saldo/formulario.php" >Contabilidad / Remesas recibidas / Asig. Saldo a Remesa o Factura</option><option value="1|200104|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/dep_cheque_cartera/lista.php" >Contabilidad / Remesas recibidas / Dep. Cheque en Cartera</option><option value="1|200301|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/egreso/cheque/lista.php" >Contabilidad / Pagos de la Agencia / Confecci�n de cheques</option><option value="1|200302|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/egreso/cheque/anulacion/lista.php" >Contabilidad / Pagos de la Agencia / Anulaci�n de cheques</option><option value="1|200305|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/egreso/efectivo/lista.php" >Contabilidad / Pagos de la Agencia / Pagos en Efectivo</option><option value="1|200317|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/desembolsos_sin_cancelar/lista.php" >Contabilidad / Pagos de la Agencia / Desembolsos sin cancelar</option><option value="0|200345|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/desembolsos/lista.php" >Contabilidad / Pagos de la Agencia / Desembolsos cancelados cliente</option><option value="1|200401|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/pago_directo/lista.php" >Contabilidad / Pago Directo / Ingreso de Pagos Directos</option><option value="1|200501|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/comprobante/lista.php" >Contabilidad / Comprobante / Crear/Editar Comprobantes</option><option value="1|200503|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/imp_compro.php" >Contabilidad / Comprobante / Imp. de Comprobantes Contables</option><option value="1|200703|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/compras/honorarios/libro_honorarios.php" >Contabilidad / Compras y Honorarios / Ingreso Honorarios</option><option value="1|200705|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/compras/libro_compra/libro_compra.php" >Contabilidad / Compras y Honorarios / Ingreso Compras</option><option value="1|200707|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/compras/libro_compra/envio_libro_compra/seleccion_cmp.php" >Contabilidad / Compras y Honorarios / Envio L. Compra</option><option value="1|200801|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/imp_balance.php" >Contabilidad / Reportes / Impresi�n de Balance</option><option value="1|200805|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/imp_libro.php" >Contabilidad / Reportes / Impresi�n de Libros</option><option value="1|200807|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/informes_contables.php" >Contabilidad / Reportes / Informes contables</option><option value="1|200817|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/por_cuenta_analisis/listado.php" >Contabilidad / Reportes / An�lisis de cuenta</option><option value="1|200818|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/por_despacho/listado.php" >Contabilidad / Reportes / An�lisis por Despacho</option><option value="1|200819|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/por_documento/listado.php" >Contabilidad / Reportes / Busqueda Documento Externo</option><option value="1|200820|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/cliente-proveedor/listado.php" >Contabilidad / Reportes / An�lisis por Cliente - Proveedor</option><option value="0|200821|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/consulta_cuenta/consulta_cuenta.php" >Contabilidad / Reportes / Consulta de Cuentas</option><option value="1|200825|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/imp_certificados.php" >Contabilidad / Reportes / Impresi�n de Certificados</option><option value="1|200830|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/impresion_paridad.php" >Contabilidad / Reportes / Reporte paridad</option><option value="1|200840|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/foliador/index.php" >Contabilidad / Reportes / Foliar Hoja Blanca</option><option value="1|200842|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/evento/lista.php" >Contabilidad / Reportes / Seguimiento de comprobantes</option><option value="0|200843|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/empleado/eventos/lista.php" >Contabilidad / Reportes / Seguimiento de Empleados</option><option value="1|200901|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/solicitud_fondos/lista.php" >Contabilidad / Solicitud de Remesas / Solicitud de Remesas</option><option value="1|201002|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/lista.php" >Contabilidad / Facturaci�n / DIN-Preparar factura DIN</option><option value="1|201003|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/impresion.php" >Contabilidad / Facturaci�n / -------Imprimir factura DIN</option><option value="1|201004|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/reimpresion.php" >Contabilidad / Facturaci�n / -------Reimprimir factura DIN</option><option value="1|201009|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/exenta/lista.php" >Contabilidad / Facturaci�n / DUS-Preparar factura DUS</option><option value="1|201010|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/exenta/impresion.php" >Contabilidad / Facturaci�n / -------Imprimir factura DUS</option><option value="1|201011|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/exenta/reimpresion.php" >Contabilidad / Facturaci�n / -------Reimprimir factura DUS</option><option value="1|201014|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/debito/lista.php" >Contabilidad / Facturaci�n / N.D�bito-Preparaci�n N.D.</option><option value="1|201015|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/debito/impresion.php" >Contabilidad / Facturaci�n / -------Impresi�n N.D.</option><option value="1|201016|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/debito/reimpresion.php" >Contabilidad / Facturaci�n / -------Reimprimir N.D.</option><option value="1|201017|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/credito/lista.php" >Contabilidad / Facturaci�n / N.Cr�dito-Preparaci�n N.C.</option><option value="1|201041|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/credito/impresion.php" >Contabilidad / Facturaci�n / -------Impresi�n N.C.</option><option value="1|201042|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/credito/reimpresion.php" >Contabilidad / Facturaci�n / -------Reimprimir N.C.</option><option value="1|201044|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/guia_despacho/lista.php" >Contabilidad / Facturaci�n / GUIA -Preparar Guia de Despacho</option><option value="1|201045|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/guia_despacho/impresion_guia.php" >Contabilidad / Facturaci�n / -------Impresi�n GUIA</option><option value="1|201046|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/guia_despacho/reimpresion.php" >Contabilidad / Facturaci�n / -------Reimprimir GUIA</option><option value="1|201048|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/cobranza/lista.php" >Contabilidad / Facturaci�n / Cobranza-Preparaci�n Cobranza</option><option value="1|201049|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/cobranza/impresion.php" >Contabilidad / Facturaci�n / -------Impresi�n Nota de Cobranza</option><option value="1|201050|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/cobranza/reimpresion.php" >Contabilidad / Facturaci�n / -------Reimprimir Nota de Cobranza</option><option value="1|201052|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/descuento/lista.php" >Contabilidad / Facturaci�n / N. Descuento-Preparaci�n N.D</option><option value="1|201053|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/descuento/impresion.php" >Contabilidad / Facturaci�n / -------Impresi�n Nota de Descuento</option><option value="1|201054|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/descuento/reimpresion.php" >Contabilidad / Facturaci�n / -------Reimprimir Nota de Descuento</option><option value="1|201101|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/acuse_recibo/lista.php" >Contabilidad / Cartas / Acuse de Recibo</option><option value="1|201102|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/envio_documentos/lista.php" >Contabilidad / Cartas / Env�o Documentos</option><option value="1|201103|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/carta_reclamo/lista.php" >Contabilidad / Cartas / Reclamo</option><option value="1|201104|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/cartas/index.php" >Contabilidad / Cartas / Reportes</option><option value="1|201310|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cta_cte/cliente/index.php" >Contabilidad / Cuenta Corriente / Cliente</option><option value="1|201320|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cta_cte/proveedor/lista.php" >Contabilidad / Cuenta Corriente / Proveedor</option><option value="0|201330|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cta_cte/honorario/lista.php" >Contabilidad / Cuenta Corriente / Honorarios</option><option value="1|201413|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/lista.php" >Contabilidad / Remuneraciones / Preparar Liquidaciones</option><option value="1|201414|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/lista_impresas.php" >Contabilidad / Remuneraciones / Liquidaciones Impresas</option><option value="1|201415|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/comprobantes/crear_comprobantes.php" >Contabilidad / Remuneraciones / Crear Comprobante</option><option value="1|201416|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/anticipos/lista.php" >Contabilidad / Remuneraciones / Anticipos</option><option value="1|201417|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/reportes/index.php" >Contabilidad / Remuneraciones / Reportes Instituciones</option><option value="1|201420|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/nomina_trabajadores/index.php" >Contabilidad / Remuneraciones / N�mina de Trabajadores</option><option value="0|201422|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/pago_mensual/index.php" >Contabilidad / Remuneraciones / Pago Mensual</option><option value="0|201425|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/liquidaciones/libro_electronico/index.php" >Contabilidad / Remuneraciones / Libro Electr�nico para la Direcci�n del Trabajo</option><option value="0|201601|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/gestion_cobranza/cliente_cobranza/lista.php" >Contabilidad / Gesti�n Cobranza / Crear/Editar Cobranza</option><option value="0|201610|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/gestion_cobranza/reportes/reportes_gestion.php" >Contabilidad / Gesti�n Cobranza / Reporte</option><option value="0|201611|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/gestion_cobranza/reportes/importar_excel.php" >Contabilidad / Gesti�n Cobranza / Cargar Reparto Factura</option><option value="1|201701|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/conciliacion/lista.php" >Contabilidad / Conciliaci�n / Cheques por conciliar</option><option value="1|201703|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/desconciliacion/lista.php" >Contabilidad / Conciliaci�n / Documentos conciliados</option><option value="1|201705|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/conciliacion/desconciliar_cartola/lista.php" >Contabilidad / Conciliaci�n / Desconciliar cartola</option><option value="0|201706|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/conciliacion/index.php" >Contabilidad / Conciliaci�n / Reportes Conciliaci�n</option><option value="0|201709|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/reportes/conciliacion/desconciliar_cartola/lista_eliminar.php" >Contabilidad / Conciliaci�n / Eliminar Cartola</option><option value="0|201801|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cuenta_ifrs/lista.php" >Contabilidad / Contabilidad IFRS / Cuentas IFRS</option><option value="0|201802|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cuenta_ifrs/comprobante/lista.php" >Contabilidad / Contabilidad IFRS / Comprobantes IFRS</option><option value="0|201803|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cuenta_ifrs/reportes/index.php" >Contabilidad / Contabilidad IFRS / Reportes IFRS</option><option value="1|202010|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_emitidos/lista.php" >Contabilidad / Documentos Electronicos / Documentos  Emitidos</option><option value="1|202020|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_recibidos/lista.php" >Contabilidad / Documentos Electronicos / Documentos Recibidos</option><option value="1|202021|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_recibidos/lista.php?dte_reci_ingresado=1" >Contabilidad / Documentos Electronicos / Documentos Contabilizados</option><option value="1|202022|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_recibidos/lista.php?dte_guias=1" >Contabilidad / Documentos Electronicos / Gu�as Despacho Recibidas </option><option value="1|202023|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_recibidos/lista.php?dte_reci_estado_comercial=2" >Contabilidad / Documentos Electronicos / Documentos Rechazados</option><option value="1|202024|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/carga_masiva_complemento_libros/ver_libro_compra_venta_sii.php" >Contabilidad / Documentos Electronicos / Consulta Registro Libros SII</option><option value="1|202026|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/carga_masiva_complemento_libros/carga_masivo_complementos.php" >Contabilidad / Documentos Electronicos / Complemento libro SII</option><option value="1|202030|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/boleta_electronica/consumo_folio/lista.php" >Contabilidad / Documentos Electronicos / Consumo de folios enviados</option><option value="1|202031|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/boleta_electronica/consumo_folio/formulario.php" >Contabilidad / Documentos Electronicos / Envio Consumo de Folios</option><option value="1|202080|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/libros_compra_venta/lista.php" >Contabilidad / Documentos Electronicos / Listado libros enviados SII</option><option value="1|202090|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/documentos_cedidos/lista.php" >Contabilidad / Documentos Electronicos / Ceder Documentos</option><option value="1|202095|https://fguerragodoy.aduananet2.cl/modulos/facturacion_electronica/otros/impresion_masiva_pdf.php" >Contabilidad / Documentos Electronicos / Muestra impresa masiva DTE</option><option value="1|300100|https://fguerragodoy.aduananet2.cl/modulos/comex/orden_compra/lista.php" >Comex / Comex / Apertura de carpeta</option><option value="1|300300|https://fguerragodoy.aduananet2.cl/modulos/comex/index_rs.php" >Comex / Comex / Op. de reg. suspensivo</option><option value="1|300400|https://fguerragodoy.aduananet2.cl/modulos/comex/form_reporte_regimen_sus.php" >Comex / Comex / Reporte Mercanc�as RS</option><option value="1|300901|https://fguerragodoy.aduananet2.cl/modulos/certificados/lista.php" >Comex / Certificados / Origen</option><option value="1|300904|https://fguerragodoy.aduananet2.cl/modulos/certificados/fitosanitario/lista.php" >Comex / Certificados / Certificados Fitosanitario</option><option value="1|300908|https://fguerragodoy.aduananet2.cl/modulos/certificados/mandatos/lista.php" >Comex / Certificados / Mandato de Poder</option><option value="1|300909|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cliente_mandato/lista.php" >Comex / Certificados / Mandato Exportaci�n</option><option value="0|300910|https://fguerragodoy.aduananet2.cl/modulos/certificados/dus_salida_region/lista.php" >Comex / Certificados / Certificado Salida Al Sur</option><option value="1|301043|https://fguerragodoy.aduananet2.cl/modulos/comex/memor/lista.php" >Comex / Memorandum / Memorandum</option><option value="1|301101|https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/rendiciones/index.php" >Comex / IVV / Rendiciones</option><option value="1|301102|https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/comisiones/index.php" >Comex / IVV / Comisiones</option><option value="1|301103|https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/deducibles/index.php" >Comex / IVV / Deducibles</option><option value="1|301104|https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/liquidaciones/index.php" >Comex / IVV / Liquidaciones</option><option value="1|301105|https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/ivv/index.php" >Comex / IVV / IVV</option><option value="1|301115|https://fguerragodoy.aduananet2.cl/modulos/comex/ivv/despachos/index.php" >Comex / IVV / Despachos</option><option value="1|301201|https://fguerragodoy.aduananet2.cl/modulos/comex/carga_txt/rockwell/index.php" >Comex / Carga Despacho / Rockwell</option><option value="1|400200|https://fguerragodoy.aduananet2.cl/modulos/extranet/resumen_operaciones/lista.php" >Reportes / Reportes / Resumen de operaciones</option><option value="1|400300|https://fguerragodoy.aduananet2.cl/modulos/extranet/vcto_regim_suspensivos.php" >Reportes / Reportes / Vcto. Reg. Suspensivos</option><option value="1|400400|https://fguerragodoy.aduananet2.cl/modulos/extranet/vcto_pagos_diferidos_normal.php" >Reportes / Reportes / Vcto. Pagos Diferidos</option><option value="1|400501|https://fguerragodoy.aduananet2.cl/modulos/extranet/vencimientos/dus/lista.php" >Reportes / Vencimientos DIN - DUS / DUS Primer envio</option><option value="1|400502|https://fguerragodoy.aduananet2.cl/modulos/extranet/vencimientos/dus/lista_reg.php" >Reportes / Vencimientos DIN - DUS / DUS Reg. Suspensivos</option><option value="0|400503|https://fguerragodoy.aduananet2.cl/modulos/extranet/vencimientos/din/lista.php" >Reportes / Vencimientos DIN - DUS / DIN Vcto. Pago Derechos</option><option value="0|400504|https://fguerragodoy.aduananet2.cl/modulos/extranet/vencimientos/din/lista_reg.php" >Reportes / Vencimientos DIN - DUS / DIN Reg. Suspensivos</option><option value="1|400601|https://fguerragodoy.aduananet2.cl/modulos/libro/seguimiento/lista.php" >Reportes / Seguimiento Despachos / Eventos</option><option value="0|400603|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/comunicacion_sistema/lista.php" >Reportes / Seguimiento Despachos / Triggers</option><option value="1|400700|https://fguerragodoy.aduananet2.cl/modulos/extranet/tracking.php" >Reportes / Reportes / Tracking de Operaciones</option><option value="1|400910|https://fguerragodoy.aduananet2.cl/modulos/extranet/guia_despacho/lista.php" >Reportes / Tracking Guias Despacho / Tracking Guia de Despacho / Lista</option><option value="1|400920|https://fguerragodoy.aduananet2.cl/modulos/extranet/index.php" >Reportes / Tracking Guias Despacho / Reporte</option><option value="1|401000|https://fguerragodoy.aduananet2.cl/modulos/extranet/reportes_dinamicos/informes.php" >Reportes / Reportes / Reportes Dinamicos</option><option value="1|402000|https://fguerragodoy.aduananet2.cl/modulos/extranet/reporte_despachos.php" >Reportes / Reportes / Reporte Diario</option><option value="1|600100|https://fguerragodoy.aduananet2.cl/modulos/clasificacion_arancelaria/redirect.php" >Clasificacion Arancelaria / Clasificacion Arancelaria / Ir al Portal</option><option value="1|700101|https://fguerragodoy.aduananet2.cl/modulos/comex/orden_compra/lista.php" >Info. Clientes / Despachos / Apertura de Carpeta</option><option value="1|700102|https://fguerragodoy.aduananet2.cl/modulos/extranet/tracking.php" >Info. Clientes / Despachos / Tracking De Operaciones</option><option value="1|700103|https://fguerragodoy.aduananet2.cl/modulos/extranet/vcto_regim_suspensivos.php" >Info. Clientes / Despachos / Reg. Suspensivos</option><option value="1|700104|https://fguerragodoy.aduananet2.cl/modulos/info_cliente/despachos/regimen_importacion_index.php" >Info. Clientes / Despachos / Regimen de Importaci�n</option><option value="1|700105|https://fguerragodoy.aduananet2.cl/modulos/extranet/guia_despacho/lista.php" >Info. Clientes / Despachos / Tracking Guia de Despacho / Lista</option><option value="1|700201|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cta_cte/cliente/lista.php" >Info. Clientes / Informaci�n Contable / Cuenta Corriente</option><option value="1|700202|https://fguerragodoy.aduananet2.cl/modulos/info_cliente/informacion_contable/totales_factura_index.php" >Info. Clientes / Informaci�n Contable / Totales Por Factura</option><option value="1|700203|https://fguerragodoy.aduananet2.cl/modulos/info_cliente/informacion_contable/desembolso_index.php" >Info. Clientes / Informaci�n Contable / Desembolsos</option><option value="1|700301|https://fguerragodoy.aduananet2.cl/modulos/info_cliente/estadistica/index.php" >Info. Clientes / Res�menes Estad�sticos / Reportes</option><option value="1|800200|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/param_sist/formulario.php" >Administraci�n / Administraci�n / Par�metros Sistema</option><option value="1|800301|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/agente/lista.php" >Administraci�n / Config. Contabilidad / Agente</option><option value="1|800302|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/apoderado/lista.php" >Administraci�n / Config. Contabilidad / Apoderado</option><option value="1|800303|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/agencia/lista.php" >Administraci�n / Config. Contabilidad / 1 Agencia</option><option value="1|800304|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/datos_contab.php" >Administraci�n / Config. Contabilidad / 2 Comprobantes</option><option value="1|800306|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cuenta/lista.php" >Administraci�n / Config. Contabilidad / 3 Plan de Cuenta</option><option value="1|800307|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/cuenta_nivel.php" >Administraci�n / Config. Contabilidad / 3 Estructura del plan de cuenta</option><option value="1|800308|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/enlace_cuentas/v2/listav2.php" >Administraci�n / Config. Contabilidad / 4 Enlace de cuentas</option><option value="1|800310|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cfactura/lista.php" >Administraci�n / Config. Contabilidad / 5 Cheques Varios</option><option value="1|800311|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cfactura2_subconcepto/lista.php" >Administraci�n / Config. Contabilidad / 5 Subcuentas de Desembolsos</option><option value="1|800312|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cfactura2/lista.php" >Administraci�n / Config. Contabilidad / 5 Cheque Factura despachos</option><option value="1|800314|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/centro/lista.php" >Administraci�n / Config. Contabilidad / 5 Centro de Costo</option><option value="1|800317|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/doc_pago.php" >Administraci�n / Config. Contabilidad / 8 Documentos de Pago</option><option value="1|800318|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/periodo/mod_cierre_global/lista.php" >Administraci�n / Config. Contabilidad / Periodo Contable</option><option value="1|800319|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/periodo/mod_cierre_auxiliar/lista.php" >Administraci�n / Config. Contabilidad / Ver Reservas Periodo</option><option value="1|800320|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/banco/lista.php" >Administraci�n / Config. Contabilidad / Bancos</option><option value="1|800327|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/asiento_inicial/asiento_inicial.php" >Administraci�n / Config. Contabilidad / Asiento Inicial</option><option value="0|800329|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/glosa/lista.php" >Administraci�n / Config. Contabilidad / Glosa para comprobantes I/E</option><option value="1|800330|https://fguerragodoy.aduananet2.cl/modulos/contabilidad/anular_comprobantes_libres.php" >Administraci�n / Config. Contabilidad / Anular comprobantes libres</option><option value="1|800331|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/representante_legal/lista.php" >Administraci�n / Config. Contabilidad / Representante Legal</option><option value="1|800332|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cargo/lista.php" >Administraci�n / Config. Contabilidad / Cargos</option><option value="1|800401|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cliente/lista.php" >Administraci�n / Mant. de Usuarios / Clientes</option><option value="1|800402|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/empleado/lista.php" >Administraci�n / Mant. de Usuarios / Empleados</option><option value="1|800403|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/proveedor/lista.php" >Administraci�n / Mant. de Usuarios / Proveedores</option><option value="1|800404|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cuenta_analisis/lista.php" >Administraci�n / Mant. de Usuarios / C�digos de Analisis</option><option value="1|800405|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/perfil/lista.php" >Administraci�n / Mant. de Usuarios / Perfiles</option><option value="1|800406|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/permisos.php" >Administraci�n / Mant. de Usuarios / Permisos de Acceso</option><option value="1|800407|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/usuario/lista.php" >Administraci�n / Mant. de Usuarios / Usuarios</option><option value="0|800418|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/contacto_cliente_proveedor/lista.php" >Administraci�n / Mant. de Usuarios / Contactos de clientes</option><option value="1|800425|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/comisionista/lista.php" >Administraci�n / Mant. de Usuarios / Comisionista</option><option value="1|800427|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/usuario/clave/lista.php" >Administraci�n / Mant. de Usuarios / Mantenci�n de Claves</option><option value="0|800428|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/dte_cesionario/lista.php" >Administraci�n / Mant. de Usuarios / Mantenci�n de cesionarios</option><option value="0|800500|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/setting_sistema/lista.php" >Administraci�n / Administraci�n / Configuraci�n sistema</option><option value="1|801802|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/nave/lista.php" >Administraci�n / Mant. de Despachos / Naves</option><option value="1|801803|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/puerto/lista.php" >Administraci�n / Mant. de Despachos / Puertos</option><option value="1|801804|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/obs_item/lista.php" >Administraci�n / Mant. de Despachos / Obs. de Item</option><option value="1|801806|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/transportista/lista.php" >Administraci�n / Mant. de Despachos / Transportista</option><option value="1|801807|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/consignatario/lista.php" >Administraci�n / Mant. de Despachos / Consignatarios</option><option value="1|801810|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/vbueno/lista.php" >Administraci�n / Mant. de Despachos / Vistos Buenos</option><option value="1|801811|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/tipo_bulto/lista.php" >Administraci�n / Mant. de Despachos / Tipos de Bulto</option><option value="1|801812|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/transportista_nac/lista.php" >Administraci�n / Mant. de Despachos / Transportista Nacional</option><option value="1|801813|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/nid_anuladas.php" >Administraci�n / Mant. de Despachos / Nid anuladas</option><option value="1|801814|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/nid_reserva.php" >Administraci�n / Mant. de Despachos / Nid Reserva</option><option value="1|801825|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/compania_seguro/lista.php" >Administraci�n / Mant. de Despachos / C�as. de Seguros</option><option value="1|801826|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/impresion_paridad.php" >Administraci�n / Mant. de Despachos / Reporte Paridad</option><option value="1|801828|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/lbac_nid_reserva.php" >Administraci�n / Mant. de Despachos / Reserva libro de aclaraciones</option><option value="0|801831|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/producto_sobretasa/lista.php" >Administraci�n / Mant. de Despachos / Sobretasas transitorias</option><option value="1|801832|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/concepto_desembolso/lista.php" >Administraci�n / Mant. de Despachos / Concepto Desembolso</option><option value="1|801833|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/concepto_gasto/lista.php" >Administraci�n / Mant. de Despachos / Concepto Gasto</option><option value="1|801834|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/proveedor_concept_desembolso/lista.php" >Administraci�n / Mant. de Despachos / Proveedor concepto desembolso</option><option value="1|801900|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/modulo/lista.php" >Administraci�n / Administraci�n / Nombres del Menu</option><option value="1|802301|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cat_pago_din/index.php" >Administraci�n / Categor�as Honorarios / Din - Categor�as</option><option value="1|802303|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/cat_pago_dus/index.php" >Administraci�n / Categor�as Honorarios / Dus - Categor�as</option><option value="1|802400|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/rango_sii/lista.php" >Administraci�n / Administraci�n / Rangos documentos SII</option><option value="1|805005|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_afp/lista.php" >Administraci�n / Conf. Remuneraciones / Afp</option><option value="1|805010|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_isapre/lista.php" >Administraci�n / Conf. Remuneraciones / Salud</option><option value="1|805015|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_carga_familiar/lista.php" >Administraci�n / Conf. Remuneraciones / Carga Familiar</option><option value="1|805018|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_mutual/lista.php" >Administraci�n / Conf. Remuneraciones / Mutual</option><option value="1|805021|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_ccaf/lista.php" >Administraci�n / Conf. Remuneraciones / Caja de Compesaci�n</option><option value="0|805026|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_bono_descuento/lista.php" >Administraci�n / Conf. Remuneraciones / Bonos y Descuentos</option><option value="1|805031|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/remu_reforma_previsional/lista.php" >Administraci�n / Conf. Remuneraciones / Incremento gradual cotizaci�n hasta el 8,5% entre 2025-2033</option><option value="0|806010|https://fguerragodoy.aduananet2.cl/modulos/consultas/soporte/inicio.php" >Administraci�n / Soporte / soporte nivel 1</option><option value="0|806020|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/proceso_interno/formulario.php?despliega=listado" >Administraci�n / Soporte / Tareas Programadas (Cron)</option><option value="0|807000|https://fguerragodoy.aduananet2.cl/modulos/consultas/revision_carga/lista.php" >Administraci�n / Administraci�n / Revisi�n general de datos</option><option value="0|908000|https://fguerragodoy.aduananet2.cl/modulos/mantenedores/proceso_interno/formulario.php?despliega=listado" >Soporte / Soporte / Tareas Programadas (Cron)</option></select></td>
+
+    <td align="center" nowrap width="1%"></td>
+     <td align="center" nowrap width="5%"></td>
+
+    <td align="center" nowrap width="1%"></td>
+
+    <td align="center" nowrap width="5%"></td>
+		</tr>
+	</table>
+		<table width="99%" border="0" cellspacing="0" cellpadding="0">
+  	<tr>
+			<td width="100%" valign="top" align="center" colspan="2" class="txtContenido">
+	        <!-- Begin Content -->
+<script language="javascript">
+   var winlookup;
+
+   function lookup(tabla, campo, lista, mover) {
+       if (winlookup!=null) {
+          if (!winlookup.closed) {
+             winlookup.focus();
+             return;
+          }
+       }
+        
+       w=400;
+       h=300;
+       LeftPosition = (screen.width) ? (screen.width-w)/2 : 0;
+       TopPosition = (screen.height) ? (screen.height-h)/2 : 0;
+       
+       
+       winlookup=window.open("lookup.php?tabla="+tabla+"&campo="+campo+"&lista="+lista+"&mover="+mover, "_blank", "titlebar=no,location=no,status=no,menubar=no,scrollbars=yes,height="+h+",width="+w+",top="+TopPosition+",left="+LeftPosition);
+   }
+
+   function lookup2(mitabla, campo, lista, mover) {
+       if (winlookup!=null) {
+          if (!winlookup.closed) {
+             winlookup.focus();
+             return;
+          }
+       }
+        
+       w=300;
+       h=300;
+       LeftPosition = (screen.width) ? (screen.width-w)/2 : 0;
+       TopPosition = (screen.height) ? (screen.height-h)/2 : 0;
+       
+       
+       winlookup=window.open("lookup2.php?mitabla="+mitabla+"&campo="+campo+"&lista="+lista+"&mover="+mover, "_blank", "titlebar=no,location=no,status=no,menubar=no,scrollbars=yes,height="+h+",width="+w+",top="+TopPosition+",left="+LeftPosition);
+   }
+   function lookup3(tabla, campo, lista, mover) {
+       if (winlookup!=null) {
+          if (!winlookup.closed) {
+             winlookup.focus();
+             return;
+          }
+       }
+        
+       w=300;
+       h=300;
+       LeftPosition = (screen.width) ? (screen.width-w)/2 : 0;
+       TopPosition = (screen.height) ? (screen.height-h)/2 : 0;
+       
+       
+       winlookup=window.open("lookup3.php?tabla="+tabla+"&campo="+campo+"&lista="+lista+"&mover="+mover, "_blank", "titlebar=no,location=no,status=no,menubar=no,scrollbars=yes,height="+h+",width="+w+",top="+TopPosition+",left="+LeftPosition);
+   }
+
+   function lookup4(mitabla, campo, lista, mover) {
+       if (winlookup!=null) {
+          if (!winlookup.closed) {
+             winlookup.focus();
+             return;
+          }
+       }
+        
+       w=300;
+       h=300;
+       LeftPosition = (screen.width) ? (screen.width-w)/2 : 0;
+       TopPosition = (screen.height) ? (screen.height-h)/2 : 0;
+       
+       
+       winlookup=window.open("lookup4.php?mitabla="+mitabla+"&campo="+campo+"&lista="+lista+"&mover="+mover, "_blank", "titlebar=no,location=no,status=no,menubar=no,scrollbars=yes,height="+h+",width="+w+",top="+TopPosition+",left="+LeftPosition);
+   }
+         function calcula_plazo()
+         {
+         	fec_retiro				=	document.frm.fec_retiro_270.value;
+         	dias_sin_interes	=	document.frm.dias_sin_interes.value;
+         	fecha_rs					=	document.frm.din_fecha_rs.value;
+         	dias_almacen_part	=	document.frm.dias_ap.value;
+
+         	if(dias_almacen_part=="")
+         	{
+	         	if((fec_retiro!="")&&(dias_sin_interes!="")&&(fecha_rs!=""))
+	         	{
+							var MINUTE = 60 * 1000
+							var HOUR = MINUTE * 60
+							var DAY = HOUR * 24
+
+							anio_ret	=	parseInt(fec_retiro.substr(6),10);
+							mes_ret 	=	parseInt(fec_retiro.substr(3,2),10);
+							dia_ret 	=	parseInt(fec_retiro.substr(0,2),10);
+	         		objDateRetiro = new Date(anio_ret, mes_ret-1, dia_ret);
+
+							anio_rs	=	parseInt(fecha_rs.substr(6),10);
+							mes_rs 	=	parseInt(fecha_rs.substr(3,2),10);
+							dia_rs 	=	parseInt(fecha_rs.substr(0,2),10);
+	         		objDateRS = new Date(anio_rs, mes_rs-1, dia_rs);
+
+	         		dias	=	objDateRetiro.getTime()-objDateRS.getTime();
+							dias	=	Math.round(dias/DAY);
+	         	}
+	         	else
+	         	{
+	         		return;
+	         	}
+	        }
+	       	else
+	        {
+         		dias	=	dias_almacen_part;
+  	      }
+					plazo	=	dias - dias_sin_interes;
+
+					if(plazo>0)
+						document.frm.dus_plazo_vigencia_rs.value	=	dias - dias_sin_interes;
+					else
+						document.frm.dus_plazo_vigencia_rs.value	=	"0";
+
+					if(dias>90)
+						if(alert("Ha excedido los 90 d�as de vigencia de DAPI"));
+         }
+
+         function suma(n) {
+            if (!isFloat(n.value, true)) {
+               swal("Aviso","�Debe ingresar un valor num�rico en este campo!","error");
+               n.focus();
+               return;
+            }
+
+            n4 = document.frm.dus_valor_liquido_retorno.value;
+
+            if (n4!="")
+               return;
+
+            n1 = document.frm.dus_valor_clau_venta.value;
+            n2 = document.frm.dus_comision_exterior.value;
+            n3 = document.frm.dus_otros_gastos_deducibles.value;
+
+            if (n1=="") n1="0";
+            if (n2=="") n2="0";
+            if (n3=="") n3="0";
+
+            //alert(n1+" "+n2+" "+n3);
+
+            document.frm.dus_valor_liquido_retorno.value=parseFloat(n1) + parseFloat(n2) + parseFloat(n3);
+         }
+
+        function open_calendar(obj)
+        {
+	        var newWindow;
+	        var urlstring = '../../js/calendario/calendar.php?obj='+obj;
+	        newWindow = window.open(urlstring,'','height=200,width=280,toolbar=no,minimize=no,status=no,memubar=no,location=no,scrollbars=no');
+        }
+			function set_glosa_moneda()
+			{
+				if(document.frm.mda_id.value=="900")
+				{
+					despliega("div_glosa_moneda",true);
+					document.frm.moneda_glosa.value	=	"OTROS NO ESP.";
+				}
+				else
+				{
+					despliega("div_glosa_moneda",false);
+					document.frm.moneda_glosa.value	=	"";
+				}
+			}
+</script>
+<br/>
+<SCRIPT TYPE="text/javascript" SRC=/js/ajax.js></SCRIPT><script language="JavaScript" src=/js/formcheck.js></script><script language="javascript">
+	function obtieneDatosUsandoAjax(nombre_tabla,campos_select,campos_filtro,tipo_where,order)
+	{
+		url = "/modulos/general/getXML/getXML.php?nombre_tabla="+nombre_tabla+"&tipo_where="+tipo_where+"&order="+order;
+		if(campos_filtro != null)
+			for (var i in campos_filtro)
+				url	+= "&campos_filtro["+i+"]="+campos_filtro[i];
+
+		if(campos_select != null)
+			for (var i in campos_select)
+				url	+= "&campos_select["+i+"]="+campos_select[i];
+
+		xmldoc	= getXmlAjax(url);
+
+		return xmlToArray(xmldoc,nombre_tabla);
+	}	var winCalc;
+
+
+
+   function ChequeaNoNulos() {
+      if (document.frm.din_dias.value=="") {
+         document.frm.din_dias.focus();
+         alert("�Debe ingresar un valor en este campo!");
+         return false;
+      }
+      if (document.frm.din_valor_ex_fabrica.value=="") {
+         document.frm.din_valor_ex_fabrica.focus();
+         alert("�Debe ingresar un valor en este campo!");
+         return false;
+      }
+      if (document.frm.din_gastos_hasta_fob.value=="") {
+         document.frm.din_gastos_hasta_fob.focus();
+         alert("�Debe ingresar un valor en este campo!");
+         return false;
+      }
+   			arrFP	=	new Array("1","11");//Forma de pago que debe ingresar d�as
+   			if((in_array(document.frm.fpa_id.value,arrFP))&&(document.frm.din_dias.value=="0")&&(151!=106)&&(151!=156))
+   			{
+   				swal("Aviso","Debe ingresar N�mero de d�as.","error");
+   				document.frm.din_dias.focus();
+   				document.frm.din_dias.select();
+   				return false;
+   			}
+   			
+   			
+				//conjunto de validacion de campos vacios
+				//campos a validar 
+				arrCampos = new Array ("reg_id","fpa_id","mda_id","cvt_id","fpg_id","div_id");
+				arrTexto  = new Array ("R�gimen Importaci�n","Forma de Pago","Moneda","Cl�usula de Compra","Forma pago grav�menes","Divisas");
+				aviso = new Array();
+				//recorro el formulario segun campos en arreglo arrCampos
+				for(i=0;i<arrCampos.length;i++)
+				{
+				 	if(eval("document.frm."+arrCampos[i]+".value")=='')
+					 {
+					 	//si es vacio inserto en el arreglo aviso
+					 	aviso.unshift(arrTexto[i]);
+					 }
+				}
+				
+				//arreglo con datos que son enviados vacios
+				if(aviso.length>0)
+					{
+						if(!confirm('Faltan los siguientes datos:\n'+aviso.join('\n')+'\n� Desea continuar ?'))
+							return false;		
+					}	
+
+   			
+
+   			   			//Reg�menes que deben llevar certificaci�n de origen
+   			arrRegCertOrig	=	new Array ("61","62","63","64","65","66","67","68","69","70","71","72","73","75","79","80","88","89","91","92","93","94","95","96","97","98");
+   			if(in_array(document.frm.reg_id.value,arrRegCertOrig))
+   			{
+					//alert("Debe preguntar por cert de orig");
+	        var urlstring = "cert_orig.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2";
+	        cert_orig = window.open(urlstring,'cert_orig','height=200,width=280,toolbar=no,minimize=no,status=no,memubar=no,location=no,scrollbars=no');
+	        cert_orig.focus();
+					return false;
+   			}
+      return true;
+   }
+
+   function aceptar() {
+			if(!validaDinEnviada())return false;
+			if(!validaNidEnviadaSicex())return false;
+      if (ChequeaNoNulos()) {
+         document.frm.comando.value="U";
+         document.frm.submit();
+      }
+   }
+
+							function validaDinEnviada()
+						  {
+						  	
+						  	lib_base       = "1";
+						  	lib_nid        = "190248";
+						  	lbac_nid       = "0";
+						  	dus_tipo_envio = "2";
+						  	
+						  	filtro                  = new Array();
+								nombre_tabla						=	"dus_encabezado";
+								filtro["lib_base"]	    = lib_base;
+								filtro["lib_nid"]		    = lib_nid;
+								filtro["lbac_nid"]	    = lbac_nid;
+								filtro["dus_tipo_envio"]= dus_tipo_envio;
+								arrDespacho	            =	obtieneDatosUsandoAjax(nombre_tabla,null,filtro);		
+								
+								if(arrDespacho.length > 0 )
+								{
+									if(arrDespacho[0]['din_enviada_en_curso']=='1')
+									{
+										alert("El despacho "+lib_nid+" fue enviado a Servicio Nacional de Aduana, no puede modificar. ");
+										return false;		
+									}
+								}	
+						  	
+						  	return true;
+						  }	
+						  
+						  function validaNidEnviadaSicex()
+								{
+									
+									lib_base       = "1";
+									lib_nid        = "190248";
+									lbac_nid       = "0";
+									dus_tipo_envio = "2";
+									
+									filtro                  = new Array();
+									nombre_tabla						=	"dus_encabezado";
+									filtro["lib_base"]	    = lib_base;
+									filtro["lib_nid"]		    = lib_nid;
+									filtro["lbac_nid"]	    = lbac_nid;
+									filtro["dus_tipo_envio"]= dus_tipo_envio;
+									arrDespacho	            =	obtieneDatosUsandoAjax(nombre_tabla,null,filtro);		
+									
+									if(arrDespacho.length > 0 )
+									{
+										if(arrDespacho[0]['nid_en_sicex']=='1')
+										{
+											alert("El despacho "+lib_nid+" fue enviado a SICEX, no puede modificar. ");
+											return false;		
+										}
+									}	
+									
+									return true;
+								}	
+						     function cancelar() {
+      document.frm.comando.value="L";
+      document.frm.action="din_mercancia.php";
+      document.frm.comando.value="M";
+      document.frm.submit();
+   }
+
+</script>
+
+<form name="frm" method=post>
+<table border=0 class="table_din"  align=center cellpading=0 cellspacing=0>   <tr><td>              <script language="JavaScript">
+            
+              function open_txt()
+              {
+								if (!despacho_cuadrado("190248")) {
+									alert("Aviso: El despacho no est� cuadrado");
+									// return false;   SOLO AVISO, continua generando el archivo
+								}
+								
+		              	
+								window.open("salida_texto.php?lib_base=1&lib_nid=190248&dus_tipo_envio=2&lbac_nid=0&comando=M&pagno=0","","scrollbars=yes,resizable=yes,width=300,height=300");
+								window.location='dus_encabezado.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0';
+              }
+              function duplicaDatos()
+              {
+								window.open("duplica_datos.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0","","scrollbars=yes,resizable=yes,width=600,height=300");
+              }
+              </script>
+              <table class="table_din" border=0 cellpading=0 cellspacing=0 >
+                 <tr>
+                 	<td nowrap><img src=/temas/fguerragodoy/img/spacer.gif  width="1" height="20" /></td><td nowrap><a href='dus_encabezado.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0' class='botones'>Resumen L.C.</a></td><td nowrap><a href='din_valores_generales.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0' class='botones'>Valores Factura</a></td><td nowrap><a href='dus_identificacion.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0' class='botones'>Identificaci�n</a></td><td nowrap><a href='dus_destino.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0' class='botones'>Destino y Transp.</a></td><td nowrap><a href='dus_antecedentes.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0' class='botones_amarillos'>Antec.Fin.</a></td><td nowrap><a href='din_mercancia.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0' class='botones'>Mercanc�as</a></td><td nowrap><a href='dus_desc_bulto.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0' class='botones'>Bultos</a></td><td nowrap><a href='dus_ctas_valores.php?lib_base=1&lib_nid=190248&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0' class='botones'>Ctas.Val., Pago.Diferido</a></td><td nowrap><a href='imprimir_din.php?lib_base=1&lib_nid=190248&dus_tipo_envio=2&lbac_nid=0&comando=M&pagno=0' class='botones'>Impresi�n</a></td>                 </tr>
+              </table>   </td></tr>   <tr><td>   <table class="table_din" align="center" border=0  cellpading=0 cellspacing=8>
+      <tr><td><table class="table_responsive" align="center" border=0 cellpading=0 cellspacing=0><tr><td colspan="2">
+<tr><td class="titulo1">151 - IMPORT. CTDO/ ANTIC.</td></tr>
+<input type="hidden" name="dias_ap" value=""><input type="hidden" name="cert_orig_tipo" value=""><input type="hidden" name="cert_numero" value=""><input type="hidden" name="cert_fecha" value=""><tr><td><h1>Antecedentes Financieros</h1></td></tr>
+<tr><td valign=top><table class="table_responsive"  cellpadding="0" cellspacing="0">
+<tr><td>R�gimen Importaci�n</td><td>C�d.Banco Comercial</td></tr>
+<tr><td><input type="text" name="reg_id" value="92" size=4 style="text-align:right;cursor:text;"  onblur="BuscaValor(this,document.frm.lreg_id)">&nbsp;<select name="lreg_id" onchange="alcambiar(document.frm.reg_id,this)" ><option value="">Seleccione</option>
+<option value="0" >SIN REGIMEN&nbsp;</option>
+<option value="1" >GENERAL&nbsp;</option>
+<option value="3" >LEY NRO. 20096&nbsp;</option>
+<option value="30" >PDA 0033&nbsp;</option>
+<option value="32" >DIPLOMATICO&nbsp;</option>
+<option value="33" >AUTOMOTRIZ&nbsp;</option>
+<option value="35" >LEY 20.690&nbsp;</option>
+<option value="36" >DCTO 2038&nbsp;</option>
+<option value="37" >PDA 0036&nbsp;</option>
+<option value="39" >LEY 13039&nbsp;</option>
+<option value="51" >TLC-CHINDO&nbsp;</option>
+<option value="52" >AACH-RU&nbsp;</option>
+<option value="53" >ALCAPS&nbsp;</option>
+<option value="54" >CEPA-EAU&nbsp;</option>
+<option value="60" >AMCHIAP&nbsp;</option>
+<option value="61" >TLCCH-HON&nbsp;</option>
+<option value="62" >TLCCH-PAN&nbsp;</option>
+<option value="63" >TLCCH-AUS&nbsp;</option>
+<option value="64" >ALCCH-COL&nbsp;</option>
+<option value="65" >TLCCH-GU&nbsp;</option>
+<option value="66" >TLCCH-TURQ&nbsp;</option>
+<option value="67" >ALCCH-MAL&nbsp;</option>
+<option value="68" >TLCCH-VIET&nbsp;</option>
+<option value="69" >TLCCH-NIC&nbsp;</option>
+<option value="70" >TLCCH-TAI&nbsp;</option>
+<option value="71" >ALADI&nbsp;</option>
+<option value="72" >ACEM&nbsp;</option>
+<option value="73" >TLCCHC&nbsp;</option>
+<option value="74" >D.L.480/74&nbsp;</option>
+<option value="75" >TLCCH-M&nbsp;</option>
+<option value="76" >LEY ARICA&nbsp;</option>
+<option value="77" >NAVAR/PORVENIR&nbsp;</option>
+<option value="79" >TLCCH-CR&nbsp;</option>
+<option value="80" >TLCCH-ES&nbsp;</option>
+<option value="81" >FORA&nbsp;</option>
+<option value="82" >D.L.600&nbsp;</option>
+<option value="84" >DISCAPA&nbsp;</option>
+<option value="85" >PESCA&nbsp;</option>
+<option value="86" >GATT&nbsp;</option>
+<option value="87" >LEY 17.652/68&nbsp;</option>
+<option value="88" >T.URUG.&nbsp;</option>
+<option value="89" >TLCCH-HGK&nbsp;</option>
+<option value="90" >OTROS&nbsp;</option>
+<option value="91" >AICCH-UE&nbsp;</option>
+<option value="92" SELECTED>TLCCH-USA&nbsp;</option>
+<option value="93" >TLCCH-COR&nbsp;</option>
+<option value="94" >TLCCH-AELC&nbsp;</option>
+<option value="95" >TRANSP4&nbsp;</option>
+<option value="96" >TLC-CHCHI&nbsp;</option>
+<option value="97" >AAPCH-IND&nbsp;</option>
+<option value="98" >AAEECH-JAP&nbsp;</option>
+</select></td><td><input type="text" name="bcc_id" value="" size=4 style="text-align:right;cursor:text;"  onblur="BuscaValor(this,document.frm.lbcc_id)">&nbsp;<select name="lbcc_id" onchange="alcambiar(document.frm.bcc_id,this)" ><option value="">Seleccione</option>
+<option value="1" >CENTRAL BANK&nbsp;</option>
+<option value="2" >CORPBANCA&nbsp;</option>
+<option value="4" >CRED. INVERS.&nbsp;</option>
+<option value="5" >NAC. ARGENT.&nbsp;</option>
+<option value="6" >INTERNACIONAL&nbsp;</option>
+<option value="7" >EST. DE CHILE&nbsp;</option>
+<option value="8" >C. NAC. COB.&nbsp;</option>
+<option value="9" >BBVA&nbsp;</option>
+<option value="10" >SUD AMERICANO&nbsp;</option>
+<option value="11" >HIPOT. IN. FI.&nbsp;</option>
+<option value="13" >A. EDWARDS&nbsp;</option>
+<option value="15" >DE CHILE&nbsp;</option>
+<option value="16" >DO BRASIL&nbsp;</option>
+<option value="17" >ABN AMRO&nbsp;</option>
+<option value="19" >TOKYO MITSU&nbsp;</option>
+<option value="21" >DRESDNER BANK&nbsp;</option>
+<option value="23" >CITIBANK N.A.&nbsp;</option>
+<option value="30" >REAL S.A.&nbsp;</option>
+<option value="31" >Banco Santiago&nbsp;</option>
+<option value="32" >EST. S. PAULO&nbsp;</option>
+<option value="33" >OF AMERICA&nbsp;</option>
+<option value="34" >SANTANDER SANTIAGO&nbsp;</option>
+<option value="35" >EXTERIOR S.A.&nbsp;</option>
+<option value="37" >REP. N. - N.Y.&nbsp;</option>
+<option value="38" >ITAU&nbsp;</option>
+<option value="40" >BANCO BICE&nbsp;</option>
+<option value="41" >SUDAMERIS&nbsp;</option>
+<option value="42" >CH. MANHATTAN&nbsp;</option>
+<option value="43" >AM. EXP. LTDA.&nbsp;</option>
+<option value="45" >DESARROLLO&nbsp;</option>
+<option value="47" >SECURITY&nbsp;</option>
+<option value="49" >ING BANK&nbsp;</option>
+<option value="50" >SCOTIABANK&nbsp;</option>
+<option value="51" >TBANC&nbsp;</option>
+<option value="52" >FALABELLA&nbsp;</option>
+<option value="53" >RIPLEY&nbsp;</option>
+<option value="99" >POR COBRAR&nbsp;</option>
+<option value="100" >MERCADO PAGO&nbsp;</option>
+<option value="101" >TENPO&nbsp;</option>
+<option value="102" >COPEC PAY&nbsp;</option>
+</select></td></tr>
+<tr><td>Forma de Pago</td><td>D�as</td></tr>
+<tr><td><input type="text" name="fpa_id" value="1" size=4 style="text-align:right;cursor:text;"  onblur="BuscaValor(this,document.frm.lfpa_id)">&nbsp;<select name="lfpa_id" onchange="alcambiar(document.frm.fpa_id,this)" ><option value="">Seleccione</option>
+<option value="1" SELECTED>COB1&nbsp;</option>
+<option value="2" >COBRANZA&nbsp;</option>
+<option value="11" >ACRED&nbsp;</option>
+<option value="12" >CBOF&nbsp;</option>
+<option value="21" >S/PAGO&nbsp;</option>
+<option value="32" >ANTICIPO&nbsp;</option>
+<option value="50" >ANT/COB&nbsp;</option>
+<option value="51" >ANT/COB&nbsp;</option>
+<option value="52" >ANT/COB&nbsp;</option>
+<option value="53" >ANT/COB&nbsp;</option>
+<option value="54" >ANT/COB&nbsp;</option>
+<option value="55" >ANT/COB&nbsp;</option>
+<option value="56" >ANT/COB&nbsp;</option>
+<option value="57" >ANT/COB&nbsp;</option>
+<option value="58" >ANT/COB&nbsp;</option>
+<option value="59" >ANT/COB&nbsp;</option>
+<option value="60" >ANT/CRED&nbsp;</option>
+<option value="61" >ANT/CRED&nbsp;</option>
+<option value="62" >ANT/CRED&nbsp;</option>
+<option value="63" >ANT/CRED&nbsp;</option>
+<option value="64" >ANT/CRED&nbsp;</option>
+<option value="65" >ANT/CRED&nbsp;</option>
+<option value="66" >ANT/CRED&nbsp;</option>
+<option value="67" >ANT/CRED&nbsp;</option>
+<option value="68" >ANT/CRED&nbsp;</option>
+<option value="69" >ANT/CRED&nbsp;</option>
+<option value="70" >ANT/COB&nbsp;</option>
+<option value="71" >ANT/COB&nbsp;</option>
+<option value="72" >ANT/COB&nbsp;</option>
+<option value="73" >ANT/COB&nbsp;</option>
+<option value="74" >ANT/COB&nbsp;</option>
+<option value="75" >ANT/COB&nbsp;</option>
+<option value="80" >S/PAGO/COB&nbsp;</option>
+<option value="81" >S/PAGO/COB&nbsp;</option>
+<option value="82" >S/PAGO/COB&nbsp;</option>
+<option value="83" >S/PAGO/COB&nbsp;</option>
+<option value="84" >S/PAGO/COB&nbsp;</option>
+<option value="85" >S/PAGO/COB&nbsp;</option>
+</select></td><td><input type="text" name="din_dias" size=4 maxlength=4 value="60" style="text-align:right" onblur="checkFloat(this,true)">(*)</td></tr><tr><td>Moneda</td><td>Divisas</td></tr>
+<tr><td><input type="text" name="mda_id" value="13" size=3 style="text-align:right;cursor:text;"  onblur="BuscaValor(this,document.frm.lmda_id);set_glosa_moneda();">&nbsp;
+<select name="lmda_id" onchange="alcambiar(document.frm.mda_id,this);set_glosa_moneda();">
+<option value="">Seleccione</option>
+	<option value="161">BALBOA PA</option>
+	<option value="145">BATH TH</option>
+	<option value="134">BOLIVAR</option>
+	<option value="4">BOLIVIANO</option>
+	<option value="160">COLON CR</option>
+	<option value="143">CORONA CZ</option>
+	<option value="51">CORONA DIN</option>
+	<option value="158">CORONA IS</option>
+	<option value="96">CORONA NOR</option>
+	<option value="113">CORONA SC</option>
+	<option value="139">DIRHAM</option>
+	<option value="36">DOLAR AUST</option>
+	<option value="6">DOLAR CAN</option>
+	<option value="127">DOLAR HK</option>
+	<option value="97">DOLAR NZ</option>
+	<option value="136">DOLAR SIN</option>
+	<option value="138">DOLAR TAI</option>
+	<option value="13" selected>DOLAR USA</option>
+	<option value="155">DONG VN</option>
+	<option value="142">EURO</option>
+	<option value="144">FORINT HU</option>
+	<option value="82">FRANCO SZ</option>
+	<option value="23">GUARANI</option>
+	<option value="150">HRYVNIA UA</option>
+	<option value="157">LEU RO</option>
+	<option value="156">LIBRA EG</option>
+	<option value="102">LIBRA EST</option>
+	<option value="146">LIRA TR</option>
+	<option value="24">NUEVO SOL</option>
+	<option value="900">OTRAS MONEDAS</option>
+	<option value="1">PESO AR</option>
+	<option value="200">PESO CHILENO</option>
+	<option value="129">PESO CO</option>
+	<option value="163">PESO CU</option>
+	<option value="162">PESO DO</option>
+	<option value="132">PESO MX</option>
+	<option value="152">PESO PH</option>
+	<option value="26">PESO UY</option>
+	<option value="128">RAND</option>
+	<option value="5">REAL BR</option>
+	<option value="159">RIAL IR</option>
+	<option value="147">RINGGIT MY</option>
+	<option value="153">RIYAL SA</option>
+	<option value="148">RUBLO RU</option>
+	<option value="149">RUPIA ID</option>
+	<option value="137">RUPIA IN</option>
+	<option value="154">RUPIA PK</option>
+	<option value="151">SHEKEL IL</option>
+	<option value="140">WON KR</option>
+	<option value="72">YEN</option>
+	<option value="48">YUAN CN</option>
+	<option value="141">ZLOTY PL</option>
+</select>
+<div id="div_glosa_moneda" style="display:none">
+<br>         <input type="text" name="moneda_glosa" size=28 maxlength=30 value="">
+</div>
+         </td><td><input type="text" name="div_id" value="" size=4 style="text-align:right;cursor:text;"  onblur="BuscaValor(this,document.frm.ldiv_id)">&nbsp;<select name="ldiv_id" onchange="alcambiar(document.frm.div_id,this)" ><option value="">Seleccione</option>
+<option value="1" >MERC.CAMB.FORMAL&nbsp;</option>
+<option value="2" >TESORERIA GENERAL&nbsp;</option>
+<option value="3" >SIN PAGO&nbsp;</option>
+<option value="4" >DISPONIB. PROPIAS&nbsp;</option>
+<option value="5" >OTROS&nbsp;</option>
+</select></td></tr>
+<tr><td>Cl&aacute;usula de Compra</td><td>Valor Ex-F�brica</td></tr>
+<tr><td><input type="text" name="cvt_id" value="2" size=2 style="text-align:right;cursor:text;"  onblur="BuscaValor(this,document.frm.lcvt_id)">&nbsp;<select name="lcvt_id" onchange="alcambiar(document.frm.cvt_id,this)" ><option value="">Seleccione</option>
+<option value="1" >CIF&nbsp;</option>
+<option value="2" SELECTED>CFR&nbsp;</option>
+<option value="3" >EXW&nbsp;</option>
+<option value="4" >FAS&nbsp;</option>
+<option value="5" >FOB&nbsp;</option>
+<option value="6" >S/CL&nbsp;</option>
+<option value="7" >FCA&nbsp;</option>
+<option value="8" >OTRA&nbsp;</option>
+<option value="9" >DDP&nbsp;</option>
+</select></td><td><input type="text" name="din_valor_ex_fabrica" size="12" maxlength="12" value="0.00" style="text-align:right" onblur="checkFloat(this,true)">(*)</td></tr>
+<tr><td>Forma pago grav�menes</td><td>Gastos hasta FOB</td></tr>
+<tr><td><input type="text" name="fpg_id" value="4" size=4 style="text-align:right;cursor:text;"  onblur="BuscaValor(this,document.frm.lfpg_id)">&nbsp;<select name="lfpg_id" onchange="alcambiar(document.frm.fpg_id,this)" ><option value="">Seleccione</option>
+<option value="1" >CONT/CONT&nbsp;</option>
+<option value="2" >Sp/IVA Sp&nbsp;</option>
+<option value="3" >APORTE&nbsp;</option>
+<option value="4" SELECTED>Sp/IVA C&nbsp;</option>
+<option value="5" >CONT/IVA Sp&nbsp;</option>
+<option value="6" >Sp/IVA L&nbsp;</option>
+<option value="7" >Sp/IVA D&nbsp;</option>
+<option value="8" >2563/IVA C&nbsp;</option>
+<option value="9" >2563/IVA Sp&nbsp;</option>
+<option value="10" >1226/IVA Sp&nbsp;</option>
+<option value="11" >17.238/IVA Sp&nbsp;</option>
+<option value="12" >1226/IVA C&nbsp;</option>
+<option value="13" >17.238/IVA C&nbsp;</option>
+<option value="14" >1557/IVA C&nbsp;</option>
+<option value="15" >17.238/IVA D&nbsp;</option>
+<option value="16" >1557/IVA D&nbsp;</option>
+<option value="17" >1557/IVA Sp&nbsp;</option>
+<option value="18" >18.483/IVA C&nbsp;</option>
+<option value="19" >18.483Sp/IVA C&nbsp;</option>
+<option value="20" >CONT/828&nbsp;</option>
+<option value="21" >LPD/53/IVA C&nbsp;</option>
+<option value="22" >LPD/54/IVA D&nbsp;</option>
+<option value="23" >LPD/55/Sp IVA&nbsp;</option>
+<option value="24" >LPD/56/IVA L&nbsp;</option>
+<option value="30" >CONT/IVA L&nbsp;</option>
+<option value="31" >CONT/IVA D&nbsp;</option>
+<option value="40" >2563/IVA L&nbsp;</option>
+<option value="41" >2563/IVA D&nbsp;</option>
+<option value="42" >LPD/45/C&nbsp;</option>
+<option value="43" >LPD/46/IVA D&nbsp;</option>
+<option value="44" >LPD/47/Sp IVA&nbsp;</option>
+<option value="45" >LPD/48/IVA L&nbsp;</option>
+<option value="46" >LPD/49/IVA C&nbsp;</option>
+<option value="47" >LPD/50/IVA D&nbsp;</option>
+<option value="48" >LPD/51/Sp IVA&nbsp;</option>
+<option value="49" >LPD/52/IVA L&nbsp;</option>
+<option value="50" >1226/IVA L&nbsp;</option>
+<option value="51" >1226/IVA D&nbsp;</option>
+<option value="55" >LPD/1/IVA C&nbsp;</option>
+<option value="56" >LPD/2/IVA C&nbsp;</option>
+<option value="57" >LPD/3/IVA C&nbsp;</option>
+<option value="58" >LPD/4/IVA C&nbsp;</option>
+<option value="59" >LPD/5/IVA C&nbsp;</option>
+<option value="60" >LPD/6/IVA C&nbsp;</option>
+<option value="61" >LPD/7/IVA C&nbsp;</option>
+<option value="62" >LPD/8/IVA D&nbsp;</option>
+<option value="63" >LPD/9/IVA D&nbsp;</option>
+<option value="64" >LPD/10/IVA D&nbsp;</option>
+<option value="65" >LPD/11/IVA D&nbsp;</option>
+<option value="66" >LPD/12/IVA D&nbsp;</option>
+<option value="67" >LPD/13/IVA D&nbsp;</option>
+<option value="68" >LPD/14/IVA D&nbsp;</option>
+<option value="69" >LPD/15/Sp IVA&nbsp;</option>
+<option value="70" >LPD/16/Sp IVA&nbsp;</option>
+<option value="71" >LPD/17/Sp IVA&nbsp;</option>
+<option value="72" >LPD/18/Sp IVA&nbsp;</option>
+<option value="73" >LPD/19/Sp IVA&nbsp;</option>
+<option value="74" >LPD/20/Sp IVA&nbsp;</option>
+<option value="75" >LPD/21/Sp IVA&nbsp;</option>
+<option value="76" >LPD/22/IVA L&nbsp;</option>
+<option value="77" >LPD/23/IVA L&nbsp;</option>
+<option value="78" >LPD/24/IVA L&nbsp;</option>
+<option value="79" >LPD/25/IVA L&nbsp;</option>
+<option value="80" >LPD/26/IVA L&nbsp;</option>
+<option value="81" >LPD/27/IVA L&nbsp;</option>
+<option value="82" >LPD/28/IVA L&nbsp;</option>
+<option value="83" >LPD/29/IVA C&nbsp;</option>
+<option value="84" >LPD/30/IVA D&nbsp;</option>
+<option value="85" >LPD/31/Sp IVA&nbsp;</option>
+<option value="86" >LPD/32/IVA L&nbsp;</option>
+<option value="87" >LPD/33/IVA C&nbsp;</option>
+<option value="88" >LPD/34/IVA D&nbsp;</option>
+<option value="89" >LPD/35/Sp IVA&nbsp;</option>
+<option value="90" >LPD/36/IVA L&nbsp;</option>
+<option value="91" >LPD/37/IVA C&nbsp;</option>
+<option value="92" >LPD/38/IVA D&nbsp;</option>
+<option value="93" >LPD/39/Sp IVA D&nbsp;</option>
+<option value="94" >LPD/40/IVA L&nbsp;</option>
+<option value="95" >LPD/41/IVA C&nbsp;</option>
+<option value="96" >LPD/42/IVA D&nbsp;</option>
+<option value="97" >LPD/43/Sp IVA&nbsp;</option>
+<option value="98" >LPD/44/IVA L&nbsp;</option>
+<option value="99" >OTRA&nbsp;</option>
+</select></td><td><input type="text" name="din_gastos_hasta_fob" size="12" maxlength="12" value="0.00" style="text-align:right" onblur="checkFloat(this,true)">(*)</td></tr>
+</table>
+      </td></tr></table></td></tr>
+   </table>
+   </td></tr></table><input type="hidden" name="lib_base" value="1">
+<input type="hidden" name="lib_nid" value="190248">
+<input type="hidden" name="lbac_nid" value="0">
+<input type="hidden" name="dus_tipo_envio" value="2">
+<input type="hidden" name="pagno"  value="0">
+<input type="hidden" name="comando" value='L'>
+<input type='hidden' name='query'   value=''>
+</form>
+<center><input type="button" value="Aceptar" onclick="aceptar()" class="botones">&nbsp;<input type="button" value="Cancelar" onclick="cancelar()" class="botones"></center>
+<script language="javascript" src="/js/formchek.js">
+</script>
+        <!-- End Content -->
+			</td>
+		</tr>
+		  <tr>
+    	<td height="2" class="txtContenido" align="right" valign="bottom"><img src="/img/spacer.gif" height="9"></TD>
+	    <td height="2" class="txtContenido" width="1%" align="right" valign="bottom"><img src="/temas_formulario/azul_piedrav2/img/der_bottom.png" width="15" height="15"></TD>
+	  </tr>
+	  </table>
+		</body>
+		</html>
+		<script src="/js/multiple-select/multiple-select.js"></script>
+				 <script> 
+		  $('#select_modulo').multipleSelect({
+		            width: 340,
+		            multiple: false,
+		            single: true,
+		            filter: true,
+		            placeholder:'Buscador de menu',
+		            filterPlaceholder: 'Ingresa t� busqueda'
+		        });          
+		        
+		  $('#select_modulo').change(function(){ 
+		    var valueMod = $(this).val()+'';
+		    var textMod  =  $(this).find('option:selected').text();
+		
+		    var arrOptMod = valueMod.split("|",3);
+		    
+		    
+		    
+		    if(arrOptMod[0]=="0")
+		    swal("Buscador de Menu","Su perfil de usuario (ADMINISTRADOR) no tiene permisos de acceso a \n "+textMod+"","info");
+		    else
+		    window.location.href = arrOptMod[2];
+				
+			});
+		</script>
+		
+		

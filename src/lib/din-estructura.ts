@@ -813,3 +813,175 @@ export function resolverRegimen(tratadoOPais: string): { regId: string; nombre: 
   }
   return { regId: "1", nombre: "GENERAL" };
 }
+
+// ============================================================
+// INSTRUCCIONES DE LLENADO VALIDADAS — ANTECEDENTES FINANCIEROS
+// ============================================================
+// Validado en op 190248 — guardado y verificado OK.
+//
+// REGLAS:
+//   bcc_id / lbcc_id        → VACÍO siempre
+//   fpg_id / lfpg_id        → 4 (Sp/IVA C) siempre
+//   din_dias                 → 60 por defecto
+//   mda_id / lmda_id        → 13 (DOLAR USA) siempre por defecto
+//   div_id / ldiv_id        → 1 (MERC.CAMB.FORMAL)
+//   fpa_id / lfpa_id        → 1 (COB1)
+//   cvt_id / lcvt_id        → DEBE coincidir con term_compra de Valores Generales
+//   din_valor_ex_fabrica    → valor factura USD solo si cláusula=EXW (código 3), sino 0.00
+//   din_gastos_hasta_fob    → solo si EXW con gastos, sino 0.00
+//   reg_id / lreg_id        → según tratado del CO (resolverRegimen())
+//
+// CERTIFICADO DE ORIGEN (campos hidden, se graban con el submit):
+//   Solo si reg_id ≠ 1 (GENERAL):
+//   cert_orig_tipo = "c" → Certificado de origen independiente (caso normal)
+//   cert_orig_tipo = "f" → Certificación en factura (SOLO Chile-UE, reg_id=91)
+//   cert_numero    → del documento CO en BD: datos.numero_certificado || "S/N"
+//   cert_fecha     → del CO en BD: datos.representante_legal_autorizado?.fecha_firma
+//                    || datos.fecha_emision (formato DD/MM/YYYY)
+//
+// NOTA: El popup cert_orig.php se dispara al hacer aceptar() si reg_id está en
+// arrRegCertOrig. Nosotros inyectamos cert_orig_tipo/cert_numero/cert_fecha
+// directamente en el form antes del submit (comando=U) y se persisten OK.
+// La verificación se hace recargando cert_orig.php (los campos hidden del form
+// vuelven vacíos, pero el popup muestra los datos guardados).
+
+// ============================================================
+// MÓDULO 7: MERCANCÍA / ÍTEMS (din_mercancia.php)
+// ============================================================
+// URL: /modulos/din/dus_encabezado/din_mercancia.php?lib_base=1&lib_nid={OP}&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0
+// Guardado: aceptar() → comando="U" → submit a SÍ MISMO.
+// Se repite por cada ítem de la factura.
+//
+// FLUJO POR CADA ÍTEM:
+//   1. linea = "" (Crear nuevo)
+//   2. mer_producto1 = código del producto (de Invoice.items[i].codigo_material)
+//   3. Buscar descriptor: GET /inc/getXML/buscar_descriptores.php?partida=&codigo={cod}&descripcion=&cli_id={cli_id}
+//      → Responde XML con dsc_partida, dsc_cod_producto, dsc_descrip_corta, dsc_otro1 (marca), dsc_otro2 (modelo), dsc_obs (presentación)
+//   4. Seleccionar el ÚLTIMO producto con ese código del select mer_producto
+//      → Esto abre popup Descriptor (IngresoMercancia)
+//   5. En popup Descriptor: llenar "Cantidad unidad de venta" según la unidad que muestra:
+//      - Si unidad = KG → usar peso_neto del ítem (ej: 10800)
+//      - Si otra unidad → usar cantidad correspondiente de la factura
+//      → Botón "Solo a Despacho" (aplica datos sin guardar en mantenedor)
+//   6. Seleccionar Acuerdo Comercial (lmer_nro_acuerdo_comercial) = TLC según CO
+//   7. Consultar Arancel: popup consulta_arancel_json.php?partida={arancel}&pais={pai_id}&regimen={reg_id}
+//      → Tomar la fila VUESA2002: seleccionar(advalorem, cod_arancel, nro_acuerdo, correlativo)
+//      → Pegar cod_arancel en mer_cod_arancel_tratado
+//   8. Cálculo Valores Item: popup calculo_valores_item.php
+//      → total_neto_item = valor total del ítem SEGÚN CLÁUSULA (CFR = FOB+flete, CIF = FOB+flete+seguro, FOB = solo FOB)
+//      → cantidad = cantidad en unidad de medida (KG generalmente)
+//      → Botón "Aceptar" → calcula() pega: mer_cantidad, mer_fob_unitario, mer_valor_cif_item, mer_monto_ajuste_item
+//   9. Cálculo de Derechos: popup trae_cuenta.php?mer_cod_arancel={}&mer_porc_advalorem={}&cif={}&...
+//      → Solo "Aceptar" → pega: mer_porc_advalorem, mer_cuenta_advalorem, mer_porc_otro1 (IVA 19%), mer_cod_otro1 (178), mer_monto_impto_otro1
+//  10. Grabar Mercadería: comando="U" → submit
+//
+// CÁLCULO VALORES ITEM (lógica de calcula() del popup):
+//   Si ume_id=6 (KG) y NO prorrateo:
+//     mer_fob_unitario = (total_neto_item / total_neto_itemes) * fob_total / cantidad
+//     mer_valor_cif_item = total_neto_item * cif_neto
+//     mer_monto_ajuste_item = total_neto_item * ajuste_neto
+//   Factores (vienen como hidden del form):
+//     valor_kn  = peso_bruto * paridad / total_factura
+//     fob_neto  = fob_total / total_neto_itemes
+//     cif_neto  = cif_total / total_neto_itemes
+//     ajuste_neto = ajuste_global / total_neto_itemes
+//
+// DERECHOS (IVA siempre 19%):
+//   mer_porc_otro1 = "19.000"
+//   mer_cod_otro1 = "178"
+//   mer_monto_impto_otro1 = (CIF + advalorem) * 19%
+//   mer_cod_obs1 = "99" (peso)
+//   mer_obs1 = "{cantidad_padded}.000000 KG" (ej: "00010800.000000 KG")
+//
+// mer_nombre (descriptor): "{codigo_producto_padded};{descripcion_corta};{marca};{modelo};{presentacion}"
+
+export const MODULO_MERCANCIA_GRABAR = {
+  action: "/modulos/din/dus_encabezado/din_mercancia.php",
+  metodo: "POST",
+  comando: "U",
+  nota: "Submit a sí mismo. linea='' para crear nuevo, linea=N para editar ítem N. Eliminar: comando=E + mer_nro_item=N.",
+};
+
+// ============================================================
+// MÓDULO 8: BULTOS (dus_desc_bulto.php)
+// ============================================================
+// URL: /modulos/din/dus_encabezado/dus_desc_bulto.php?lib_base=1&lib_nid={OP}&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0
+// Guardado: aceptar() → comando="U" → submit a SÍ MISMO.
+//
+// CAMPOS A LLENAR:
+//   din_id_bultos (textarea):
+//     Formato:
+//       {NUMERO_CONTENEDOR_1}
+//       {NUMERO_CONTENEDOR_2} (si hay más)
+//       CONT llevan {pallets} Pallets ({cod_pallet}) con {cantidad_bultos} {TIPO_BULTO}({cod_bulto})
+//     Ejemplo:
+//       ZCSU7530471
+//       CONT llevan 18 Pallets (80) con 18 OCTABIN(93)
+//     Fuentes:
+//       - Contenedores → BL.contenedores[].numero_contenedor
+//       - Pallets → BL.contenedores[].pallets
+//       - Tipo bulto → BL.contenedores[].tipo_bulto / Invoice.items[].tipo_bulto
+//       - Cantidad → BL.contenedores[].numero_bultos / Invoice.items[].cantidad
+//       - Código bulto → tabla tipos_bulto (80=PALLET, 93=BULTONOESP, etc.)
+//
+//   din_obs_banco_sna (textarea):
+//     Formato:
+//       CERTIFICADO DE ORIGEN {numero} FECHA {fecha}
+//       Mandato FEA
+//       M/N {nave}
+//     Ejemplo:
+//       CERTIFICADO DE ORIGEN S/N FECHA 22/04/2026
+//       Mandato FEA
+//       M/N MAERSK COLORADO
+//     Fuentes:
+//       - CO: cert_numero (o "S/N"), cert_fecha
+//       - Nave: BL.nave (corregida por ShipsGo si existe)
+//
+// Los campos de peso/FOB/flete/seguro/CIF vienen precargados y NO se modifican.
+// Códigos flete/seguro teórico se dejan vacíos (ya fueron ingresados reales).
+
+export const MODULO_BULTOS_GRABAR = {
+  action: "/modulos/din/dus_encabezado/dus_desc_bulto.php",
+  metodo: "POST",
+  comando: "U",
+  nota: "Submit a sí mismo. Llenar din_id_bultos y din_obs_banco_sna. Los demás campos vienen precargados.",
+};
+
+// ============================================================
+// MÓDULO 9: CUENTAS Y VALORES (dus_ctas_valores.php)
+// ============================================================
+// URL: /modulos/din/dus_encabezado/dus_ctas_valores.php?lib_base=1&lib_nid={OP}&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0
+// Guardado: aceptar() → comando="U" → submit a SÍ MISMO.
+//
+// Este módulo viene PRECARGADO con las cuentas calculadas desde Mercancía.
+// Solo hay que hacer "Aceptar" (comando=U) sin modificar nada.
+//
+// Campos que trae precargados:
+//   dus_codigo1 = "223" (ad-valorem) | dus_valor1 = monto ad-valorem
+//   dus_codigo178 = "178" (IVA)      | dus_valor178 = monto IVA
+//   dus_codigo191 = "191" (total)    | dus_valor191 = total a pagar USD
+//   dus_codigo91 = "91" (total CLP)  | dus_valor91 = total en pesos chilenos
+//   dus_tipo_cambio = tipo de cambio USD/CLP del día
+//
+// La función recupera_cuentas() se ejecuta al cargar la página y llena
+// automáticamente desde el array arr_ctas[] embebido.
+
+export const MODULO_CTAS_VALORES_GRABAR = {
+  action: "/modulos/din/dus_encabezado/dus_ctas_valores.php",
+  metodo: "POST",
+  comando: "U",
+  nota: "Solo Aceptar. Las cuentas vienen precargadas de Mercancía. No se modifica nada.",
+};
+
+// ============================================================
+// FLUJO COMPLETO DIN — ORDEN DE MÓDULOS
+// ============================================================
+// 1. Encabezado (dus_encabezado.php) — ya existe, no se modifica
+// 2. Valores Generales (din_valores_generales.php) → grabar.php
+// 3. Identificación (dus_identificacion.php) — no se modifica
+// 4. Destino/Transporte (dus_destino.php) → comando=U
+// 5. Antecedentes Financieros (dus_antecedentes.php) → comando=U + cert_orig
+// 6. Mercancía (din_mercancia.php) → por cada ítem: buscar descriptor + consultar arancel + calcular valores + derechos + comando=U
+// 7. Bultos (dus_desc_bulto.php) → din_id_bultos + din_obs_banco_sna + comando=U
+// 8. Cuentas y Valores (dus_ctas_valores.php) → solo comando=U
+// 9. Imprimir (imprimir_din.php) — fin del flujo

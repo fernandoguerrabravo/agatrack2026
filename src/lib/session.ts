@@ -54,6 +54,7 @@ export async function getSession(): Promise<SessionPayload | null> {
       rut: payload.rut as string,
       nombre: payload.nombre as string,
       email: payload.email as string,
+      rol: (payload.rol as "cliente" | "ejecutivo" | "admin") || "cliente",
       rol_prealertas: (payload.rol_prealertas as number) ?? 0,
     };
   } catch {

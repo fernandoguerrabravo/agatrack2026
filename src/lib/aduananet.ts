@@ -157,24 +157,62 @@ export async function resolverPuerto(
   via = ""
 ): Promise<{ codigo: string; nombre: string } | null> {
   if (!nombre) return null;
-  // Limpiar el nombre: tomar solo la primera palabra significativa para mejorar el match
-  const query = nombre.replace(/[^A-Za-zÁÉÍÓÚÑ\s]/g, " ").trim().split(/\s+/).slice(0, 2).join(" ");
+  // Extraer país del nombre si viene (ej: "CAUCEDO, DOMINICAN REPUBLIC" o "CARTAGENA (COLOMBIA)")
+  const partes = nombre.replace(/\(([^)]*)\)/g, ", $1").split(",").map(s => s.trim());
+  const nombrePuerto = partes[0];
+  const paisHint = partes.length > 1 ? partes.slice(1).join(" ").toUpperCase() : "";
+
+  const query = nombrePuerto.replace(/[^A-Za-zÁÉÍÓÚÑ\s]/g, " ").trim().split(/\s+/).slice(0, 2).join(" ");
   const pagina = nacional ? "puertos.php" : "otros_puertos.php";
   const identificador = nacional ? "pue_id2" : "pue_id";
-  const path = `/modulos/general/${pagina}?identificador=${identificador}&modo=desc&valor=${encodeURIComponent(query)}&via=${via}&nacional=${nacional ? "1" : "0"}`;
+  const pathUrl = `/modulos/general/${pagina}?identificador=${identificador}&modo=desc&valor=${encodeURIComponent(query)}&via=${via}&nacional=${nacional ? "1" : "0"}`;
 
-  const res = await aduananetFetch(path, { method: "GET", redirect: "follow" });
+  const res = await aduananetFetch(pathUrl, { method: "GET", redirect: "follow" });
   const html = await res.text();
 
-  // La respuesta contiene filas con seleccion("CODIGO","NOMBRE")
   const matches = [...html.matchAll(/seleccion\(["']([^"']+)["']\s*,\s*["']([^"']+)["']\)/gi)];
   if (matches.length === 0) return null;
+  if (matches.length === 1) return { codigo: matches[0][1], nombre: matches[0][2] };
 
-  // Preferir coincidencia exacta del nombre; sino el primero
-  const target = nombre.toUpperCase().trim();
-  const exact = matches.find(m => m[2].toUpperCase().trim() === target);
-  const chosen = exact || matches.find(m => m[2].toUpperCase().includes(query.toUpperCase())) || matches[0];
-  return { codigo: chosen[1], nombre: chosen[2] };
+  // Varios resultados — verificar contra la BD con info geográfica
+  const { pgQuery } = await import("./postgres");
+  const codigos = matches.map(m => m[1]);
+  const dbResult = await pgQuery<{ codigo: string; nombre: string; pais: string }>(
+    `SELECT codigo, nombre, pais FROM puertos WHERE codigo = ANY($1)`,
+    [codigos]
+  );
+
+  if (dbResult.length > 0 && paisHint) {
+    // Buscar match geográfico por país del BL
+    const paisKeywords: Record<string, string[]> = {
+      "DOMINICAN": ["AMERICA", "ANTILLAS"], "REPUBLIC": ["AMERICA"],
+      "USA": ["USA"], "UNITED STATES": ["USA"], "CHINA": ["CHINA"],
+      "PERU": ["PERU"], "COLOMBIA": ["COLOMBIA"], "BRAZIL": ["BRASIL"],
+      "PANAMA": ["PANAMA"], "ECUADOR": ["ECUADOR"], "MEXICO": ["MEXICO"],
+      "ARGENTINA": ["ARGENTINA"], "JAPAN": ["JAPON"], "KOREA": ["COREA"],
+    };
+    for (const [key, regiones] of Object.entries(paisKeywords)) {
+      if (paisHint.includes(key)) {
+        const geo = dbResult.filter(r => regiones.some(reg => r.pais.toUpperCase().includes(reg)));
+        if (geo.length > 0) {
+          return { codigo: geo[0].codigo, nombre: matches.find(m => m[1] === geo[0].codigo)?.[2] || geo[0].nombre };
+        }
+      }
+    }
+    // Caribe/otros → buscar "AMERICA"
+    const america = dbResult.find(r => r.pais === "AMERICA" || r.nombre.includes("AMERICA"));
+    if (america) return { codigo: america.codigo, nombre: matches.find(m => m[1] === america.codigo)?.[2] || america.nombre };
+  }
+
+  // Sin hint geográfico: tomar el de código más alto en BD
+  if (dbResult.length > 0) {
+    dbResult.sort((a, b) => Number(b.codigo) - Number(a.codigo));
+    return { codigo: dbResult[0].codigo, nombre: matches.find(m => m[1] === dbResult[0].codigo)?.[2] || dbResult[0].nombre };
+  }
+
+  // Fallback
+  const sorted = matches.sort((a, b) => Number(b[1]) - Number(a[1]));
+  return { codigo: sorted[0][1], nombre: sorted[0][2] };
 }
 
 
@@ -267,10 +305,38 @@ export async function buscarTransportista(
   const exact = porCodigoDesc(all.filter(c => c.nombre.toUpperCase().trim() === target));
   if (exact.length) return exact[0]; // la última creada
 
-  // Buscar por primera palabra clave (ej: "ZIM")
-  const keyword = target.split(/\s+/)[0];
-  const porKeyword = porCodigoDesc(all.filter(c => c.nombre.toUpperCase().includes(keyword)));
-  return porKeyword.length ? porKeyword[0] : null;
+  // Buscar por nombre completo contenido — preferir el match más largo, luego último creado
+  const porNombreCompleto = all.filter(c => c.nombre.toUpperCase().includes(target) || target.includes(c.nombre.toUpperCase().trim()));
+  if (porNombreCompleto.length) {
+    porNombreCompleto.sort((a, b) => b.nombre.length - a.nombre.length || Number(b.codigo) - Number(a.codigo));
+    return porNombreCompleto[0];
+  }
+
+  // Buscar por palabras clave significativas (excluir palabras cortas/genéricas)
+  const palabrasSignificativas = target.split(/\s+/).filter(w => w.length > 3 && !/^(S\.?A\.?|LTD|INC|LLC|LTDA|COMPANY|CO\.)$/i.test(w));
+  if (palabrasSignificativas.length > 1) {
+    // Buscar match con al menos 2 palabras significativas
+    const porMultiKeyword = all.filter(c => {
+      const n = c.nombre.toUpperCase();
+      return palabrasSignificativas.filter(w => n.includes(w)).length >= 2;
+    });
+    if (porMultiKeyword.length) {
+      // Nombre más largo; si empatan, último creado
+      porMultiKeyword.sort((a, b) => b.nombre.length - a.nombre.length || Number(b.codigo) - Number(a.codigo));
+      return porMultiKeyword[0];
+    }
+  }
+
+  // Fallback: buscar por primera palabra clave significativa (NO siglas)
+  // Preferir palabras largas sobre siglas cortas (ej: "MEDITERRANEAN" sobre "MSC")
+  const keywordLarga = palabrasSignificativas.find(w => w.length > 4) || palabrasSignificativas[0] || target.split(/\s+/)[0];
+  const porKeyword = all.filter(c => c.nombre.toUpperCase().includes(keywordLarga));
+  if (porKeyword.length) {
+    // Seleccionar el de nombre más largo; si empatan en largo, el de código más alto (último creado)
+    porKeyword.sort((a, b) => b.nombre.length - a.nombre.length || Number(b.codigo) - Number(a.codigo));
+    return porKeyword[0];
+  }
+  return null;
 }
 
 /**

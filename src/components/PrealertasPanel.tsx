@@ -27,6 +27,7 @@ export default function PrealertasPanel() {
   const [results, setResults] = useState<Array<{ nombre: string; tipo: string; resumen: string; error?: string }>>([]);
   const [grupos, setGrupos] = useState<OperacionGroup[]>([]);
   const [filterOp, setFilterOp] = useState("");
+  const [confeccionando, setConfeccionando] = useState<string | null>(null);
 
   const fetchDocumentos = useCallback(async () => {
     const params = filterOp ? `?nro_operacion=${encodeURIComponent(filterOp)}` : "";
@@ -65,6 +66,103 @@ export default function PrealertasPanel() {
     const res = await fetch(`/api/documentos?nro_operacion=${encodeURIComponent(nroOp)}`, { method: "DELETE" });
     if (res.ok) {
       fetchDocumentos();
+    }
+  }
+
+  async function handleCambiarTipo(docId: number, nuevoTipo: string) {
+    const res = await fetch(`/api/documentos/${docId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tipo_documento: nuevoTipo }),
+    });
+    if (res.ok) {
+      fetchDocumentos();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Error al cambiar tipo");
+    }
+  }
+
+  async function handleConfeccionar(nroOp: string) {
+    const Swal = (await import("sweetalert2")).default;
+
+    // Paso 1: Confirmar si es el BL corregido
+    const blConfirm = await Swal.fire({
+      title: "¿Es el BL corregido?",
+      text: "Confirma que el Bill of Lading subido corresponde al BL corregido (con datos de ShipsGo/nave final).",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Sí, es el corregido",
+      cancelButtonText: "No, cancelar",
+      confirmButtonColor: "#f59e0b",
+      cancelButtonColor: "#6b7280",
+    });
+
+    if (!blConfirm.isConfirmed) {
+      await Swal.fire({
+        title: "Confección cancelada",
+        text: "Debe subir el BL corregido antes de confeccionar la DIN.",
+        icon: "info",
+        confirmButtonColor: "#3b82f6",
+      });
+      return;
+    }
+
+    // Paso 2: Confirmar envío a confección
+    const confConfirm = await Swal.fire({
+      title: "¿Enviar a confección?",
+      html: `Se confeccionará la DIN para la operación <b>${nroOp}</b> en AduanaNet.<br><br>Este proceso puede tomar hasta 1 minuto.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Confeccionar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#f59e0b",
+      cancelButtonColor: "#6b7280",
+    });
+
+    if (!confConfirm.isConfirmed) return;
+
+    // Ejecutar confección
+    setConfeccionando(nroOp);
+    Swal.fire({
+      title: "Confeccionando DIN...",
+      html: "Grabando módulos en AduanaNet. Por favor espere.",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => { Swal.showLoading(); },
+    });
+
+    try {
+      const res = await fetch("/api/confeccionar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nro_operacion: nroOp }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await Swal.fire({
+          title: "✅ Confección exitosa",
+          html: `<b>Op ${nroOp}</b><br><br>${Object.entries(data.resultado || {}).map(([k, v]) => `<b>${k}:</b> ${v}`).join("<br>")}`,
+          icon: "success",
+          confirmButtonColor: "#10b981",
+        });
+      } else {
+        await Swal.fire({
+          title: "Error en confección",
+          text: data.error || "Error desconocido",
+          icon: "error",
+          confirmButtonColor: "#ef4444",
+        });
+      }
+    } catch (err) {
+      await Swal.fire({
+        title: "Error de conexión",
+        text: err instanceof Error ? err.message : "Error desconocido",
+        icon: "error",
+        confirmButtonColor: "#ef4444",
+      });
+    } finally {
+      setConfeccionando(null);
     }
   }
 
@@ -244,16 +342,45 @@ export default function PrealertasPanel() {
                       <span className="badge badge-primary badge-sm font-mono">Op. {grupo.nro_operacion}</span>
                       <span className="text-sm text-base-content/60">{grupo.documentos.length} documento{grupo.documentos.length !== 1 ? "s" : ""}</span>
                     </div>
-                    <button
-                      className="btn btn-error btn-xs"
-                      onClick={() => handleDeleteOperacion(grupo.nro_operacion)}
-                      title="Eliminar operación completa"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Eliminar todo
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const tieneBL = grupo.documentos.some(d => d.tipo_documento === "Bill of Lading (BL)");
+                        const tieneFactura = grupo.documentos.some(d => d.tipo_documento === "Invoice (Factura Comercial)");
+                        const blCorregido = grupo.documentos.some(d => {
+                          if (d.tipo_documento !== "Bill of Lading (BL)") return false;
+                          const datos = typeof d.datos_extraidos === "string" ? JSON.parse(d.datos_extraidos || "{}") : (d.datos_extraidos || {});
+                          return !!(datos._nave_corregida_shipsgo || datos.nave_corregida || datos.viaje_corregido || d.datos_shipsgo);
+                        });
+                        const puedeConfeccionar = tieneBL && tieneFactura && blCorregido;
+                        return (
+                          <button
+                            className={`btn btn-xs ${puedeConfeccionar ? "btn-warning" : "btn-disabled"}`}
+                            disabled={!puedeConfeccionar || confeccionando === grupo.nro_operacion}
+                            onClick={() => handleConfeccionar(grupo.nro_operacion)}
+                            title={!tieneBL ? "Falta BL" : !tieneFactura ? "Falta Factura" : !blCorregido ? "BL no corregido (falta ShipsGo)" : "Enviar a confección DIN"}
+                          >
+                            {confeccionando === grupo.nro_operacion ? (
+                              <span className="loading loading-spinner loading-xs"></span>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )}
+                            {confeccionando === grupo.nro_operacion ? "Confeccionando..." : "Enviar a Confección"}
+                          </button>
+                        );
+                      })()}
+                      <button
+                        className="btn btn-error btn-xs"
+                        onClick={() => handleDeleteOperacion(grupo.nro_operacion)}
+                        title="Eliminar operación completa"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Eliminar todo
+                      </button>
+                    </div>
                   </div>
                   <details className="group">
                     <summary className="px-4 py-2 cursor-pointer text-xs text-primary hover:text-primary/80 list-none flex items-center gap-1">
@@ -287,7 +414,22 @@ export default function PrealertasPanel() {
                                 )}
                               </td>
                               <td>
-                                <span className="badge badge-sm badge-outline">{doc.tipo_documento}</span>
+                                <select
+                                  className="select select-xs select-bordered w-full max-w-[180px]"
+                                  value={doc.tipo_documento}
+                                  onChange={(e) => handleCambiarTipo(doc.id, e.target.value)}
+                                >
+                                  <option value="Bill of Lading (BL)">Bill of Lading (BL)</option>
+                                  <option value="Invoice (Factura Comercial)">Invoice (Factura Comercial)</option>
+                                  <option value="Lista de Empaque (Packing List)">Lista de Empaque (Packing List)</option>
+                                  <option value="Certificado de Origen">Certificado de Origen</option>
+                                  <option value="Póliza de Seguro">Póliza de Seguro</option>
+                                  <option value="Ficha Técnica">Ficha Técnica</option>
+                                  <option value="Certificado Fitosanitario">Certificado Fitosanitario</option>
+                                  <option value="Certificado de Calidad">Certificado de Calidad</option>
+                                  <option value="Certificado Sanitario (SEREMI)">Certificado Sanitario (SEREMI)</option>
+                                  <option value="Mandato">Mandato</option>
+                                </select>
                               </td>
                               <td className="max-w-[400px]">
                                 {(() => {
@@ -763,6 +905,21 @@ export default function PrealertasPanel() {
                     </div>
                   </div>
                   </details>
+                  {/* AduanaNet — Ver borrador DIN */}
+                  <div className="px-4 py-2 border-t border-base-300">
+                    <a
+                      href={`https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/din.php?lib_base=1&lib_nid=${grupo.nro_operacion}&lbac_nid=0&dus_tipo_envio=2&pagno=0&tipo=&copias=1&borrador=1&ref=1&dolar=1&imp_masiva=0&comando=U`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-xs btn-outline btn-info"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Ver Borrador DIN
+                    </a>
+                  </div>
                 </div>
               ))}
             </div>
