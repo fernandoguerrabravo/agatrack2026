@@ -88,6 +88,15 @@ export default function CustomerServicesPanel() {
       .then(r => r.json())
       .then(data => { if (data.aprobadas?.length > 0) fetchData(); })
       .catch(() => {});
+
+    // Polling cada 60s para detectar aprobaciones
+    const interval = setInterval(() => {
+      fetch("/api/operaciones/verificar-aprobacion", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+        .then(r => r.json())
+        .then(data => { if (data.aprobadas?.length > 0) fetchData(); })
+        .catch(() => {});
+    }, 60000);
+    return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
