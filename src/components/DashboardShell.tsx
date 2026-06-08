@@ -18,8 +18,11 @@ type MenuItem = {
 };
 
 function getMenuItems(user: SessionPayload): MenuItem[] {
+  // Determinar rol efectivo (backward compat con tokens viejos)
+  const rol = user.rol || (user.rol_prealertas === 1 ? "admin" : "cliente");
+
   // Ejecutivo: solo Dashboard + Customer Services
-  if (user.rol === "ejecutivo") {
+  if (rol === "ejecutivo") {
     return [
       { label: "Home", href: "/dashboard", icon: HomeIcon },
       { label: "Customer Services", href: "/dashboard/customer-services", icon: DocIcon },
@@ -44,7 +47,7 @@ function getMenuItems(user: SessionPayload): MenuItem[] {
   ];
 
   // Admin: todo
-  if (user.rol === "admin") {
+  if (rol === "admin") {
     items.push({ label: "Prealertas", href: "/dashboard/prealertas", icon: DocIcon });
     items.push({ label: "Customer Services", href: "/dashboard/customer-services", icon: DocIcon });
     items.push({ label: "Rastrea tu Contenedor", href: "/dashboard/tracking", icon: TrackingIcon });
