@@ -29,7 +29,7 @@ function getMenuItems(user: SessionPayload): MenuItem[] {
     ];
   }
 
-  // Cliente: Dashboard + Exportaciones + Importaciones + Tracking Contenedores
+  // Cliente: Dashboard + Exportaciones + Importaciones + Rastrea tu Contenedor
   const items: MenuItem[] = [
     { label: "Home", href: "/dashboard", icon: HomeIcon },
     {
@@ -44,14 +44,14 @@ function getMenuItems(user: SessionPayload): MenuItem[] {
       { label: "Estadísticas Generales", href: "/dashboard/importaciones/estadisticas" },
       { label: "Impuestos Importaciones", href: "/dashboard/importaciones/impuestos" },
     ] },
-    { label: "Tracking Contenedores", href: "/dashboard/tracking-contenedores", icon: TrackingIcon },
+    { label: "Rastrea tu Contenedor", href: "/dashboard/tracking", icon: TrackingIcon },
   ];
 
   // Admin: todo
   if (rol === "admin") {
     items.push({ label: "Prealertas", href: "/dashboard/prealertas", icon: DocIcon });
     items.push({ label: "Customer Services", href: "/dashboard/customer-services", icon: DocIcon });
-    items.push({ label: "Rastrea tu Contenedor", href: "/dashboard/tracking", icon: TrackingIcon });
+    items.push({ label: "Tracking Contenedores", href: "/dashboard/tracking-contenedores", icon: TrackingIcon });
   }
 
   return items;

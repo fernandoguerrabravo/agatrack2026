@@ -44,6 +44,7 @@ export default function CustomerServicesPanel() {
   const [operaciones, setOperaciones] = useState<OperacionConDocs[]>([]);
   const [filterOp, setFilterOp] = useState("");
   const [confeccionando, setConfeccionando] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(true);
 
   // Upload
   const [archivos, setArchivos] = useState<File[]>([]);
@@ -57,8 +58,9 @@ export default function CustomerServicesPanel() {
   }
 
   const fetchData = useCallback(async () => {
+    setCargando(true);
     const opsRes = await fetch(`/api/operaciones${filterOp ? `?nro_operacion=${encodeURIComponent(filterOp)}` : ""}`);
-    if (!opsRes.ok) return;
+    if (!opsRes.ok) { setCargando(false); return; }
     const ops: Operacion[] = (await opsRes.json()).operaciones ?? [];
 
     const docsRes = await fetch(`/api/documentos${filterOp ? `?nro_operacion=${encodeURIComponent(filterOp)}` : ""}`);
@@ -78,6 +80,7 @@ export default function CustomerServicesPanel() {
     }
     combined.sort((a, b) => (b.documentos[0]?.created_at || b.fecha_apertura || "").localeCompare(a.documentos[0]?.created_at || a.fecha_apertura || ""));
     setOperaciones(combined);
+    setCargando(false);
   }, [filterOp]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -535,7 +538,12 @@ export default function CustomerServicesPanel() {
           </div>
 
           {/* Pestañas por estado */}
-          {(() => {
+          {cargando ? (
+            <div className="flex items-center justify-center py-8 gap-3">
+              <span className="loading loading-spinner loading-md"></span>
+              <span className="text-base-content/60">Cargando operaciones...</span>
+            </div>
+          ) : ((() => {
             const abiertas = operaciones.filter(o => o.estado === "abierta");
             const tteEnviado = operaciones.filter(o => o.estado === "tte_enviado");
             const confeccionadas = operaciones.filter(o => o.estado === "confeccionada");
@@ -574,7 +582,7 @@ export default function CustomerServicesPanel() {
                 </div>
               </div>
             );
-          })()}
+          })())}
         </div>
       </div>
     </div>
