@@ -290,6 +290,64 @@ async function processInboundEmail(
       );
       console.log(`[inbound] Documentos asociados a op ${nroOperacion}`);
 
+      // PASO 6: Consultar ShipsGo si hay BL con número
+      let shipsgoData: Record<string, unknown> = {};
+      const blDocForShipsgo = processedDocs.find(d => d.tipo === "Bill of Lading (BL)");
+      const blNumberForShipsgo = String(blDocForShipsgo?.datos?.numero_bl_master || blDocForShipsgo?.datos?.numero_bl || "");
+      if (blNumberForShipsgo && !esTerrestreDoc) {
+        try {
+          const shipsgoToken = process.env.SHIPSGO_API_KEY;
+          if (shipsgoToken) {
+            console.log(`[inbound] Consultando ShipsGo para BL: ${blNumberForShipsgo}`);
+            // Crear shipment
+            const createRes = await fetch("https://api.shipsgo.com/v2/ocean/shipments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-Shipsgo-User-Token": shipsgoToken },
+              body: JSON.stringify({ booking_number: blNumberForShipsgo }),
+            });
+            const createJson = await createRes.json();
+            const sgId = createJson.shipment?.id;
+            if (sgId) {
+              // Esperar y consultar detalles (reintentar hasta 5 veces)
+              for (let i = 0; i < 5; i++) {
+                await new Promise(r => setTimeout(r, 3000));
+                const detailRes = await fetch(`https://api.shipsgo.com/v2/ocean/shipments/${sgId}`, {
+                  headers: { "X-Shipsgo-User-Token": shipsgoToken },
+                });
+                if (detailRes.ok) {
+                  const detailJson = await detailRes.json();
+                  shipsgoData = detailJson.shipment || {};
+                  if ((shipsgoData as Record<string, unknown>).route) break;
+                }
+              }
+              // Guardar en el doc de BL
+              if (blDocForShipsgo) {
+                await pgQuery("UPDATE documentos SET datos_shipsgo = $1, shipsgo_id = $2 WHERE id = $3",
+                  [JSON.stringify(shipsgoData), sgId, blDocForShipsgo.id]);
+              }
+              console.log(`[inbound] ShipsGo data obtenida, id=${sgId}`);
+            }
+          }
+        } catch (sgErr) {
+          console.error("[inbound] Error ShipsGo:", sgErr instanceof Error ? sgErr.message : sgErr);
+        }
+      }
+
+      // Extraer ETA de ShipsGo
+      const sgRoute = (shipsgoData as Record<string, unknown>).route as Record<string, unknown> | undefined;
+      const etaRaw = (sgRoute?.port_of_discharge as Record<string, unknown>)?.date_of_discharge || "";
+      let eta = "";
+      if (etaRaw) {
+        const d = new Date(String(etaRaw));
+        const meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+        eta = `${String(d.getDate()).padStart(2, "0")}${meses[d.getMonth()]} ${d.getFullYear()}`;
+      }
+      // Fallback: ETA del subject
+      if (!eta && subject) {
+        const etaMatch = subject.match(/ETA:?\s*(\d{1,2}\s*[A-Z]{3}\s*\d{4})/i);
+        if (etaMatch) eta = etaMatch[1];
+      }
+
       // Enviar notificación email con detalle del embarque
       try {
         const { Resend } = await import("resend");
@@ -331,7 +389,7 @@ async function processInboundEmail(
         await resend.emails.send({
           from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
           to: ["fguerrab@agenciaguerra.com"],
-          subject: `Nuevo Despacho ${nroOperacion} - ${config.cliente_nombre} - REF: ${referencia}`,
+          subject: `Nuevo Despacho ${nroOperacion} - ${config.cliente_nombre} - REF: ${referencia}${eta ? " - ETA: " + eta : ""}`,
           html: `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
   <p>Estimados,</p>
@@ -354,6 +412,7 @@ async function processInboundEmail(
     ${ptoEmbarque ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Puerto Embarque</td><td style="padding:8px 12px;border:1px solid #ddd;">${ptoEmbarque}</td></tr>` : ""}
     ${ptoTransbordo ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Puerto Transbordo</td><td style="padding:8px 12px;border:1px solid #ddd;">${ptoTransbordo}</td></tr>` : ""}
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Puerto Desembarque</td><td style="padding:8px 12px;border:1px solid #ddd;">${puertoDesembarque}</td></tr>
+    ${eta ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">ETA</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#16a34a;">${eta}</td></tr>` : ""}
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Email de</td><td style="padding:8px 12px;border:1px solid #ddd;">${from}</td></tr>
   </table>
 
@@ -362,6 +421,9 @@ async function processInboundEmail(
     <thead><tr style="background:#f5f5f5;"><th style="padding:6px 12px;border:1px solid #ddd;">Contenedor</th><th style="padding:6px 12px;border:1px solid #ddd;">Tipo</th><th style="padding:6px 12px;border:1px solid #ddd;">Peso Bruto</th></tr></thead>
     <tbody>${contTable}</tbody>
   </table>` : ""}
+
+  <h3 style="margin-top:20px;">Tracking en Vivo</h3>
+  <p><a href="https://agatrack.com/tracking/${nroOperacion}" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 24px;border-radius:4px;text-decoration:none;font-weight:600;">Ver seguimiento del embarque →</a></p>
 
   <h3 style="margin-top:20px;">Documentos Procesados</h3>
   <table style="border-collapse:collapse;border:1px solid #ddd;width:100%;max-width:600px;">
