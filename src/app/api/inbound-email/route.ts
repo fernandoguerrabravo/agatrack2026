@@ -290,65 +290,14 @@ async function processInboundEmail(
       );
       console.log(`[inbound] Documentos asociados a op ${nroOperacion}`);
 
-      // PASO 6: Consultar ShipsGo si hay BL con número
-      let shipsgoData: Record<string, unknown> = {};
-      const blDocForShipsgo = processedDocs.find(d => d.tipo === "Bill of Lading (BL)");
-      const blNumberForShipsgo = String(blDocForShipsgo?.datos?.numero_bl_master || blDocForShipsgo?.datos?.numero_bl || "");
-      if (blNumberForShipsgo && !esTerrestreDoc) {
-        try {
-          const shipsgoToken = process.env.SHIPSGO_API_KEY;
-          if (shipsgoToken) {
-            console.log(`[inbound] Consultando ShipsGo para BL: ${blNumberForShipsgo}`);
-            // Crear shipment
-            const createRes = await fetch("https://api.shipsgo.com/v2/ocean/shipments", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "X-Shipsgo-User-Token": shipsgoToken },
-              body: JSON.stringify({ booking_number: blNumberForShipsgo }),
-            });
-            const createJson = await createRes.json();
-            const sgId = createJson.shipment?.id;
-            if (sgId) {
-              // Esperar y consultar detalles (reintentar hasta 5 veces)
-              for (let i = 0; i < 5; i++) {
-                await new Promise(r => setTimeout(r, 3000));
-                const detailRes = await fetch(`https://api.shipsgo.com/v2/ocean/shipments/${sgId}`, {
-                  headers: { "X-Shipsgo-User-Token": shipsgoToken },
-                });
-                if (detailRes.ok) {
-                  const detailJson = await detailRes.json();
-                  shipsgoData = detailJson.shipment || {};
-                  if ((shipsgoData as Record<string, unknown>).route) break;
-                }
-              }
-              // Guardar en el doc de BL
-              if (blDocForShipsgo) {
-                await pgQuery("UPDATE documentos SET datos_shipsgo = $1, shipsgo_id = $2 WHERE id = $3",
-                  [JSON.stringify(shipsgoData), sgId, blDocForShipsgo.id]);
-              }
-              console.log(`[inbound] ShipsGo data obtenida, id=${sgId}`);
-            }
-          }
-        } catch (sgErr) {
-          console.error("[inbound] Error ShipsGo:", sgErr instanceof Error ? sgErr.message : sgErr);
-        }
-      }
-
-      // Extraer ETA de ShipsGo
-      const sgRoute = (shipsgoData as Record<string, unknown>).route as Record<string, unknown> | undefined;
-      const etaRaw = (sgRoute?.port_of_discharge as Record<string, unknown>)?.date_of_discharge || "";
+      // Extraer ETA del subject del email (no esperar ShipsGo)
       let eta = "";
-      if (etaRaw) {
-        const d = new Date(String(etaRaw));
-        const meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
-        eta = `${String(d.getDate()).padStart(2, "0")}${meses[d.getMonth()]} ${d.getFullYear()}`;
-      }
-      // Fallback: ETA del subject
-      if (!eta && subject) {
+      if (subject) {
         const etaMatch = subject.match(/ETA:?\s*(\d{1,2}\s*[A-Z]{3}\s*\d{4})/i);
         if (etaMatch) eta = etaMatch[1];
       }
 
-      // Enviar notificación email con detalle del embarque
+      // Enviar notificación email INMEDIATAMENTE (sin esperar ShipsGo)
       try {
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
@@ -437,6 +386,47 @@ async function processInboundEmail(
         });
       } catch (emailErr) {
         console.error("[inbound] Error enviando notificación:", emailErr instanceof Error ? emailErr.message : emailErr);
+      }
+
+      // PASO 7: Consultar ShipsGo en background (solo marítimas, no bloquea)
+      if (!esTerrestreDoc) {
+        const blDocForShipsgo = processedDocs.find(d => d.tipo === "Bill of Lading (BL)");
+        const blNumberForShipsgo = String(blDocForShipsgo?.datos?.numero_bl_master || blDocForShipsgo?.datos?.numero_bl || "");
+        if (blNumberForShipsgo) {
+          try {
+            const shipsgoToken = process.env.SHIPSGO_API_KEY;
+            if (shipsgoToken) {
+              console.log(`[inbound] Consultando ShipsGo para BL: ${blNumberForShipsgo}`);
+              const createRes = await fetch("https://api.shipsgo.com/v2/ocean/shipments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Shipsgo-User-Token": shipsgoToken },
+                body: JSON.stringify({ booking_number: blNumberForShipsgo }),
+              });
+              const createJson = await createRes.json();
+              const sgId = createJson.shipment?.id;
+              if (sgId) {
+                for (let i = 0; i < 5; i++) {
+                  await new Promise(r => setTimeout(r, 3000));
+                  const detailRes = await fetch(`https://api.shipsgo.com/v2/ocean/shipments/${sgId}`, {
+                    headers: { "X-Shipsgo-User-Token": shipsgoToken },
+                  });
+                  if (detailRes.ok) {
+                    const detailJson = await detailRes.json();
+                    const sgData = detailJson.shipment || {};
+                    if (sgData.route) {
+                      await pgQuery("UPDATE documentos SET datos_shipsgo = $1, shipsgo_id = $2 WHERE id = $3",
+                        [JSON.stringify(sgData), sgId, blDocForShipsgo!.id]);
+                      console.log(`[inbound] ShipsGo data guardada, id=${sgId}`);
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          } catch (sgErr) {
+            console.error("[inbound] Error ShipsGo:", sgErr instanceof Error ? sgErr.message : sgErr);
+          }
+        }
       }
     }
 
