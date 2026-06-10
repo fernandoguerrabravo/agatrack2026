@@ -41,7 +41,31 @@ export async function POST(request: Request) {
   const cookies = await aduananetLogin();
   const aprobadas: Array<{ nro_operacion: string; nro_aceptacion: string; fecha_aceptacion: string }> = [];
 
-  for (const op of operaciones) {
+  // Primero verificar en despachos_replica (más confiable)
+  const nros = operaciones.map(o => o.nro_operacion);
+  const replicaAprobadas = await pgQuery<{ despacho: string; nro_aceptacion: string; fecha_aceptacion: string }>(
+    `SELECT despacho, nro_aceptacion, fecha_aceptacion FROM despachos_replica WHERE despacho = ANY($1)`,
+    [nros]
+  );
+  for (const ap of replicaAprobadas) {
+    aprobadas.push({
+      nro_operacion: ap.despacho,
+      nro_aceptacion: ap.nro_aceptacion || "",
+      fecha_aceptacion: ap.fecha_aceptacion ? new Date(ap.fecha_aceptacion).toLocaleDateString("es-CL") : "",
+    });
+    await pgQuery(
+      `UPDATE operaciones SET estado = 'aprobada', fecha_cierre = NOW(), updated_at = NOW(),
+       notas = COALESCE(notas, '') || $1
+       WHERE nro_operacion = $2 AND estado != 'aprobada'`,
+      [`\nAprobada (replica): ${ap.nro_aceptacion}`, ap.despacho]
+    );
+  }
+
+  // Luego verificar en AduanaNet las que no se encontraron en replica
+  const yaAprobadas = new Set(aprobadas.map(a => a.nro_operacion));
+  const pendientesAduananet = operaciones.filter(o => !yaAprobadas.has(o.nro_operacion));
+
+  for (const op of pendientesAduananet) {
     try {
       // Filtrar en lista de DIN terminadas por lib_nid
       const filterBody = new URLSearchParams();
