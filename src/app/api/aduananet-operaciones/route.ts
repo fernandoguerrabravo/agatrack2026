@@ -194,20 +194,6 @@ export async function POST(request: Request) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         const CONTACTOS_PROVISION = [
-          "BARomanini@dow.com",
-          "HZachariotto@dow.com",
-          "LNuez@dow.com",
-          "MLIbarraRocha@dow.com",
-          "jfernandez@agenciaguerra.com",
-          "losandes@agenciaguerra.com",
-          "hector@agenciaguerra.com",
-          "boris@agenciaguerra.com",
-          "bdpcl.dow@bdpint.com",
-          "isabel.riveros@psabdp.com",
-          "roberto.santibanez@psabdp.com",
-          "sara.arcos@psabdp.com",
-          "bastian.monsalve@agenciaguerra.com",
-          "ehenriquez@agenciaguerra.com",
           "fguerrab@agenciaguerra.com",
         ];
         await resend.emails.send({
