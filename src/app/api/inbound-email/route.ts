@@ -11,7 +11,7 @@ export const maxDuration = 120;
  * Mapeo de dirección de recepción → configuración del cliente
  */
 const INBOUND_MAP: Record<string, { cli_id: string; rut_cliente: string; cliente_nombre: string }> = {
-  "dow@agatrack.com": { cli_id: "2710", rut_cliente: "92933000-5", cliente_nombre: "PETROQUIMICA DOW S.A." },
+  "dow@agatrack.agenciaguerra.com": { cli_id: "2710", rut_cliente: "92933000-5", cliente_nombre: "PETROQUIMICA DOW S.A." },
 };
 
 /**
