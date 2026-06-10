@@ -65,6 +65,16 @@ const CLIENTES = [
     nombre: "PETROQUIMICA DOW S.A.",
     emails: ["Yisel.Moraga@psabdp.com", "sara.arcos@psabdp.com", "fguerrab@agenciaguerra.com"],
     periodo: "mes",
+    columnas: [
+      "operacion", "aduana", "fecha_aceptacion", "cliente", "despacho",
+      "total_itemes", "total_bultos", "identificacion_bultos", "total_peso_bruto",
+      "total_fob", "valor_seguro", "valor_flete", "total_cif", "tipo_cambio",
+      "puerto_embarque", "puerto_desembarque", "cia_transportadora",
+      "pais_origen_mercancias", "pais_adquisicion_mercancias", "iva",
+      "consignante", "regimen", "documento_transporte", "descripcion_item_1",
+      "codigo_arancel_tratado_item_1", "nro_aceptacion", "referencia",
+      "gravamenes_valor_1", "gravamenes_valor_2", "gravamenes_valor_3", "via"
+    ],
   },
 ];
 
