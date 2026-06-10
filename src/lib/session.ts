@@ -6,7 +6,7 @@ import type { SessionPayload } from "./types";
 export type { SessionPayload };
 
 const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? "fallback_dev_secret"
+  process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET no configurado"); })()
 );
 
 const COOKIE_NAME = "agatrack_session";
