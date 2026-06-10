@@ -1703,15 +1703,59 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
               const shipsgoId = createJson.shipment?.id;
               if (shipsgoId) {
                 await pgQuery("UPDATE documentos SET shipsgo_id = $1 WHERE id = $2", [shipsgoId, docId]);
-                // Consultar detalles
-                const detailRes = await fetch(`https://api.shipsgo.com/v2/ocean/shipments/${shipsgoId}`, {
-                  headers: { "X-Shipsgo-User-Token": shipsgoToken },
-                });
-                if (detailRes.ok) {
-                  const detailJson = await detailRes.json();
-                  const shipsgoData = detailJson.shipment || {};
+                // Consultar detalles (reintentar hasta 5 veces)
+                let shipsgoData: Record<string, unknown> = {};
+                for (let i = 0; i < 5; i++) {
+                  await new Promise(r => setTimeout(r, 3000));
+                  const detailRes = await fetch(`https://api.shipsgo.com/v2/ocean/shipments/${shipsgoId}`, {
+                    headers: { "X-Shipsgo-User-Token": shipsgoToken },
+                  });
+                  if (detailRes.ok) {
+                    const detailJson = await detailRes.json();
+                    shipsgoData = detailJson.shipment || {};
+                    if ((shipsgoData as Record<string, unknown>).route) break;
+                  }
+                }
+                if (shipsgoData) {
                   await pgQuery("UPDATE documentos SET datos_shipsgo = $1 WHERE id = $2", [JSON.stringify(shipsgoData), docId]);
                   console.log("[upload] ShipsGo data guardada para BL:", blNumber, "id:", shipsgoId);
+
+                  // Enviar correo actualización ETA si hay ruta
+                  const sgRoute = (shipsgoData as Record<string, unknown>).route as Record<string, unknown> | undefined;
+                  if (sgRoute) {
+                    try {
+                      const { Resend: ResendEta } = await import("resend");
+                      const resendEta = new ResendEta(process.env.RESEND_API_KEY);
+                      const podData = sgRoute.port_of_discharge as Record<string, unknown>;
+                      const polData = sgRoute.port_of_loading as Record<string, unknown>;
+                      const etaDate = podData?.date_of_discharge ? new Date(String(podData.date_of_discharge)) : null;
+                      const mesesEta = ["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT","NOV","DIC"];
+                      const etaStr = etaDate ? `${String(etaDate.getDate()).padStart(2,"0")}${mesesEta[etaDate.getMonth()]} ${etaDate.getFullYear()}` : "";
+                      const polName = (polData?.location as Record<string, unknown>)?.name || "";
+                      const podName = (podData?.location as Record<string, unknown>)?.name || "";
+                      const transitTime = sgRoute.transit_time || "";
+                      const transitPct = sgRoute.transit_percentage || 0;
+                      const co2 = sgRoute.co2_emission || "";
+                      const naveEta = combined.nave_corregida || combined.nave || "";
+                      const productoEta = ""; // No tenemos acceso al invoice aquí
+                      const contenedoresEta = (combined.contenedores || []) as Array<Record<string, unknown>>;
+                      const contTableEta = contenedoresEta.map((c: Record<string, unknown>) => `<tr><td style="padding:4px 12px;border:1px solid #ddd;">${c.numero_contenedor || ""}</td><td style="padding:4px 12px;border:1px solid #ddd;">${c.tipo_contenedor || ""}</td><td style="padding:4px 12px;border:1px solid #ddd;">${c.peso_bruto || ""} KG</td></tr>`).join("");
+                      // Obtener referencia de la operación
+                      const opRows = await pgQuery<{notas: string}>("SELECT notas FROM operaciones WHERE nro_operacion = $1", [nroOperacion]);
+                      const refMatch = (opRows[0]?.notas || "").match(/ref:\s*([^\s|]+)/i);
+                      const refEta = refMatch ? refMatch[1] : "";
+
+                      await resendEta.emails.send({
+                        from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
+                        to: ["fguerrab@agenciaguerra.com"],
+                        subject: `Actualización ETA Despacho ${nroOperacion} - REF: ${refEta} - ETA: ${etaStr}`,
+                        html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;"><p>Estimados,</p><p>Se ha actualizado la información de seguimiento para el despacho <b>${nroOperacion}</b>:</p><table style="border-collapse:collapse;margin:16px 0;width:100%;max-width:600px;"><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;width:180px;">N° Despacho</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#2563eb;">${nroOperacion}</td></tr><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Referencia</td><td style="padding:8px 12px;border:1px solid #ddd;">${refEta}</td></tr><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">BL</td><td style="padding:8px 12px;border:1px solid #ddd;">${blNumber}</td></tr><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Nave</td><td style="padding:8px 12px;border:1px solid #ddd;">${naveEta}</td></tr><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Ruta</td><td style="padding:8px 12px;border:1px solid #ddd;">${polName} → ${podName}</td></tr><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Tránsito</td><td style="padding:8px 12px;border:1px solid #ddd;">${transitTime} días (${transitPct}%)</td></tr><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">ETA</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#16a34a;font-size:16px;">${etaStr}</td></tr>${co2 ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">CO₂</td><td style="padding:8px 12px;border:1px solid #ddd;">${co2} ton</td></tr>` : ""}</table>${contTableEta ? `<h3 style="margin-top:20px;">Contenedores</h3><table style="border-collapse:collapse;border:1px solid #ddd;width:100%;max-width:600px;"><thead><tr style="background:#f5f5f5;"><th style="padding:6px 12px;border:1px solid #ddd;">Contenedor</th><th style="padding:6px 12px;border:1px solid #ddd;">Tipo</th><th style="padding:6px 12px;border:1px solid #ddd;">Peso Bruto</th></tr></thead><tbody>${contTableEta}</tbody></table>` : ""}<h3 style="margin-top:20px;">Tracking en Vivo</h3><p><a href="https://agatrack.com/tracking/${nroOperacion}" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 24px;border-radius:4px;text-decoration:none;font-weight:600;">Ver seguimiento del embarque →</a></p><p style="margin-top:20px;color:#666;font-size:12px;">Actualización automática de tracking por AgaTrack.</p></div>`,
+                      });
+                      console.log("[upload] Correo actualización ETA enviado para op", nroOperacion);
+                    } catch (etaErr) {
+                      console.error("[upload] Error correo ETA:", etaErr instanceof Error ? etaErr.message : etaErr);
+                    }
+                  }
                 }
               }
             } catch (err) {
