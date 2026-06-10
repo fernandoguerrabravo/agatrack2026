@@ -60,6 +60,12 @@ const CLIENTES = [
     ],
   },
   // Agregar más clientes aquí
+  {
+    rut: "92933000-5",
+    nombre: "PETROQUIMICA DOW S.A.",
+    emails: ["Yisel.Moraga@psabdp.com", "sara.arcos@psabdp.com", "fguerrab@agenciaguerra.com"],
+    periodo: "mes",
+  },
 ];
 
 // Columnas por defecto (todas) para clientes sin columnas personalizadas
