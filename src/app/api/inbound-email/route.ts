@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { pgQuery } from "@/lib/postgres";
 import { uploadToSpaces } from "@/lib/spaces";
-import { Resend } from "resend";
+import { aduananetLogin } from "@/lib/aduananet";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
+
+const BASE_URL = process.env.ADUANANET_URL || "https://fguerragodoy.aduananet2.cl";
 
 /**
  * Mapeo de dirección de recepción → configuración del cliente
@@ -18,36 +20,19 @@ const INBOUND_MAP: Record<string, { cli_id: string; rut_cliente: string; cliente
  * POST /api/inbound-email
  * 
  * Webhook receptor de Resend para emails inbound.
- * Cuando un cliente envía un email con documentos adjuntos a dow@agatrack.com,
+ * Cuando un cliente envía un email con documentos adjuntos a dow@agatrack.agenciaguerra.com,
  * este endpoint:
  * 1. Obtiene los attachments via Resend API
- * 2. Los procesa (clasifica + extrae datos) usando la misma lógica de upload
- * 3. Crea la operación en AduanaNet
- * 4. Guarda los documentos en bucket y BD
+ * 2. Sube cada doc al bucket y lo procesa con IA (clasificar + extraer)
+ * 3. Extrae referencia del invoice
+ * 4. Crea la operación en AduanaNet (igual que el ejecutivo)
+ * 5. Asocia todos los docs al nro_operacion
  */
 export async function POST(request: Request) {
   try {
-    // Verificar firma del webhook de Resend (temporalmente desactivado para debug)
-    const svixId = request.headers.get("svix-id");
-    const svixTimestamp = request.headers.get("svix-timestamp");
-    const svixSignature = request.headers.get("svix-signature");
-    
     const body = await request.text();
     const payload = JSON.parse(body);
 
-    // TODO: Re-activar verificación una vez confirmado el secret correcto
-    // if (svixId && svixTimestamp && svixSignature && process.env.RESEND_WEBHOOK_SECRET) {
-    //   const { Webhook } = await import("svix");
-    //   const wh = new Webhook(process.env.RESEND_WEBHOOK_SECRET);
-    //   try {
-    //     wh.verify(body, { "svix-id": svixId, "svix-timestamp": svixTimestamp, "svix-signature": svixSignature });
-    //   } catch (err) {
-    //     console.error("[inbound] Webhook signature verification failed:", err instanceof Error ? err.message : err);
-    //     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    //   }
-    // }
-    
-    // Resend webhook payload: { type: "email.received", data: { email_id, from, to, subject } }
     const eventType = payload.type;
     if (eventType !== "email.received") {
       return NextResponse.json({ ok: true, message: "Evento ignorado" });
@@ -65,7 +50,6 @@ export async function POST(request: Request) {
     }
 
     // Obtener attachments via Resend API
-    const resend = new Resend(process.env.RESEND_API_KEY);
     const attachmentsRes = await fetch(`https://api.resend.com/emails/receiving/${email_id}/attachments`, {
       headers: { "Authorization": `Bearer ${process.env.RESEND_API_KEY}` },
     });
@@ -85,103 +69,198 @@ export async function POST(request: Request) {
 
     console.log(`[inbound] ${attachments.length} attachment(s) encontrados`);
 
-    // Procesar cada attachment
-    const processedDocs: Array<{ id: number; tipo: string; nombre: string }> = [];
-    let referencia = "";
-    let nroOperacion = "";
-
+    // PASO 1: Descargar todos los attachments y subirlos al bucket
+    const archivos: Array<{ filename: string; buffer: Buffer; contentType: string; storageUrl: string }> = [];
     for (const att of attachments) {
       const { filename, content_type, download_url } = att;
-      
-      // Solo procesar PDFs e imágenes
       if (!content_type?.match(/pdf|image/i)) {
         console.log(`[inbound] Ignorando ${filename} (${content_type})`);
         continue;
       }
-
-      // Descargar el archivo
       const fileRes = await fetch(download_url);
-      if (!fileRes.ok) {
-        console.error(`[inbound] Error descargando ${filename}: ${fileRes.status}`);
-        continue;
-      }
-      const fileBuffer = Buffer.from(await fileRes.arrayBuffer());
-      console.log(`[inbound] Descargado: ${filename} (${fileBuffer.length} bytes)`);
-
-      // Subir al bucket
+      if (!fileRes.ok) continue;
+      const buffer = Buffer.from(await fileRes.arrayBuffer());
       const storageKey = `documentos/${config.rut_cliente}/inbound_${email_id}/${filename}`;
-      const storageUrl = await uploadToSpaces(fileBuffer, storageKey, content_type);
+      const storageUrl = await uploadToSpaces(buffer, storageKey, content_type);
+      archivos.push({ filename, buffer, contentType: content_type, storageUrl });
+      console.log(`[inbound] Descargado y subido: ${filename} (${buffer.length} bytes)`);
+    }
 
-      // Procesar con IA — llamar directamente al endpoint de upload con bypass de auth
-      const baseUrl = `http://localhost:${process.env.PORT || 3000}`;
-      const formData = new FormData();
-      const blob = new Blob([fileBuffer], { type: content_type });
-      formData.append("file", blob, filename);
-      formData.append("nro_operacion", nroOperacion || "INBOUND_" + email_id.substring(0, 8));
-      formData.append("rut_cliente", config.rut_cliente);
-      formData.append("inbound_secret", process.env.INBOUND_SECRET || "");
+    if (archivos.length === 0) {
+      return NextResponse.json({ ok: true, message: "Sin archivos procesables" });
+    }
 
-      const uploadRes = await fetch(`${baseUrl}/api/documentos/upload`, {
-        method: "POST",
-        body: formData,
-      });
+    // PASO 2: Procesar cada archivo con IA (clasificar + extraer datos)
+    // Usar la misma lógica de /api/documentos/upload llamando internamente
+    const tempNro = "INBOUND_" + email_id.substring(0, 8);
+    const processedDocs: Array<{ id: number; tipo: string; nombre: string; datos: Record<string, unknown> }> = [];
 
-      if (uploadRes.ok) {
-        const uploadData = await uploadRes.json();
-        const doc = uploadData.documento;
-        if (doc) {
-          processedDocs.push({ id: doc.id, tipo: doc.tipo_documento, nombre: filename });
-          
-          // Extraer referencia del invoice
-          if (doc.tipo_documento === "Invoice (Factura Comercial)" && !referencia) {
-            const datos = typeof doc.datos_extraidos === "string" ? JSON.parse(doc.datos_extraidos) : doc.datos_extraidos;
-            referencia = datos?.customer_order_number || datos?.internal_document_number || datos?.orden || datos?.our_reference || datos?.numero_factura || "";
+    for (const archivo of archivos) {
+      try {
+        const formData = new FormData();
+        const blob = new Blob([new Uint8Array(archivo.buffer)], { type: archivo.contentType });
+        formData.append("file", blob, archivo.filename);
+        formData.append("nro_operacion", tempNro);
+        formData.append("rut_cliente", config.rut_cliente);
+        formData.append("inbound_secret", process.env.INBOUND_SECRET || "");
+
+        const uploadRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/documentos/upload`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          const doc = uploadData.documento;
+          if (doc) {
+            const datos = typeof doc.datos_extraidos === "string" ? JSON.parse(doc.datos_extraidos) : (doc.datos_extraidos || {});
+            processedDocs.push({ id: doc.id, tipo: doc.tipo_documento, nombre: archivo.filename, datos });
+            console.log(`[inbound] Procesado: ${archivo.filename} → ${doc.tipo_documento}`);
           }
+        } else {
+          const errText = await uploadRes.text().catch(() => "");
+          console.error(`[inbound] Error procesando ${archivo.filename}: ${uploadRes.status} ${errText.substring(0, 200)}`);
         }
-      } else {
-        console.error(`[inbound] Error procesando ${filename}:`, await uploadRes.text().catch(() => ""));
+      } catch (err) {
+        console.error(`[inbound] Error en ${archivo.filename}:`, err instanceof Error ? err.message : err);
       }
     }
 
-    // Si tenemos referencia, crear operación en AduanaNet
-    if (referencia && processedDocs.length > 0) {
-      // Detectar si es terrestre
-      const esTerrestreDoc = processedDocs.some(d => d.tipo === "Carta de Porte Internacional (CRT)" || d.tipo === "MIC/DTA");
-      const puertoDesembarque = esTerrestreDoc ? "LOS ANDES" : "SAN ANTONIO";
+    // PASO 3: Extraer referencia del invoice
+    let referencia = "";
+    const invoiceDoc = processedDocs.find(d => d.tipo === "Invoice (Factura Comercial)");
+    if (invoiceDoc) {
+      const d = invoiceDoc.datos;
+      referencia = String(d.customer_order_number || d.internal_document_number || d.orden || d.our_reference || d.orden_compra || d.po_number || d.numero_factura || "");
+    }
 
-      const baseUrl = `http://localhost:${process.env.PORT || 3000}`;
-      const crearRes = await fetch(`${baseUrl}/api/aduananet-operaciones`, {
+    if (!referencia) {
+      console.log(`[inbound] No se encontró referencia en los documentos. Docs procesados: ${processedDocs.length}`);
+      return NextResponse.json({ ok: true, message: "Sin referencia", documentos: processedDocs.length, nro_temp: tempNro });
+    }
+
+    // PASO 4: Detectar terrestre y crear operación en AduanaNet
+    const esTerrestreDoc = processedDocs.some(d => d.tipo === "Carta de Porte Internacional (CRT)" || d.tipo === "MIC/DTA");
+    const puertoDesembarque = esTerrestreDoc ? "LOS ANDES" : "SAN ANTONIO";
+
+    // Crear operación directamente (sin llamar al endpoint)
+    const cookies = await aduananetLogin();
+    const grabarBody = new URLSearchParams();
+    grabarBody.set("accion", "N");
+    grabarBody.set("cli_id", config.cli_id);
+    grabarBody.set("txt_cli_id", "");
+    grabarBody.set("orc_tio", "DIN");
+    grabarBody.set("tipo_doc", "IMPO");
+    grabarBody.set("tio_id", "101");
+    grabarBody.set("sel_tio_id", "101");
+    grabarBody.set("emp_id", "C69");
+    grabarBody.set("sel_emp_id", "C69");
+    grabarBody.set("ejecutivo_id", "");
+    grabarBody.set("sel_ejecutivo_id", "");
+    const PUERTO_ADUANA_MAP: Record<string, string> = { "SAN ANTONIO": "39", "LOS ANDES": "33" };
+    const aduId = PUERTO_ADUANA_MAP[puertoDesembarque] || "39";
+    grabarBody.set("adu_id", aduId);
+    grabarBody.set("sel_adu_id", aduId);
+    grabarBody.set("fpa_id", "");
+    grabarBody.set("sel_fpa_id", "");
+    grabarBody.set("mon_id", "13");
+    grabarBody.set("sel_mon_id", "13");
+    grabarBody.set("cvt_id", "");
+    grabarBody.set("sel_cvt_id", "");
+    grabarBody.set("reg_id", "");
+    grabarBody.set("sel_reg_id", "");
+    grabarBody.set("sel_tna_id", "");
+    grabarBody.set("nro_libro", "");
+    grabarBody.set("orc_referencia", referencia);
+    grabarBody.set("orc_bodega", "");
+    grabarBody.set("usua_id", "100");
+    grabarBody.set("lineas", "0");
+    grabarBody.set("ineditable", "false");
+    grabarBody.set("generar_despacho", "1");
+    grabarBody.set("email", "1");
+
+    await fetch(`${BASE_URL}/modulos/comex/orden_compra/grabar.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookies, Referer: `${BASE_URL}/modulos/comex/orden_compra/formulario.php` },
+      body: grabarBody.toString(),
+      redirect: "manual",
+    });
+
+    // Buscar el nro_operacion creado
+    const filterBody = new URLSearchParams();
+    filterBody.set("accion", "F");
+    filterBody.set("fil_cli_id", config.cli_id);
+    const listaRes = await fetch(`${BASE_URL}/modulos/comex/orden_compra/lista.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookies },
+      body: filterBody.toString(),
+    });
+    const listaHtml = await listaRes.text();
+    const allOrcIds = [...listaHtml.matchAll(/agregar\(\s*['"]?(\d+)['"]?\s*\)/gi)].map(m => Number(m[1]));
+    const maxOrcId = allOrcIds.length > 0 ? Math.max(...allOrcIds) : 0;
+
+    let nroOperacion = "";
+    if (maxOrcId) {
+      const filter2 = new URLSearchParams();
+      filter2.set("accion", "F");
+      filter2.set("fil_orc_id", String(maxOrcId));
+      const res2 = await fetch(`${BASE_URL}/modulos/comex/orden_compra/lista.php`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-inbound-secret": process.env.INBOUND_SECRET || "",
-        },
-        body: JSON.stringify({
-          cli_id: config.cli_id,
-          rut_cliente: config.rut_cliente,
-          referencia,
-          puerto_desembarque: puertoDesembarque,
-          tio_id: "101",
-        }),
+        headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookies },
+        body: filter2.toString(),
       });
+      const html2 = await res2.text();
+      const libNidLink = html2.match(/lib_nid=(\d+)/);
+      if (libNidLink) nroOperacion = libNidLink[1];
+    }
 
-      if (crearRes.ok) {
-        const crearData = await crearRes.json();
-        nroOperacion = crearData.nro_operacion || "";
-        console.log(`[inbound] Operación creada: ${nroOperacion} (ref: ${referencia})`);
+    console.log(`[inbound] Operación AduanaNet creada: ${nroOperacion} (ref: ${referencia}, aduana: ${aduId})`);
 
-        // Actualizar nro_operacion en los documentos ya subidos
-        if (nroOperacion) {
-          const tempNro = "INBOUND_" + email_id.substring(0, 8);
-          await pgQuery(
-            "UPDATE documentos SET nro_operacion = $1 WHERE nro_operacion = $2",
-            [nroOperacion, tempNro]
-          );
-        }
+    // PASO 5: Guardar en BD y actualizar documentos con nro_operacion real
+    if (nroOperacion) {
+      await pgQuery(
+        `INSERT INTO operaciones (nro_operacion, rut_cliente, estado, notas)
+         VALUES ($1, $2, 'abierta', $3)
+         ON CONFLICT (nro_operacion) DO NOTHING`,
+        [nroOperacion, config.rut_cliente, `ref: ${referencia} | inbound: ${email_id}`]
+      );
+
+      // Mover documentos del temp al nro_operacion real
+      await pgQuery(
+        "UPDATE documentos SET nro_operacion = $1 WHERE nro_operacion = $2",
+        [nroOperacion, tempNro]
+      );
+      console.log(`[inbound] Documentos asociados a op ${nroOperacion}`);
+
+      // Enviar notificación email
+      try {
+        const { Resend } = await import("resend");
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
+          to: ["fguerrab@agenciaguerra.com"],
+          subject: `Nuevo Despacho ${nroOperacion} - ${config.cliente_nombre} - REF: ${referencia}`,
+          html: `
+<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
+  <p>Estimados,</p>
+  <p>Se ha creado un nuevo despacho via email inbound:</p>
+  <table style="border-collapse:collapse;margin:16px 0;width:100%;max-width:600px;">
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">N° Despacho</td><td style="padding:8px 12px;border:1px solid #ddd;">${nroOperacion}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Cliente</td><td style="padding:8px 12px;border:1px solid #ddd;">${config.cliente_nombre}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Referencia</td><td style="padding:8px 12px;border:1px solid #ddd;">${referencia}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Email de</td><td style="padding:8px 12px;border:1px solid #ddd;">${from}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Documentos</td><td style="padding:8px 12px;border:1px solid #ddd;">${processedDocs.map(d => d.nombre + " (" + d.tipo + ")").join("<br>")}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Puerto</td><td style="padding:8px 12px;border:1px solid #ddd;">${puertoDesembarque}</td></tr>
+  </table>
+  <p style="color:#666;font-size:12px;">Creado automáticamente via email inbound por AgaTrack.</p>
+</div>`,
+        });
+      } catch (emailErr) {
+        console.error("[inbound] Error enviando notificación:", emailErr instanceof Error ? emailErr.message : emailErr);
       }
     }
 
-    console.log(`[inbound] Procesamiento completado: ${processedDocs.length} docs, op=${nroOperacion}, ref=${referencia}`);
+    console.log(`[inbound] ✅ Completado: ${processedDocs.length} docs, op=${nroOperacion}, ref=${referencia}`);
 
     return NextResponse.json({
       ok: true,
