@@ -42,12 +42,17 @@ export async function POST(request: Request) {
     console.log(`[inbound] Email recibido: from=${from} to=${JSON.stringify(to)} subject=${subject} id=${email_id}`);
 
     // Idempotencia: no procesar el mismo email dos veces
-    const existing = await pgQuery<{ id: number }>(
+    // Verificar tanto en documentos como en operaciones temporales
+    const existingDoc = await pgQuery<{ id: number }>(
       "SELECT id FROM documentos WHERE nro_operacion LIKE $1 LIMIT 1",
       [`INBOUND_${email_id.substring(0, 8)}%`]
     );
-    if (existing.length > 0) {
-      console.log(`[inbound] Email ${email_id} ya procesado, ignorando`);
+    const existingOp = await pgQuery<{ nro_operacion: string }>(
+      "SELECT nro_operacion FROM operaciones WHERE nro_operacion = $1 LIMIT 1",
+      [`INBOUND_${email_id.substring(0, 8)}`]
+    );
+    if (existingDoc.length > 0 || existingOp.length > 0) {
+      console.log(`[inbound] Email ${email_id} ya procesado/en proceso, ignorando`);
       return NextResponse.json({ ok: true, message: "Ya procesado" });
     }
 
