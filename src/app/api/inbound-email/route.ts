@@ -219,6 +219,15 @@ async function processInboundEmail(
       referencia = String(d.customer_order_number || d.internal_document_number || d.orden || d.our_reference || d.orden_compra || d.po_number || d.numero_factura || "");
     }
 
+    // Validar documentos mínimos: BL (o CRT) + Factura
+    const tieneTransporte = processedDocs.some(d => d.tipo === "Bill of Lading (BL)" || d.tipo === "Carta de Porte Internacional (CRT)" || d.tipo === "MIC/DTA");
+    const tieneFactura = processedDocs.some(d => d.tipo === "Invoice (Factura Comercial)");
+    if (!tieneTransporte || !tieneFactura) {
+      console.log(`[inbound] Documentos insuficientes: transporte=${tieneTransporte}, factura=${tieneFactura}. No se crea operación.`);
+      await pgQuery("DELETE FROM operaciones WHERE nro_operacion = $1", [tempNro]);
+      return;
+    }
+
     // Fallback: extraer referencia del subject del email (formato: REF: XXXX o REF:XXXX)
     if (!referencia && subject) {
       const refMatch = subject.match(/REF:?\s*([A-Z0-9_-]+)/i);
