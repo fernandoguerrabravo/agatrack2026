@@ -154,8 +154,8 @@ export default function CustomerServicesPanel() {
       const datos = tempData.documento?.datos_extraidos;
       const datosObj = typeof datos === "string" ? JSON.parse(datos) : datos;
 
-      // Extraer referencia: customer_order_number, our_reference, numero_factura
-      const referencia = datosObj?.customer_order_number || datosObj?.our_reference || datosObj?.orden_compra || datosObj?.po_number || datosObj?.numero_factura || "";
+      // Extraer referencia: internal_document_number, customer_order_number, orden, etc.
+      const referencia = datosObj?.customer_order_number || datosObj?.internal_document_number || datosObj?.orden || datosObj?.our_reference || datosObj?.orden_compra || datosObj?.po_number || datosObj?.numero_factura || "";
 
       if (!referencia) {
         update({ estado: "error", progreso: "No se encontró referencia (Customer Order Number) en el documento." });
@@ -165,10 +165,14 @@ export default function CustomerServicesPanel() {
       update({ estado: "creando", referencia, progreso: `Ref: ${referencia} — Creando operación en AduanaNet...` });
 
       // PASO 2: Crear operación en AduanaNet con la referencia
+      // Detectar si es terrestre por transport_mode de la factura
+      const isTerrestre = /cami[oó]n|terrestre|truck|carretera/i.test(String(datosObj?.transport_mode || datosObj?.tipo_transporte || ""));
+      const puertoDesembarque = isTerrestre ? "LOS ANDES" : "SAN ANTONIO";
+      
       const crearRes = await fetch("/api/aduananet-operaciones", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cli_id: "2710", rut_cliente: "92933000-5", referencia, puerto_desembarque: "SAN ANTONIO", tio_id: "101" }),
+        body: JSON.stringify({ cli_id: "2710", rut_cliente: "92933000-5", referencia, puerto_desembarque: puertoDesembarque, tio_id: "101" }),
       });
       const crearData = await crearRes.json();
 
@@ -267,9 +271,17 @@ export default function CustomerServicesPanel() {
 
   async function handleConfeccionar(nroOp: string) {
     const Swal = (await import("sweetalert2")).default;
-    const c1 = await Swal.fire({ title: "¿BL corregido?", text: "Confirma que el BL tiene datos de nave/viaje corregidos.", icon: "question", showCancelButton: true, confirmButtonText: "Sí", confirmButtonColor: "#f59e0b" });
-    if (!c1.isConfirmed) return;
-    const c2 = await Swal.fire({ title: "¿Confeccionar?", html: `DIN para <b>${nroOp}</b>`, icon: "warning", showCancelButton: true, confirmButtonText: "Confeccionar", confirmButtonColor: "#f59e0b" });
+    // Detect terrestrial: has CRT/MIC but no BL
+    const op = operaciones.find(o => o.nro_operacion === nroOp);
+    const tieneBL = op?.documentos.some(d => d.tipo_documento === "Bill of Lading (BL)");
+    const tieneCRT = op?.documentos.some(d => d.tipo_documento === "Carta de Porte Internacional (CRT)" || d.tipo_documento === "MIC/DTA");
+    const esTerrestre = tieneCRT && !tieneBL;
+
+    if (!esTerrestre) {
+      const c1 = await Swal.fire({ title: "¿BL corregido?", text: "Confirma que el BL tiene datos de nave/viaje corregidos.", icon: "question", showCancelButton: true, confirmButtonText: "Sí", confirmButtonColor: "#f59e0b" });
+      if (!c1.isConfirmed) return;
+    }
+    const c2 = await Swal.fire({ title: "¿Confeccionar?", html: `DIN ${esTerrestre ? "terrestre" : "marítima"} para <b>${nroOp}</b>`, icon: "warning", showCancelButton: true, confirmButtonText: "Confeccionar", confirmButtonColor: "#f59e0b" });
     if (!c2.isConfirmed) return;
 
     setConfeccionando(nroOp);
@@ -359,9 +371,12 @@ export default function CustomerServicesPanel() {
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             {op.estado !== "aprobada" && (() => {
               const tieneBL = op.documentos.some(d => d.tipo_documento === "Bill of Lading (BL)");
+              const tieneCRT = op.documentos.some(d => d.tipo_documento === "Carta de Porte Internacional (CRT)");
+              const tieneMIC = op.documentos.some(d => d.tipo_documento === "MIC/DTA");
               const tieneFactura = op.documentos.some(d => d.tipo_documento === "Invoice (Factura Comercial)");
+              const esTerrestre = (tieneCRT || tieneMIC) && !tieneBL;
               const blCorregido = op.documentos.some(d => { if (d.tipo_documento !== "Bill of Lading (BL)") return false; const datos = typeof d.datos_extraidos === "string" ? JSON.parse(d.datos_extraidos || "{}") : (d.datos_extraidos || {}); return !!(datos._nave_corregida_shipsgo || datos.nave_corregida || datos.viaje_corregido || d.datos_shipsgo); });
-              const puede = tieneBL && tieneFactura && blCorregido;
+              const puede = tieneFactura && (esTerrestre || (tieneBL && blCorregido));
               return <button className={`btn btn-xs ${puede ? "btn-warning" : "btn-disabled"}`} disabled={!puede || confeccionando === op.nro_operacion} onClick={() => handleConfeccionar(op.nro_operacion)}>{confeccionando === op.nro_operacion ? <span className="loading loading-spinner loading-xs"></span> : "Enviar a Confeccionar"}</button>;
             })()}
             {op.estado === "abierta" && (() => {
@@ -445,6 +460,8 @@ export default function CustomerServicesPanel() {
                         {op.estado === "aprobada" ? <span className="text-xs">{doc.tipo_documento}</span> : (
                           <select className="select select-xs select-bordered w-full max-w-[180px]" value={doc.tipo_documento} onChange={(e) => handleCambiarTipo(doc.id, e.target.value)}>
                             <option value="Bill of Lading (BL)">Bill of Lading (BL)</option>
+                            <option value="Carta de Porte Internacional (CRT)">Carta de Porte Internacional (CRT)</option>
+                            <option value="MIC/DTA">MIC/DTA</option>
                             <option value="Invoice (Factura Comercial)">Invoice (Factura Comercial)</option>
                             <option value="Lista de Empaque (Packing List)">Lista de Empaque (Packing List)</option>
                             <option value="Certificado de Origen">Certificado de Origen</option>

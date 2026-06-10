@@ -21,6 +21,8 @@ const PRIMARY_MODEL = "claude"; // Usar Claude como modelo principal para clasif
 
 const TIPOS_DOCUMENTO = [
   "Bill of Lading (BL)",
+  "Carta de Porte Internacional (CRT)",
+  "MIC/DTA",
   "Invoice (Factura Comercial)",
   "Póliza de Seguro",
   "Lista de Empaque (Packing List)",
@@ -46,8 +48,13 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
 }
 
 export async function POST(request: Request) {
+  // Permitir acceso via sesión o via inbound_secret (para webhook de email inbound)
   const session = await getSession();
-  if (!session) {
+  const formDataClone = await request.clone().formData();
+  const inboundSecret = formDataClone.get("inbound_secret") as string || "";
+  const isInbound = inboundSecret && inboundSecret === process.env.INBOUND_SECRET;
+  
+  if (!session && !isInbound) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
@@ -68,7 +75,7 @@ export async function POST(request: Request) {
     let finalRutCliente = rutCliente;
     if (!finalRutCliente) {
       const opRow = await pgQuery<{ rut_cliente: string }>("SELECT rut_cliente FROM operaciones WHERE nro_operacion = $1", [nroOperacion]);
-      finalRutCliente = opRow[0]?.rut_cliente || session.rut;
+      finalRutCliente = opRow[0]?.rut_cliente || session?.rut || "";
     }
 
     const bytes = await file.arrayBuffer();
@@ -96,7 +103,9 @@ INSTRUCCIONES IMPORTANTES:
 1. Identifica el tipo de documento con MÁXIMA PRECISIÓN. REGLAS DE CLASIFICACIÓN:
    - "Lista de Empaque (Packing List)": documentos titulados "PACKING LIST", "LISTA DE EMPAQUE", "LISTA DE EMBALAJE", "PACKING SLIP", "WEIGHT LIST", o que detallan bultos/cajas/pallets con pesos y dimensiones SIN precios ni valores monetarios. Si ves "PACKING LIST" o "LISTA DE EMPAQUE" en el título → clasificar SIEMPRE como "Lista de Empaque (Packing List)".
    - "Certificado de Origen": documentos titulados "CERTIFICATE OF ORIGIN", "CERTIFICADO DE ORIGEN", "CO", "CERTIFICADo DE ORIGEN FORM A/B", "EUR.1", "FORM E", certificados de cámaras de comercio, certificados de TRATADO DE LIBRE COMERCIO / FREE TRADE AGREEMENT (TLC Chile-USA, Chile-UE, etc.), o cualquier documento que declare el origen de la mercancía bajo un tratado con campos como "Criterio de Origen / Preference Criterion", "Clasificación Arancelaria / HS Tariff", "mercancía originaria / originating". OJO: muchos certificados de origen de TLC NO dicen literalmente "certificate of origin" — se titulan con el nombre del tratado (ej: "Tratado de Libre Comercio Chile - Estados Unidos" / "United States - Chile Free Trade Agreement"). Si ves un formato con "Criterio de Origen", "Preference Criterion", productor/exportador/importador y clasificación arancelaria bajo un tratado → es "Certificado de Origen".
-   - "Bill of Lading (BL)": "BILL OF LADING", "B/L", "CONOCIMIENTO DE EMBARQUE", "SEA WAYBILL".
+   - "Bill of Lading (BL)": "BILL OF LADING", "B/L", "CONOCIMIENTO DE EMBARQUE", "SEA WAYBILL". Solo documentos de TRANSPORTE MARÍTIMO. Si es transporte terrestre NO es BL.
+   - "Carta de Porte Internacional (CRT)": documentos titulados "CARTA DE PORTE INTERNACIONAL", "CRT", "CARTA DE PORTE POR CARRETERA", "CONOCIMIENTO DE TRANSPORTE TERRESTRE", o documentos de transporte terrestre que mencionan camión/tractor, placa de camión, conductor, ruta terrestre. Si ves campos como "Camión/Tractor", "Placa Patente", "Conductor", "País de partida" con rutas terrestres → es CRT.
+   - "MIC/DTA": documentos titulados "MIC/DTA", "MANIFIESTO INTERNACIONAL DE CARGA", "Manifiesto Internacional de Carga por Carretera", "Declaracion de Transito Aduanero", "MIC", "DTA". Si ves "MIC/DTA" en el encabezado o "Tránsito Aduanero" → clasificar como "MIC/DTA". OJO: MIC/DTA y CRT suelen venir juntos — el MIC/DTA es el manifiesto de tránsito aduanero y el CRT es la carta de porte comercial.
    - "Invoice (Factura Comercial)": "COMMERCIAL INVOICE", "FACTURA COMERCIAL", "INVOICE" con precios/valores.
    IMPORTANTE: NO confundir Packing List con Invoice — el Packing List NO tiene precios, solo cantidades/pesos/bultos. NO confundir Certificado de Origen con otros certificados (fitosanitario, calidad). El tipo_documento debe coincidir EXACTAMENTE con uno de la lista permitida.
 2. Extrae ABSOLUTAMENTE TODOS los datos visibles: números, fechas, nombres, direcciones, montos, pesos, medidas, códigos
@@ -620,8 +629,22 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       if (esBLConfiable || esInvoiceConfiable) {
         console.log("[docs] CLASIFICACIÓN: respetando tipo IA confiable (", tipoActual, ") — no se reclasifica");
       } else
-      // Bill of Lading — rescatar si la IA lo puso como "Otro" pero tiene keywords de BL
-      if (/BILL\s*OF\s*LADING|B\/L\s*N|CONOCIMIENTO\s*DE\s*EMBARQUE|SEA\s*WAYBILL|SHIPPED\s*ON\s*BOARD|FREIGHT\s*PREPAID|OCEAN\s*BILL/.test(textoClasif)
+      // MIC/DTA — Manifiesto Internacional de Carga por Carretera
+      if (/MIC\s*\/?\s*DTA|MANIFIESTO\s*INTERNACIONAL\s*DE\s*CARGA|DECLARACI[OÓ]N\s*DE\s*TR[AÁ]NSITO\s*ADUANERO|TR[AÁ]NSITO\s*ADUANERO/.test(textoClasif)
+          && tipoActual !== "MIC/DTA") {
+        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ MIC/DTA");
+        analysis.tipo_documento = "MIC/DTA";
+      } else
+      // Carta de Porte Internacional (CRT)
+      if (/CARTA\s*DE\s*PORTE\s*INTERNACIONAL|CRT\b|CONOCIMIENTO\s*DE\s*TRANSPORTE\s*TERRESTRE|PORTE\s*INTERNACIONAL\s*POR\s*CARRETERA/.test(textoClasif)
+          && tipoActual !== "Carta de Porte Internacional (CRT)"
+          && tipoActual !== "MIC/DTA") {
+        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Carta de Porte Internacional (CRT)");
+        analysis.tipo_documento = "Carta de Porte Internacional (CRT)";
+      } else
+      // Bill of Lading — rescatar si la IA lo puso como "Otro" pero tiene keywords de BL (SOLO marítimo)
+      if (/BILL\s*OF\s*LADING|B\/L\s*N|CONOCIMIENTO\s*DE\s*EMBARQUE|SEA\s*WAYBILL|SHIPPED\s*ON\s*BOARD|OCEAN\s*BILL/.test(textoClasif)
+          && !/MIC\s*\/?\s*DTA|CARTA\s*DE\s*PORTE|MANIFIESTO\s*INTERNACIONAL\s*DE\s*CARGA/.test(textoClasif)
           && tipoActual !== "Bill of Lading (BL)"
           && tipoActual !== "Invoice (Factura Comercial)"
           && tipoActual !== "Lista de Empaque (Packing List)") {
@@ -1640,7 +1663,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::vector, $12)
        RETURNING id, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, storage_url, created_at`,      [
         finalRutCliente,
-        session.rut,
+        session?.rut || "inbound",
         nroOperacion,
         file.name,
         // Usar clasificación de Claude como principal si está disponible

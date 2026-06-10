@@ -41,33 +41,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se encontraron documentos para esta operación." }, { status: 400 });
   }
 
-  // Verificar que exista BL y Factura
+  // Verificar documentos mínimos: BL+Factura (marítimo) o CRT+Factura (terrestre)
   const tiposPresentes = docs.map(d => d.tipo_documento);
   const tieneBL = tiposPresentes.includes("Bill of Lading (BL)");
+  const tieneCRT = tiposPresentes.includes("Carta de Porte Internacional (CRT)");
+  const tieneMIC = tiposPresentes.includes("MIC/DTA");
   const tieneFactura = tiposPresentes.includes("Invoice (Factura Comercial)");
+  const esTerrestre = (tieneCRT || tieneMIC) && !tieneBL;
 
-  if (!tieneBL) {
-    return NextResponse.json({ error: "Falta el Bill of Lading (BL) para confeccionar." }, { status: 400 });
-  }
   if (!tieneFactura) {
     return NextResponse.json({ error: "Falta la Factura Comercial para confeccionar." }, { status: 400 });
   }
 
-  // Verificar que el BL esté corregido
-  const blDoc = docs.find(d => d.tipo_documento === "Bill of Lading (BL)");
-  const blDatos = typeof blDoc!.datos_extraidos === "string"
-    ? JSON.parse(blDoc!.datos_extraidos)
-    : blDoc!.datos_extraidos;
+  if (!tieneBL && !tieneCRT && !tieneMIC) {
+    return NextResponse.json({ error: "Falta el documento de transporte (BL o CRT) para confeccionar." }, { status: 400 });
+  }
 
-  const blCorregido = blDatos._nave_corregida_shipsgo
-    || blDatos.nave_corregida
-    || blDatos.viaje_corregido
-    || blDoc!.datos_shipsgo;
+  // Para marítimo: verificar que el BL esté corregido
+  if (!esTerrestre) {
+    const blDoc = docs.find(d => d.tipo_documento === "Bill of Lading (BL)");
+    const blDatos = typeof blDoc!.datos_extraidos === "string"
+      ? JSON.parse(blDoc!.datos_extraidos)
+      : blDoc!.datos_extraidos;
 
-  if (!blCorregido) {
-    return NextResponse.json({
-      error: "El BL no está corregido. Debe tener datos de ShipsGo (nave/viaje corregido) antes de confeccionar.",
-    }, { status: 400 });
+    const blCorregido = blDatos._nave_corregida_shipsgo
+      || blDatos.nave_corregida
+      || blDatos.viaje_corregido
+      || blDoc!.datos_shipsgo;
+
+    if (!blCorregido) {
+      return NextResponse.json({
+        error: "El BL no está corregido. Debe tener datos de ShipsGo (nave/viaje corregido) antes de confeccionar.",
+      }, { status: 400 });
+    }
   }
 
   // Ejecutar confección

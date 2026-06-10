@@ -420,6 +420,8 @@ export default function PrealertasPanel() {
                                   onChange={(e) => handleCambiarTipo(doc.id, e.target.value)}
                                 >
                                   <option value="Bill of Lading (BL)">Bill of Lading (BL)</option>
+                                  <option value="Carta de Porte Internacional (CRT)">Carta de Porte Internacional (CRT)</option>
+                                  <option value="MIC/DTA">MIC/DTA</option>
                                   <option value="Invoice (Factura Comercial)">Invoice (Factura Comercial)</option>
                                   <option value="Lista de Empaque (Packing List)">Lista de Empaque (Packing List)</option>
                                   <option value="Certificado de Origen">Certificado de Origen</option>

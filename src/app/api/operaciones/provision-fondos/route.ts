@@ -98,7 +98,24 @@ export async function POST(request: Request) {
       console.error("[provision] Error subiendo a Spaces:", err instanceof Error ? err.message : err);
     }
 
-    // 5. Enviar por correo con detalle del embarque
+    // 5. Descargar PDF de la DIN aprobada
+    let dinPdfBuffer: Buffer | null = null;
+    try {
+      const dinPdfUrl = `${BASE_URL}/modulos/din/dus_encabezado/din.php?lbac_nid=0&lib_base=1&lib_nid=${nro_operacion}&dus_tipo_envio=2&copias=1&tipo=0&borrador=0&dolar=1&ref=1&pedidor=1&archivo=din.php-1&impresion=windows&pagina_inicial=1&cont_todas=1&rango=2-1`;
+      const cookies = await aduananetLogin();
+      const dinRes = await fetch(dinPdfUrl, { headers: { Cookie: cookies } });
+      if (dinRes.ok) {
+        const contentType = dinRes.headers.get("content-type") || "";
+        if (contentType.includes("pdf") || contentType.includes("octet")) {
+          dinPdfBuffer = Buffer.from(await dinRes.arrayBuffer());
+          console.log(`[provision] DIN PDF descargado: ${dinPdfBuffer.length} bytes`);
+        }
+      }
+    } catch (dinErr) {
+      console.error("[provision] Error descargando DIN PDF:", dinErr instanceof Error ? dinErr.message : dinErr);
+    }
+
+    // 6. Enviar por correo con detalle del embarque
     // Obtener datos del BL y ShipsGo
     const blRows = await pgQuery<{ datos_extraidos: string; datos_shipsgo: string }>(
       "SELECT datos_extraidos, datos_shipsgo FROM documentos WHERE nro_operacion = $1 AND tipo_documento = 'Bill of Lading (BL)' LIMIT 1",
@@ -157,7 +174,23 @@ export async function POST(request: Request) {
 
     const emailResult = await resend.emails.send({
       from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.agenciaguerra.com>",
-      to: ["fguerrab@agenciaguerra.com"],
+      to: [
+        "BARomanini@dow.com",
+        "HZachariotto@dow.com",
+        "LNuez@dow.com",
+        "MLIbarraRocha@dow.com",
+        "jfernandez@agenciaguerra.com",
+        "losandes@agenciaguerra.com",
+        "hector@agenciaguerra.com",
+        "boris@agenciaguerra.com",
+        "bdpcl.dow@bdpint.com",
+        "isabel.riveros@psabdp.com",
+        "roberto.santibanez@psabdp.com",
+        "sara.arcos@psabdp.com",
+        "bastian.monsalve@agenciaguerra.com",
+        "ehenriquez@agenciaguerra.com",
+        "fguerrab@agenciaguerra.com",
+      ],
       subject: `Provisión de Fondos - Despacho ${nro_operacion} - PETROQUIMICA DOW S.A. REF: ${referencia}`,
       html: `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
@@ -194,7 +227,10 @@ export async function POST(request: Request) {
   <p style="margin-top:20px;color:#666;font-size:12px;">Referencia: ${referencia} | Operación: ${nro_operacion}</p>
   <p style="color:#666;font-size:12px;">Agencia de Aduanas Fernando Guerra y Cía. Ltda.</p>
 </div>`,
-      attachments: [{ filename: `Provision_Fondos_${nro_operacion}.pdf`, content: pdfBuffer }],
+      attachments: [
+        { filename: `Provision_Fondos_${nro_operacion}.pdf`, content: pdfBuffer },
+        ...(dinPdfBuffer ? [{ filename: `DIN_Aprobada_${nro_operacion}.pdf`, content: dinPdfBuffer }] : []),
+      ],
     });
 
     if (emailResult.error) {

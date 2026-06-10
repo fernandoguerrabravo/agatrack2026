@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { aduananetLogin } from "@/lib/aduananet";
 import { clientesVisibles } from "@/lib/permisos";
 import { pgQuery } from "@/lib/postgres";
+import { Resend } from "resend";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,12 +66,16 @@ function resolverAduana(puertoDesembarque: string): string {
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
-
-  // Solo ejecutivos/admin pueden crear operaciones
-  if (session.rol === "cliente") {
-    return NextResponse.json({ error: "Sin permisos para crear operaciones." }, { status: 403 });
+    // Permitir acceso via inbound_secret (para webhook de email inbound)
+    const inboundSecret = request.headers.get("x-inbound-secret");
+    if (!inboundSecret || inboundSecret !== process.env.INBOUND_SECRET) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    }
+  } else {
+    // Solo ejecutivos/admin pueden crear operaciones
+    if (session.rol === "cliente") {
+      return NextResponse.json({ error: "Sin permisos para crear operaciones." }, { status: 403 });
+    }
   }
 
   const body = await request.json();
@@ -184,6 +189,48 @@ export async function POST(request: Request) {
          ON CONFLICT (nro_operacion) DO NOTHING`,
         [nroOperacion, rut_cliente, `ref: ${referencia || ""}`]
       );
+
+      // Enviar email de notificación de nuevo despacho
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const CONTACTOS_PROVISION = [
+          "BARomanini@dow.com",
+          "HZachariotto@dow.com",
+          "LNuez@dow.com",
+          "MLIbarraRocha@dow.com",
+          "jfernandez@agenciaguerra.com",
+          "losandes@agenciaguerra.com",
+          "hector@agenciaguerra.com",
+          "boris@agenciaguerra.com",
+          "bdpcl.dow@bdpint.com",
+          "isabel.riveros@psabdp.com",
+          "roberto.santibanez@psabdp.com",
+          "sara.arcos@psabdp.com",
+          "bastian.monsalve@agenciaguerra.com",
+          "ehenriquez@agenciaguerra.com",
+          "fguerrab@agenciaguerra.com",
+        ];
+        await resend.emails.send({
+          from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.agenciaguerra.com>",
+          to: CONTACTOS_PROVISION,
+          subject: `Nuevo Despacho ${nroOperacion} - REF: ${referencia || "S/R"}`,
+          html: `
+<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
+  <p>Estimados,</p>
+  <p>Se ha creado un nuevo despacho en AduanaNet:</p>
+  <table style="border-collapse:collapse;margin:16px 0;width:100%;max-width:600px;">
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;width:180px;">N° Despacho</td><td style="padding:8px 12px;border:1px solid #ddd;">${nroOperacion}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Referencia</td><td style="padding:8px 12px;border:1px solid #ddd;">${referencia || "S/R"}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Puerto Desembarque</td><td style="padding:8px 12px;border:1px solid #ddd;">${puerto_desembarque || "SAN ANTONIO"}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Aduana</td><td style="padding:8px 12px;border:1px solid #ddd;">${aduId}</td></tr>
+  </table>
+  <p style="color:#666;font-size:12px;">Este correo fue generado automáticamente por AgaTrack.</p>
+</div>`,
+        });
+        console.log(`[aduananet-ops] Email notificación enviado para op ${nroOperacion}`);
+      } catch (emailErr) {
+        console.error("[aduananet-ops] Error enviando email:", emailErr instanceof Error ? emailErr.message : emailErr);
+      }
     }
 
     return NextResponse.json({

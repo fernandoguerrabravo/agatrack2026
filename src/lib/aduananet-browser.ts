@@ -39,6 +39,7 @@ export async function browserValoresFactura(
   nroOperacion: string,
   datos: {
     termCompra: string;
+    termCompraFinal?: string; // Si se indica, cambia la cláusula DESPUÉS de calcular y ANTES de grabar
     moneda: string;
     pesoBruto: string;
     totalNetoFactura: string;
@@ -90,6 +91,15 @@ export async function browserValoresFactura(
   const flete = await page.evaluate(() => (document as unknown as { frm: Record<string, HTMLInputElement> }).frm.dus_valor_flete.value).catch(() => "");
   const seguro = await page.evaluate(() => (document as unknown as { frm: Record<string, HTMLInputElement> }).frm.dus_valor_seguro.value).catch(() => "");
   const cif = await page.evaluate(() => (document as unknown as { frm: Record<string, HTMLInputElement> }).frm.dus_valor_cif.value).catch(() => "");
+
+  // Workaround: si hay termCompraFinal, cambiar la cláusula DESPUÉS de calcular y ANTES de grabar
+  if (datos.termCompraFinal) {
+    await page.evaluate((finalCode) => {
+      const frm = (document as unknown as { frm: Record<string, HTMLInputElement | HTMLSelectElement> }).frm;
+      frm.term_compra.value = finalCode;
+      if (frm.sel_term_compra) (frm.sel_term_compra as HTMLSelectElement).value = finalCode;
+    }, datos.termCompraFinal);
+  }
 
   // Click "Aceptar"
   await page.evaluate(() => {

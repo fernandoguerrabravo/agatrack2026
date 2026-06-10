@@ -785,6 +785,7 @@ export const REGIMENES: Record<string, string> = {
  * Se busca por coincidencia de país/tratado en el texto del CO.
  */
 export const TRATADO_A_REGIMEN: Array<{ keywords: RegExp; regId: string; nombre: string }> = [
+  { keywords: /MERCOSUR|ACE\s*35|ACE35|COMPLEMENTACI[OÓ]N\s*ECON[OÓ]MICA|ARGENTINA|BRASIL|BRAZIL|PARAGUAY|URUGUAY/i, regId: "72", nombre: "ACEM" },
   { keywords: /ESTADOS UNIDOS|UNITED STATES|USA|EE\.?UU/i, regId: "92", nombre: "TLCCH-USA" },
   { keywords: /UNION EUROPEA|EUROPEAN UNION|\bUE\b|\bEU\b/i, regId: "91", nombre: "AICCH-UE" },
   { keywords: /CHINA(?!\s*TAI)/i, regId: "96", nombre: "TLC-CHCHI" },
