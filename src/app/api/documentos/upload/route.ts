@@ -272,7 +272,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       const result = await generateText({
         model: openai(gptModel),
         maxOutputTokens: 32000,
-        providerOptions: { openai: { reasoningEffort: "minimal" } },
+        providerOptions: { openai: { reasoningEffort: "low" } },
         messages: [
           { role: "user" as const, content: [{ type: "text" as const, text: finalPrompt }, { type: "image" as const, image: dataUrl }] },
         ],
@@ -314,7 +314,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           const result = await generateText({
             model: openai(gptModel),
             maxOutputTokens: 32000,
-            providerOptions: { openai: { reasoningEffort: "minimal" } },
+            providerOptions: { openai: { reasoningEffort: "low" } },
             system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
             messages: [
               { role: "user" as const, content: [{ type: "text" as const, text: finalPrompt }, ...imageContents] },
@@ -386,7 +386,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           const result = await generateText({
             model: openai(gptModel),
             maxOutputTokens: 32000,
-            providerOptions: { openai: { reasoningEffort: "minimal" } },
+            providerOptions: { openai: { reasoningEffort: "low" } },
             system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
             messages: [
               { role: "user" as const, content: [{ type: "text" as const, text: finalPrompt }, ...imageContents] },
