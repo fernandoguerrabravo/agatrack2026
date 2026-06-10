@@ -41,6 +41,16 @@ export async function POST(request: Request) {
     const { email_id, from, to, subject } = payload.data;
     console.log(`[inbound] Email recibido: from=${from} to=${JSON.stringify(to)} subject=${subject} id=${email_id}`);
 
+    // Idempotencia: no procesar el mismo email dos veces
+    const existing = await pgQuery<{ id: number }>(
+      "SELECT id FROM documentos WHERE nro_operacion LIKE $1 LIMIT 1",
+      [`INBOUND_${email_id.substring(0, 8)}%`]
+    );
+    if (existing.length > 0) {
+      console.log(`[inbound] Email ${email_id} ya procesado, ignorando`);
+      return NextResponse.json({ ok: true, message: "Ya procesado" });
+    }
+
     // Determinar cliente por dirección de destino
     const toAddr = Array.isArray(to) ? to[0] : to;
     const config = INBOUND_MAP[toAddr?.toLowerCase()];
@@ -132,6 +142,12 @@ export async function POST(request: Request) {
     if (invoiceDoc) {
       const d = invoiceDoc.datos;
       referencia = String(d.customer_order_number || d.internal_document_number || d.orden || d.our_reference || d.orden_compra || d.po_number || d.numero_factura || "");
+    }
+
+    // Fallback: extraer referencia del subject del email (formato: REF: XXXX o REF:XXXX)
+    if (!referencia && subject) {
+      const refMatch = subject.match(/REF:?\s*([A-Z0-9_-]+)/i);
+      if (refMatch) referencia = refMatch[1];
     }
 
     if (!referencia) {
