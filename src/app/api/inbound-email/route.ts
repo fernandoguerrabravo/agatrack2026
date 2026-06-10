@@ -12,8 +12,13 @@ const BASE_URL = process.env.ADUANANET_URL || "https://fguerragodoy.aduananet2.c
 /**
  * Mapeo de dirección de recepción → configuración del cliente
  */
-const INBOUND_MAP: Record<string, { cli_id: string; rut_cliente: string; cliente_nombre: string }> = {
-  "dow@agatrack.agenciaguerra.com": { cli_id: "2710", rut_cliente: "92933000-5", cliente_nombre: "PETROQUIMICA DOW S.A." },
+const INBOUND_MAP: Record<string, { cli_id: string; rut_cliente: string; cliente_nombre: string; remitentes_permitidos: string[] }> = {
+  "dow@agatrack.agenciaguerra.com": {
+    cli_id: "2710",
+    rut_cliente: "92933000-5",
+    cliente_nombre: "PETROQUIMICA DOW S.A.",
+    remitentes_permitidos: ["@psabdp.com"],
+  },
 };
 
 /**
@@ -84,6 +89,14 @@ export async function POST(request: Request) {
     if (!config) {
       console.log(`[inbound] Dirección no configurada: ${toAddr}`);
       return NextResponse.json({ ok: true, message: "Dirección no configurada" });
+    }
+
+    // Validar remitente (whitelist)
+    const fromLower = String(from).toLowerCase();
+    const remitentePerm = config.remitentes_permitidos.some(dominio => fromLower.endsWith(dominio));
+    if (!remitentePerm) {
+      console.log(`[inbound] Remitente no autorizado: ${from} (permitidos: ${config.remitentes_permitidos.join(", ")})`);
+      return NextResponse.json({ ok: true, message: "Remitente no autorizado" });
     }
 
     // Marcar como en proceso (para idempotencia inmediata)
