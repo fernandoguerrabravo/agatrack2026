@@ -27,7 +27,25 @@ const INBOUND_MAP: Record<string, { cli_id: string; rut_cliente: string; cliente
  */
 export async function POST(request: Request) {
   try {
-    const payload = await request.json();
+    // Verificar firma del webhook de Resend
+    const svixId = request.headers.get("svix-id");
+    const svixTimestamp = request.headers.get("svix-timestamp");
+    const svixSignature = request.headers.get("svix-signature");
+    
+    const body = await request.text();
+    const payload = JSON.parse(body);
+
+    // Si tiene headers de Svix, verificar firma
+    if (svixId && svixTimestamp && svixSignature && process.env.RESEND_WEBHOOK_SECRET) {
+      const { Webhook } = await import("svix");
+      const wh = new Webhook(process.env.RESEND_WEBHOOK_SECRET);
+      try {
+        wh.verify(body, { "svix-id": svixId, "svix-timestamp": svixTimestamp, "svix-signature": svixSignature });
+      } catch (err) {
+        console.error("[inbound] Webhook signature verification failed:", err instanceof Error ? err.message : err);
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    }
     
     // Resend webhook payload: { type: "email.received", data: { email_id, from, to, subject } }
     const eventType = payload.type;
