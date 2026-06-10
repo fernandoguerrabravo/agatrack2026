@@ -27,6 +27,7 @@ const TIPOS_DOCUMENTO = [
   "Póliza de Seguro",
   "Lista de Empaque (Packing List)",
   "Ficha Técnica",
+  "Ficha de Seguridad",
   "Certificado de Origen",
   "Certificado Fitosanitario",
   "Certificado de Calidad",
