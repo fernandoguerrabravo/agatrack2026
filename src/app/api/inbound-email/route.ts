@@ -66,10 +66,15 @@ export async function POST(request: Request) {
 
     // Marcar como en proceso (para idempotencia inmediata)
     const tempNro = "INBOUND_" + email_id.substring(0, 8);
-    await pgQuery(
-      `INSERT INTO operaciones (nro_operacion, rut_cliente, estado, notas) VALUES ($1, $2, 'procesando', $3) ON CONFLICT DO NOTHING`,
+    const insertResult = await pgQuery<{ nro_operacion: string }>(
+      `INSERT INTO operaciones (nro_operacion, rut_cliente, estado, notas) VALUES ($1, $2, 'procesando', $3) ON CONFLICT (nro_operacion) DO NOTHING RETURNING nro_operacion`,
       [tempNro, config.rut_cliente, `inbound email_id: ${email_id}`]
     );
+    if (insertResult.length === 0) {
+      // Ya existía — otro webhook ya lo está procesando
+      console.log(`[inbound] Email ${email_id} ya en proceso (op ${tempNro}), ignorando duplicado`);
+      return NextResponse.json({ ok: true, message: "Ya en proceso" });
+    }
 
     // Procesar en background (no bloquear el webhook response)
     processInboundEmail(email_id, from, subject, config, tempNro).catch(err => {
