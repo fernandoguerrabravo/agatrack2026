@@ -59,6 +59,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, message: "Dirección no configurada" });
     }
 
+    // Marcar como en proceso (para idempotencia inmediata)
+    const tempNro = "INBOUND_" + email_id.substring(0, 8);
+    await pgQuery(
+      `INSERT INTO operaciones (nro_operacion, rut_cliente, estado, notas) VALUES ($1, $2, 'procesando', $3) ON CONFLICT DO NOTHING`,
+      [tempNro, config.rut_cliente, `inbound email_id: ${email_id}`]
+    );
+
+    // Procesar en background (no bloquear el webhook response)
+    processInboundEmail(email_id, from, subject, config, tempNro).catch(err => {
+      console.error(`[inbound] Error en procesamiento background:`, err instanceof Error ? err.message : err);
+    });
+
+    // Responder inmediatamente al webhook
+    return NextResponse.json({ ok: true, message: "Recibido, procesando en background" });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error desconocido";
+    console.error("[inbound] Error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+/**
+ * Procesa el email inbound en background
+ */
+async function processInboundEmail(
+  email_id: string,
+  from: string,
+  subject: string,
+  config: { cli_id: string; rut_cliente: string; cliente_nombre: string },
+  tempNro: string
+) {
+
     // Obtener attachments via Resend API
     const attachmentsRes = await fetch(`https://api.resend.com/emails/receiving/${email_id}/attachments`, {
       headers: { "Authorization": `Bearer ${process.env.RESEND_API_KEY}` },
@@ -66,7 +98,7 @@ export async function POST(request: Request) {
     
     if (!attachmentsRes.ok) {
       console.error(`[inbound] Error obteniendo attachments: ${attachmentsRes.status}`);
-      return NextResponse.json({ error: "Error obteniendo attachments" }, { status: 500 });
+      return;
     }
 
     const attachmentsData = await attachmentsRes.json();
@@ -74,7 +106,7 @@ export async function POST(request: Request) {
     
     if (attachments.length === 0) {
       console.log("[inbound] Email sin attachments, ignorando");
-      return NextResponse.json({ ok: true, message: "Sin attachments" });
+      return;
     }
 
     console.log(`[inbound] ${attachments.length} attachment(s) encontrados`);
@@ -97,12 +129,10 @@ export async function POST(request: Request) {
     }
 
     if (archivos.length === 0) {
-      return NextResponse.json({ ok: true, message: "Sin archivos procesables" });
+      return;
     }
 
     // PASO 2: Procesar cada archivo con IA (clasificar + extraer datos)
-    // Usar la misma lógica de /api/documentos/upload llamando internamente
-    const tempNro = "INBOUND_" + email_id.substring(0, 8);
     const processedDocs: Array<{ id: number; tipo: string; nombre: string; datos: Record<string, unknown> }> = [];
 
     for (const archivo of archivos) {
@@ -152,7 +182,9 @@ export async function POST(request: Request) {
 
     if (!referencia) {
       console.log(`[inbound] No se encontró referencia en los documentos. Docs procesados: ${processedDocs.length}`);
-      return NextResponse.json({ ok: true, message: "Sin referencia", documentos: processedDocs.length, nro_temp: tempNro });
+      // Borrar operación temporal
+      await pgQuery("DELETE FROM operaciones WHERE nro_operacion = $1", [tempNro]);
+      return;
     }
 
     // PASO 4: Detectar terrestre y crear operación en AduanaNet
@@ -278,17 +310,6 @@ export async function POST(request: Request) {
 
     console.log(`[inbound] ✅ Completado: ${processedDocs.length} docs, op=${nroOperacion}, ref=${referencia}`);
 
-    return NextResponse.json({
-      ok: true,
-      email_id,
-      from,
-      nro_operacion: nroOperacion,
-      referencia,
-      documentos: processedDocs.length,
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Error desconocido";
-    console.error("[inbound] Error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
+    // Borrar operación temporal
+    await pgQuery("DELETE FROM operaciones WHERE nro_operacion = $1", [tempNro]);
 }
