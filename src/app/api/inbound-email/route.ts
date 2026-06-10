@@ -290,10 +290,44 @@ async function processInboundEmail(
       );
       console.log(`[inbound] Documentos asociados a op ${nroOperacion}`);
 
-      // Enviar notificación email
+      // Enviar notificación email con detalle del embarque
       try {
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
+
+        // Extraer datos de los documentos procesados para el email
+        const blDoc = processedDocs.find(d => d.tipo === "Bill of Lading (BL)");
+        const invDoc = processedDocs.find(d => d.tipo === "Invoice (Factura Comercial)");
+        const plDoc = processedDocs.find(d => d.tipo === "Lista de Empaque (Packing List)");
+        const polDoc = processedDocs.find(d => d.tipo === "Póliza de Seguro");
+        const coDoc = processedDocs.find(d => d.tipo === "Certificado de Origen");
+
+        const blData = blDoc?.datos || {};
+        const invData = invDoc?.datos || {};
+        const plData = plDoc?.datos || {};
+
+        const blMaster = String(blData.numero_bl_master || blData.numero_bl || "");
+        const nave = String(blData.nave_corregida || blData.nave || "");
+        const viaje = String(blData.viaje_corregido || blData.viaje || "");
+        const naviera = String(blData.naviera || "");
+        const ptoEmbarque = String(blData.puerto_embarque || "");
+        const ptoTransbordo = String(blData.puerto_transbordo || "");
+        const contenedores = (blData.contenedores || []) as Array<Record<string, unknown>>;
+        const proveedor = String((invData.proveedor as Record<string, unknown>)?.nombre || invData.proveedor || "");
+        const montoTotal = invData.monto_total || "";
+        const moneda = String(invData.moneda || "USD").replace(/[^A-Z]/g, "") || "USD";
+        const incoterm = String(invData.incoterm || "");
+        const pesoBruto = plData.peso_bruto_total || blData.peso_bruto_total || "";
+        const totalBultos = plData.total_bultos || blData.total_bultos || "";
+        const producto = (invData.items as Array<Record<string, unknown>>)?.[0]?.descripcion || "";
+        const paisOrigen = String(coDoc?.datos?.pais_origen || invData.pais_origen || "");
+
+        const contTable = contenedores.length > 0
+          ? contenedores.map((c: Record<string, unknown>) => `<tr><td style="padding:4px 12px;border:1px solid #ddd;">${c.numero_contenedor || ""}</td><td style="padding:4px 12px;border:1px solid #ddd;">${c.tipo_contenedor || ""}</td><td style="padding:4px 12px;border:1px solid #ddd;">${c.peso_bruto || ""} KG</td></tr>`).join("")
+          : "";
+
+        const docsTable = processedDocs.map(d => `<tr><td style="padding:4px 12px;border:1px solid #ddd;">${d.nombre}</td><td style="padding:4px 12px;border:1px solid #ddd;">${d.tipo}</td></tr>`).join("");
+
         await resend.emails.send({
           from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
           to: ["fguerrab@agenciaguerra.com"],
@@ -301,16 +335,42 @@ async function processInboundEmail(
           html: `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
   <p>Estimados,</p>
-  <p>Se ha creado un nuevo despacho via email inbound:</p>
+  <p>Se ha creado un nuevo despacho automáticamente via email:</p>
+  
   <table style="border-collapse:collapse;margin:16px 0;width:100%;max-width:600px;">
-    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">N° Despacho</td><td style="padding:8px 12px;border:1px solid #ddd;">${nroOperacion}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;width:180px;">N° Despacho</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#2563eb;">${nroOperacion}</td></tr>
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Cliente</td><td style="padding:8px 12px;border:1px solid #ddd;">${config.cliente_nombre}</td></tr>
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Referencia</td><td style="padding:8px 12px;border:1px solid #ddd;">${referencia}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Proveedor</td><td style="padding:8px 12px;border:1px solid #ddd;">${proveedor}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Producto</td><td style="padding:8px 12px;border:1px solid #ddd;">${producto}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Incoterm</td><td style="padding:8px 12px;border:1px solid #ddd;">${incoterm}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Monto Total</td><td style="padding:8px 12px;border:1px solid #ddd;">${moneda} ${montoTotal ? Number(montoTotal).toLocaleString() : ""}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">País Origen</td><td style="padding:8px 12px;border:1px solid #ddd;">${paisOrigen}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Peso Bruto</td><td style="padding:8px 12px;border:1px solid #ddd;">${pesoBruto} KG</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Bultos</td><td style="padding:8px 12px;border:1px solid #ddd;">${totalBultos}</td></tr>
+    ${blMaster ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">BL Master</td><td style="padding:8px 12px;border:1px solid #ddd;">${blMaster}</td></tr>` : ""}
+    ${nave ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Nave</td><td style="padding:8px 12px;border:1px solid #ddd;">${nave} ${viaje}</td></tr>` : ""}
+    ${naviera ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Naviera</td><td style="padding:8px 12px;border:1px solid #ddd;">${naviera}</td></tr>` : ""}
+    ${ptoEmbarque ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Puerto Embarque</td><td style="padding:8px 12px;border:1px solid #ddd;">${ptoEmbarque}</td></tr>` : ""}
+    ${ptoTransbordo ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Puerto Transbordo</td><td style="padding:8px 12px;border:1px solid #ddd;">${ptoTransbordo}</td></tr>` : ""}
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Puerto Desembarque</td><td style="padding:8px 12px;border:1px solid #ddd;">${puertoDesembarque}</td></tr>
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Email de</td><td style="padding:8px 12px;border:1px solid #ddd;">${from}</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Documentos</td><td style="padding:8px 12px;border:1px solid #ddd;">${processedDocs.map(d => d.nombre + " (" + d.tipo + ")").join("<br>")}</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Puerto</td><td style="padding:8px 12px;border:1px solid #ddd;">${puertoDesembarque}</td></tr>
   </table>
-  <p style="color:#666;font-size:12px;">Creado automáticamente via email inbound por AgaTrack.</p>
+
+  ${contTable ? `<h3 style="margin-top:20px;">Contenedores</h3>
+  <table style="border-collapse:collapse;border:1px solid #ddd;width:100%;max-width:600px;">
+    <thead><tr style="background:#f5f5f5;"><th style="padding:6px 12px;border:1px solid #ddd;">Contenedor</th><th style="padding:6px 12px;border:1px solid #ddd;">Tipo</th><th style="padding:6px 12px;border:1px solid #ddd;">Peso Bruto</th></tr></thead>
+    <tbody>${contTable}</tbody>
+  </table>` : ""}
+
+  <h3 style="margin-top:20px;">Documentos Procesados</h3>
+  <table style="border-collapse:collapse;border:1px solid #ddd;width:100%;max-width:600px;">
+    <thead><tr style="background:#f5f5f5;"><th style="padding:6px 12px;border:1px solid #ddd;">Archivo</th><th style="padding:6px 12px;border:1px solid #ddd;">Clasificación</th></tr></thead>
+    <tbody>${docsTable}</tbody>
+  </table>
+
+  <p style="margin-top:20px;color:#666;font-size:12px;">Creado automáticamente via email inbound por AgaTrack.</p>
+  <p style="color:#666;font-size:12px;">Agencia de Aduanas Fernando Guerra y Cía. Ltda.</p>
 </div>`,
         });
       } catch (emailErr) {
