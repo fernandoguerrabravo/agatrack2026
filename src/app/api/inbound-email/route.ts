@@ -417,6 +417,62 @@ async function processInboundEmail(
                       await pgQuery("UPDATE documentos SET datos_shipsgo = $1, shipsgo_id = $2 WHERE id = $3",
                         [JSON.stringify(sgData), sgId, blDocForShipsgo!.id]);
                       console.log(`[inbound] ShipsGo data guardada, id=${sgId}`);
+
+                      // Enviar correo de actualización ETA
+                      try {
+                        const sgRoute = sgData.route as Record<string, unknown>;
+                        const podData = sgRoute?.port_of_discharge as Record<string, unknown>;
+                        const etaDate = podData?.date_of_discharge ? new Date(String(podData.date_of_discharge)) : null;
+                        const meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+                        const etaStr = etaDate ? `${String(etaDate.getDate()).padStart(2, "0")}${meses[etaDate.getMonth()]} ${etaDate.getFullYear()}` : "";
+                        const polData = sgRoute?.port_of_loading as Record<string, unknown>;
+                        const polName = (polData?.location as Record<string, unknown>)?.name || "";
+                        const podName = (podData?.location as Record<string, unknown>)?.name || "";
+                        const transitTime = sgRoute?.transit_time || "";
+                        const transitPct = sgRoute?.transit_percentage || 0;
+                        const co2 = sgRoute?.co2_emission || "";
+                        const naveShipsgo = (() => {
+                          try {
+                            const containers = (sgData as Record<string, unknown>).containers as Array<Record<string, unknown>> | undefined;
+                            const movements = containers?.[0]?.movements as Array<Record<string, unknown>> | undefined;
+                            const vessel = movements?.[0]?.vessel as Record<string, unknown> | undefined;
+                            return String(vessel?.name || "");
+                          } catch { return ""; }
+                        })() || blNumberForShipsgo;
+
+                        const { Resend: ResendUpdate } = await import("resend");
+                        const resendUpdate = new ResendUpdate(process.env.RESEND_API_KEY);
+                        await resendUpdate.emails.send({
+                          from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
+                          to: ["fguerrab@agenciaguerra.com"],
+                          subject: `Actualización ETA Despacho ${nroOperacion} - REF: ${referencia} - ETA: ${etaStr}`,
+                          html: `
+<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
+  <p>Estimados,</p>
+  <p>Se ha actualizado la información de seguimiento para el despacho <b>${nroOperacion}</b>:</p>
+  
+  <table style="border-collapse:collapse;margin:16px 0;width:100%;max-width:600px;">
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;width:180px;">N° Despacho</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#2563eb;">${nroOperacion}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Referencia</td><td style="padding:8px 12px;border:1px solid #ddd;">${referencia}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">BL</td><td style="padding:8px 12px;border:1px solid #ddd;">${blNumberForShipsgo}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Nave</td><td style="padding:8px 12px;border:1px solid #ddd;">${naveShipsgo}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Ruta</td><td style="padding:8px 12px;border:1px solid #ddd;">${polName} → ${podName}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Tránsito</td><td style="padding:8px 12px;border:1px solid #ddd;">${transitTime} días (${transitPct}%)</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">ETA</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#16a34a;font-size:16px;">${etaStr}</td></tr>
+    ${co2 ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">CO₂</td><td style="padding:8px 12px;border:1px solid #ddd;">${co2} ton</td></tr>` : ""}
+  </table>
+
+  <h3 style="margin-top:20px;">Tracking en Vivo</h3>
+  <p><a href="https://agatrack.com/tracking/${nroOperacion}" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 24px;border-radius:4px;text-decoration:none;font-weight:600;">Ver seguimiento del embarque →</a></p>
+
+  <p style="margin-top:20px;color:#666;font-size:12px;">Actualización automática de tracking por AgaTrack.</p>
+</div>`,
+                        });
+                        console.log(`[inbound] Correo actualización ETA enviado para op ${nroOperacion}`);
+                      } catch (etaEmailErr) {
+                        console.error("[inbound] Error correo actualización ETA:", etaEmailErr instanceof Error ? etaEmailErr.message : etaEmailErr);
+                      }
+
                       break;
                     }
                   }
