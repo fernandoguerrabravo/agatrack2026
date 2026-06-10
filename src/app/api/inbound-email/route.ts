@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       const storageUrl = await uploadToSpaces(fileBuffer, storageKey, content_type);
 
       // Procesar con IA — llamar directamente al endpoint de upload con bypass de auth
-      const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://agatrack.com";
+      const baseUrl = `http://localhost:${process.env.PORT || 3000}`;
       const formData = new FormData();
       const blob = new Blob([fileBuffer], { type: content_type });
       formData.append("file", blob, filename);
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
       const esTerrestreDoc = processedDocs.some(d => d.tipo === "Carta de Porte Internacional (CRT)" || d.tipo === "MIC/DTA");
       const puertoDesembarque = esTerrestreDoc ? "LOS ANDES" : "SAN ANTONIO";
 
-      const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://agatrack.com";
+      const baseUrl = `http://localhost:${process.env.PORT || 3000}`;
       const crearRes = await fetch(`${baseUrl}/api/aduananet-operaciones`, {
         method: "POST",
         headers: { 
