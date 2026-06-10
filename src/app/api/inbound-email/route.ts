@@ -440,6 +440,16 @@ async function processInboundEmail(
                           } catch { return ""; }
                         })() || blNumberForShipsgo;
 
+                        // Datos de contenedores y producto del BL/Invoice
+                        const blDataEmail = blDocForShipsgo?.datos || {};
+                        const invDocEmail = processedDocs.find(d => d.tipo === "Invoice (Factura Comercial)");
+                        const invDataEmail = invDocEmail?.datos || {};
+                        const contenedoresEmail = (blDataEmail.contenedores || []) as Array<Record<string, unknown>>;
+                        const productoEmail = String((invDataEmail.items as Array<Record<string, unknown>>)?.[0]?.descripcion || "");
+                        const contTableEmail = contenedoresEmail.length > 0
+                          ? contenedoresEmail.map((c: Record<string, unknown>) => `<tr><td style="padding:4px 12px;border:1px solid #ddd;">${c.numero_contenedor || ""}</td><td style="padding:4px 12px;border:1px solid #ddd;">${c.tipo_contenedor || ""}</td><td style="padding:4px 12px;border:1px solid #ddd;">${c.peso_bruto || ""} KG</td></tr>`).join("")
+                          : "";
+
                         const { Resend: ResendUpdate } = await import("resend");
                         const resendUpdate = new ResendUpdate(process.env.RESEND_API_KEY);
                         await resendUpdate.emails.send({
@@ -455,12 +465,19 @@ async function processInboundEmail(
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;width:180px;">N° Despacho</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#2563eb;">${nroOperacion}</td></tr>
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Referencia</td><td style="padding:8px 12px;border:1px solid #ddd;">${referencia}</td></tr>
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">BL</td><td style="padding:8px 12px;border:1px solid #ddd;">${blNumberForShipsgo}</td></tr>
+    ${productoEmail ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Producto</td><td style="padding:8px 12px;border:1px solid #ddd;">${productoEmail}</td></tr>` : ""}
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Nave</td><td style="padding:8px 12px;border:1px solid #ddd;">${naveShipsgo}</td></tr>
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Ruta</td><td style="padding:8px 12px;border:1px solid #ddd;">${polName} → ${podName}</td></tr>
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Tránsito</td><td style="padding:8px 12px;border:1px solid #ddd;">${transitTime} días (${transitPct}%)</td></tr>
     <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">ETA</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#16a34a;font-size:16px;">${etaStr}</td></tr>
     ${co2 ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">CO₂</td><td style="padding:8px 12px;border:1px solid #ddd;">${co2} ton</td></tr>` : ""}
   </table>
+
+  ${contTableEmail ? `<h3 style="margin-top:20px;">Contenedores</h3>
+  <table style="border-collapse:collapse;border:1px solid #ddd;width:100%;max-width:600px;">
+    <thead><tr style="background:#f5f5f5;"><th style="padding:6px 12px;border:1px solid #ddd;">Contenedor</th><th style="padding:6px 12px;border:1px solid #ddd;">Tipo</th><th style="padding:6px 12px;border:1px solid #ddd;">Peso Bruto</th></tr></thead>
+    <tbody>${contTableEmail}</tbody>
+  </table>` : ""}
 
   <h3 style="margin-top:20px;">Tracking en Vivo</h3>
   <p><a href="https://agatrack.com/tracking/${nroOperacion}" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 24px;border-radius:4px;text-decoration:none;font-weight:600;">Ver seguimiento del embarque →</a></p>
