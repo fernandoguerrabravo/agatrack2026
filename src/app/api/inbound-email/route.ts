@@ -11,14 +11,14 @@ export const maxDuration = 120;
  * Mapeo de dirección de recepción → configuración del cliente
  */
 const INBOUND_MAP: Record<string, { cli_id: string; rut_cliente: string; cliente_nombre: string }> = {
-  "dow@agatrack.agenciaguerra.com": { cli_id: "2710", rut_cliente: "92933000-5", cliente_nombre: "PETROQUIMICA DOW S.A." },
+  "dow@agatrack.com": { cli_id: "2710", rut_cliente: "92933000-5", cliente_nombre: "PETROQUIMICA DOW S.A." },
 };
 
 /**
  * POST /api/inbound-email
  * 
  * Webhook receptor de Resend para emails inbound.
- * Cuando un cliente envía un email con documentos adjuntos a dow@agatrack.agenciaguerra.com,
+ * Cuando un cliente envía un email con documentos adjuntos a dow@agatrack.com,
  * este endpoint:
  * 1. Obtiene los attachments via Resend API
  * 2. Los procesa (clasifica + extrae datos) usando la misma lógica de upload
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       const storageUrl = await uploadToSpaces(fileBuffer, storageKey, content_type);
 
       // Procesar con IA — llamar directamente al endpoint de upload con bypass de auth
-      const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://agatrack.agenciaguerra.com";
+      const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://agatrack.com";
       const formData = new FormData();
       const blob = new Blob([fileBuffer], { type: content_type });
       formData.append("file", blob, filename);
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
       const esTerrestreDoc = processedDocs.some(d => d.tipo === "Carta de Porte Internacional (CRT)" || d.tipo === "MIC/DTA");
       const puertoDesembarque = esTerrestreDoc ? "LOS ANDES" : "SAN ANTONIO";
 
-      const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://agatrack.agenciaguerra.com";
+      const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.NEXTAUTH_URL || "https://agatrack.com";
       const crearRes = await fetch(`${baseUrl}/api/aduananet-operaciones`, {
         method: "POST",
         headers: { 

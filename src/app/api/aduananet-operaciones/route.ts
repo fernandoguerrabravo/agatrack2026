@@ -197,7 +197,7 @@ export async function POST(request: Request) {
           "fguerrab@agenciaguerra.com",
         ];
         await resend.emails.send({
-          from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.agenciaguerra.com>",
+          from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
           to: CONTACTOS_PROVISION,
           subject: `Nuevo Despacho ${nroOperacion} - REF: ${referencia || "S/R"}`,
           html: `

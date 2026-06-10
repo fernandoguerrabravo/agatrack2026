@@ -8,7 +8,7 @@ function getEmailTemplate({ nombre, rut, desde, hasta, rowCount, mesAnio }) {
 <div style="align-items:center;background:#f4f4f4;border:2px solid #d3d3d3;color:#000;display:flex;flex-direction:column;font-family:Arial, sans-serif;gap:24px;justify-content:center;max-width:fit-content;min-width:800px;overflow:clip">
   <!-- Header -->
   <div style="align-items:center;background:#1a2b4a;color:#fff;display:flex;justify-content:center;padding:16px;width:100%">
-    <img src="https://agatrack.agenciaguerra.com/logo_agatrack.png" alt="AGATrack" width="240" height="75" style="height:auto" />
+    <img src="https://agatrack.com/logo_agatrack.png" alt="AGATrack" width="240" height="75" style="height:auto" />
   </div>
 
   <!-- Contenido -->
@@ -29,7 +29,7 @@ function getEmailTemplate({ nombre, rut, desde, hasta, rowCount, mesAnio }) {
 
       <p style="font-size:14px;color:#333">Si desea revisar el reporte en línea o el archivo adjunto no se puede visualizar correctamente, puede obtener su reporte a través de la aplicación web de AGATrack.</p>
       
-      <a href="https://agatrack.agenciaguerra.com" style="display:inline-block;background:#e8a838;color:#1a2b4a;padding:10px 24px;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px">Ir a AGATrack</a>
+      <a href="https://agatrack.com" style="display:inline-block;background:#e8a838;color:#1a2b4a;padding:10px 24px;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px">Ir a AGATrack</a>
     </div>
   </div>
 

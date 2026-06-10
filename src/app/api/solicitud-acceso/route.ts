@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 
       // Email al equipo interno
       await resend.emails.send({
-        from: process.env.RESEND_FROM || "AGATrack <reportes@agatrack.agenciaguerra.com>",
+        from: process.env.RESEND_FROM || "AGATrack <reportes@agatrack.com>",
         to: ["fguerra@agenciaguerra.com", "garqueros@agenciaguerra.com", "fguerrab@agenciaguerra.com"],
         subject: `Nueva solicitud de acceso - ${empresa} (${rut})`,
         html: `
@@ -82,13 +82,13 @@ export async function POST(req: NextRequest) {
 
       // Email de confirmación al solicitante
       await resend.emails.send({
-        from: process.env.RESEND_FROM || "AGATrack <reportes@agatrack.agenciaguerra.com>",
+        from: process.env.RESEND_FROM || "AGATrack <reportes@agatrack.com>",
         to: [email],
         subject: "Solicitud de acceso recibida - AGATrack",
         html: `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <div style="align-items:center;background:#f4f4f4;border:2px solid #d3d3d3;color:#000;display:flex;flex-direction:column;font-family:Arial, sans-serif;gap:24px;justify-content:center;max-width:fit-content;min-width:600px;overflow:clip">
   <div style="align-items:center;background:#1a2b4a;color:#fff;display:flex;justify-content:center;padding:16px;width:100%">
-    <img src="https://agatrack.agenciaguerra.com/logo_agatrack.png" alt="AGATrack" width="240" height="75" style="height:auto" />
+    <img src="https://agatrack.com/logo_agatrack.png" alt="AGATrack" width="240" height="75" style="height:auto" />
   </div>
   <div style="padding:20px 20px;width:100%">
     <div style="gap:16px;display:flex;margin:0 20px;flex-direction:column">

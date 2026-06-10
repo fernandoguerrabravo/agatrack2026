@@ -183,7 +183,7 @@ function buildEmailHtml(cliente, data) {
 <div style="background:#f4f4f4;color:#000;font-family:Arial,sans-serif;max-width:700px;margin:0 auto;border:2px solid #d3d3d3;">
   <!-- Header -->
   <div style="background:#1a2b4a;padding:16px;text-align:center;">
-    <img src="https://agatrack.agenciaguerra.com/logo_agatrack.png" alt="AGATrack" width="240" height="75" style="height:auto" />
+    <img src="https://agatrack.com/logo_agatrack.png" alt="AGATrack" width="240" height="75" style="height:auto" />
   </div>
 
   <!-- Contenido -->
@@ -308,7 +308,7 @@ function buildEmailHtml(cliente, data) {
       </tbody>
     </table>
 
-    <p style="font-size:13px;color:#333;margin:20px 0 0 0;">Para más detalles, acceda a <a href="https://agatrack.agenciaguerra.com" style="color:#e8a838;font-weight:bold;">AGATrack</a>.</p>
+    <p style="font-size:13px;color:#333;margin:20px 0 0 0;">Para más detalles, acceda a <a href="https://agatrack.com" style="color:#e8a838;font-weight:bold;">AGATrack</a>.</p>
   </div>
 
   <!-- Disclaimer -->
@@ -351,7 +351,7 @@ async function sendReports() {
       const today = new Date().toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" });
 
       const { data: resData, error } = await resend.emails.send({
-        from: process.env.RESEND_FROM || "AGATrack <reportes@agatrack.agenciaguerra.com>",
+        from: process.env.RESEND_FROM || "AGATrack <reportes@agatrack.com>",
         to: cliente.emails,
         subject: `Estadísticas de Comercio Exterior Agencia Guerra - ${cliente.nombre} - ${today}`,
         html,

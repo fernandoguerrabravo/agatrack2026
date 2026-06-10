@@ -173,7 +173,7 @@ export async function POST(request: Request) {
     const itemsList = items.map((i: Record<string, unknown>) => `<li>${i.descripcion || i.description || ""} — ${i.cantidad || ""} ${i.unidad || "KG"}</li>`).join("");
 
     const emailResult = await resend.emails.send({
-      from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.agenciaguerra.com>",
+      from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
       to: [
         "BARomanini@dow.com",
         "HZachariotto@dow.com",

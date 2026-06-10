@@ -3,7 +3,7 @@ import { Resend } from "resend";
 import { pgQuery } from "./postgres";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.agenciaguerra.com>";
+const FROM = process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>";
 
 // Contactos fijos para solicitud de transporte — Petroquímica DOW
 const CONTACTOS_PETROQUIMICA = [
