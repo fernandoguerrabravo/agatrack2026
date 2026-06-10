@@ -96,6 +96,17 @@ export async function POST(request: Request) {
     const remitentePerm = config.remitentes_permitidos.some(dominio => fromLower.endsWith(dominio));
     if (!remitentePerm) {
       console.log(`[inbound] Remitente no autorizado: ${from} (permitidos: ${config.remitentes_permitidos.join(", ")})`);
+      // Notificar al remitente
+      try {
+        const { Resend: ResendReject } = await import("resend");
+        const resendReject = new ResendReject(process.env.RESEND_API_KEY);
+        await resendReject.emails.send({
+          from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
+          to: [from],
+          subject: `No se pudo crear operación - Remitente no autorizado`,
+          html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;"><p>Estimado/a,</p><p>Su correo enviado a <b>${toAddr}</b> no fue procesado porque su dirección de correo <b>${from}</b> no está autorizada para crear operaciones automáticamente.</p><p>Por favor contacte a su ejecutivo de cuenta para gestionar la apertura del despacho.</p><p style="color:#666;font-size:12px;">AgaTrack - Agencia de Aduanas Fernando Guerra y Cía. Ltda.</p></div>`,
+        });
+      } catch {}
       return NextResponse.json({ ok: true, message: "Remitente no autorizado" });
     }
 
@@ -224,6 +235,20 @@ async function processInboundEmail(
     const tieneFactura = processedDocs.some(d => d.tipo === "Invoice (Factura Comercial)");
     if (!tieneTransporte || !tieneFactura) {
       console.log(`[inbound] Documentos insuficientes: transporte=${tieneTransporte}, factura=${tieneFactura}. No se crea operación.`);
+      // Notificar al remitente
+      try {
+        const { Resend: ResendReject2 } = await import("resend");
+        const resendReject2 = new ResendReject2(process.env.RESEND_API_KEY);
+        const faltantes = [];
+        if (!tieneTransporte) faltantes.push("Bill of Lading (BL) o Carta de Porte (CRT)");
+        if (!tieneFactura) faltantes.push("Factura Comercial");
+        await resendReject2.emails.send({
+          from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
+          to: [from],
+          subject: "No se pudo crear operación - Documentos insuficientes",
+          html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;"><p>Estimado/a,</p><p>Su correo no pudo ser procesado porque faltan documentos requeridos para crear la operación:</p><ul>${faltantes.map(f => `<li><b>${f}</b></li>`).join("")}</ul><p>Por favor reenvíe el correo incluyendo todos los documentos necesarios, o contacte a su ejecutivo de cuenta.</p><p style="color:#666;font-size:12px;margin-top:20px;">Agencia de Aduanas Fernando Guerra y Cía. Ltda.</p></div>`,
+        });
+      } catch {}
       await pgQuery("DELETE FROM operaciones WHERE nro_operacion = $1", [tempNro]);
       return;
     }
