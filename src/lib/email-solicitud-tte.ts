@@ -150,7 +150,7 @@ export async function enviarEmailSolicitudTTE(nroOperacion: string): Promise<{ o
   ${seguimientoHtml}
 
   <h3 style="margin-top:20px;">Tracking en Vivo</h3>
-  <p><a href="https://agatrack.agenciaguerra.com/tracking/${nroOperacion}" target="_blank" style="color:#2563eb;text-decoration:underline;">Ver tracking interactivo del embarque →</a></p>
+  <p><a href="https://agatrack.com/tracking/${nroOperacion}" target="_blank" style="color:#2563eb;text-decoration:underline;">Ver tracking interactivo del embarque →</a></p>
 
   <p style="margin-top:20px;color:#666;font-size:12px;">Referencia: ${referencia} | Operación: ${nroOperacion}</p>
   <p style="color:#666;font-size:12px;">Agencia de Aduanas Fernando Guerra y Cía. Ltda.</p>
