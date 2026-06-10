@@ -64,7 +64,7 @@ const CLIENTES = [
     rut: "92933000-5",
     nombre: "PETROQUIMICA DOW S.A.",
     emails: ["Yisel.Moraga@psabdp.com", "sara.arcos@psabdp.com", "fguerrab@agenciaguerra.com"],
-    periodo: "mes",
+    periodo: "anio",
     columnas: [
       "operacion", "aduana", "fecha_aceptacion", "cliente", "despacho",
       "total_itemes", "total_bultos", "identificacion_bultos", "total_peso_bruto",
