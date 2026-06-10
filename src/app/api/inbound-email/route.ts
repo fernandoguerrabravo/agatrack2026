@@ -103,8 +103,8 @@ export async function POST(request: Request) {
         await resendReject.emails.send({
           from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
           to: [from],
-          subject: `No se pudo crear operación - Remitente no autorizado`,
-          html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;"><p>Estimado/a,</p><p>Su correo enviado a <b>${toAddr}</b> no fue procesado porque su dirección de correo <b>${from}</b> no está autorizada para crear operaciones automáticamente.</p><p>Por favor contacte a su ejecutivo de cuenta para gestionar la apertura del despacho.</p><p style="color:#666;font-size:12px;">AgaTrack - Agencia de Aduanas Fernando Guerra y Cía. Ltda.</p></div>`,
+          subject: `⚠️ No se pudo crear operación - Remitente no autorizado`,
+          html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;"><p>Estimado/a,</p><p>Su correo enviado a <b>${toAddr}</b> no fue procesado porque su dirección de correo <b>${from}</b> no está autorizada para crear operaciones automáticamente.</p><p><b>Por favor elimine la dirección ${toAddr} de su lista de envío inmediatamente.</b></p><p>Contacte a su ejecutivo de cuenta para gestionar la apertura del despacho.</p><p style="color:#666;font-size:12px;">AgaTrack - Agencia de Aduanas Fernando Guerra y Cía. Ltda.</p></div>`,
         });
       } catch {}
       return NextResponse.json({ ok: true, message: "Remitente no autorizado" });
@@ -245,7 +245,7 @@ async function processInboundEmail(
         await resendReject2.emails.send({
           from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
           to: [from],
-          subject: "No se pudo crear operación - Documentos insuficientes",
+          subject: "⚠️ No se pudo crear operación - Documentos insuficientes",
           html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;"><p>Estimado/a,</p><p>Su correo no pudo ser procesado porque faltan documentos requeridos para crear la operación:</p><ul>${faltantes.map(f => `<li><b>${f}</b></li>`).join("")}</ul><p>Por favor reenvíe el correo incluyendo todos los documentos necesarios, o contacte a su ejecutivo de cuenta.</p><p style="color:#666;font-size:12px;margin-top:20px;">Agencia de Aduanas Fernando Guerra y Cía. Ltda.</p></div>`,
         });
       } catch {}
