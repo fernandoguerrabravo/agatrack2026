@@ -359,7 +359,13 @@ async function processInboundEmail(
 
         await resend.emails.send({
           from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
-          to: ["fguerrab@agenciaguerra.com"],
+          to: [
+            "BARomanini@dow.com", "HZachariotto@dow.com", "LNuez@dow.com", "MLIbarraRocha@dow.com",
+            "jfernandez@agenciaguerra.com", "losandes@agenciaguerra.com", "hector@agenciaguerra.com",
+            "boris@agenciaguerra.com", "bdpcl.dow@bdpint.com", "isabel.riveros@psabdp.com",
+            "roberto.santibanez@psabdp.com", "sara.arcos@psabdp.com",
+            "bastian.monsalve@agenciaguerra.com", "ehenriquez@agenciaguerra.com", "fguerrab@agenciaguerra.com",
+          ],
           subject: `Nuevo Despacho ${nroOperacion} - ${config.cliente_nombre} - REF: ${referencia}${eta ? " - ETA: " + eta : ""}`,
           html: `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
@@ -476,7 +482,13 @@ async function processInboundEmail(
                         const resendUpdate = new ResendUpdate(process.env.RESEND_API_KEY);
                         await resendUpdate.emails.send({
                           from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
-                          to: ["fguerrab@agenciaguerra.com"],
+                          to: [
+                            "BARomanini@dow.com", "HZachariotto@dow.com", "LNuez@dow.com", "MLIbarraRocha@dow.com",
+                            "jfernandez@agenciaguerra.com", "losandes@agenciaguerra.com", "hector@agenciaguerra.com",
+                            "boris@agenciaguerra.com", "bdpcl.dow@bdpint.com", "isabel.riveros@psabdp.com",
+                            "roberto.santibanez@psabdp.com", "sara.arcos@psabdp.com",
+                            "bastian.monsalve@agenciaguerra.com", "ehenriquez@agenciaguerra.com", "fguerrab@agenciaguerra.com",
+                          ],
                           subject: `Actualización Despacho ${nroOperacion} - REF: ${referencia} - ETA: ${etaStr}`,
                           html: `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
