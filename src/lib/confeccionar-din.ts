@@ -506,7 +506,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
       frm.ume_id.value = "6";
       if (frm.lume_id) (frm.lume_id as HTMLSelectElement).value = "6";
       frm.mer_cantidad.value = data.cantidad;
-      frm.mer_cantidad_mercancia_um.value = "0.000000";
+      frm.mer_cantidad_mercancia_um.value = data.cantidad;
       frm.mer_fob_unitario.value = data.merFob;
       frm.mer_valor_cif_item.value = data.merCif;
       frm.mer_total_neto.value = data.totalNeto;
@@ -1103,7 +1103,7 @@ async function confeccionarDINTerrestre(
       frm.ume_id.value = "6";
       if (frm.lume_id) (frm.lume_id as HTMLSelectElement).value = "6";
       frm.mer_cantidad.value = data.cantidad;
-      frm.mer_cantidad_mercancia_um.value = "0.000000";
+      frm.mer_cantidad_mercancia_um.value = data.cantidad;
       frm.mer_fob_unitario.value = data.merFob;
       frm.mer_valor_cif_item.value = data.merCif;
       frm.mer_total_neto.value = data.totalNeto;
