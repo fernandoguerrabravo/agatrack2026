@@ -457,8 +457,8 @@ async function processInboundEmail(
     <tbody>${contTable}</tbody>
   </table>` : ""}
 
-  <h3 style="margin-top:20px;">Tracking en Vivo</h3>
-  <p><a href="https://agatrack.com/tracking/${nroOperacion}" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 24px;border-radius:4px;text-decoration:none;font-weight:600;">Ver seguimiento del embarque →</a></p>
+  ${!esTerrestreDoc ? `<h3 style="margin-top:20px;">Tracking en Vivo</h3>
+  <p><a href="https://agatrack.com/tracking/${nroOperacion}" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 24px;border-radius:4px;text-decoration:none;font-weight:600;">Ver seguimiento del embarque →</a></p>` : ""}
 
   <h3 style="margin-top:20px;">Documentos Procesados</h3>
   <table style="border-collapse:collapse;border:1px solid #ddd;width:100%;max-width:600px;">

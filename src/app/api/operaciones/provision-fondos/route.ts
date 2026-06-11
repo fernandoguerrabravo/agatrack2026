@@ -215,7 +215,7 @@ export async function POST(request: Request) {
       from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
       to: toListProv,
       cc: ejecutivosCCProv.filter(e => !toListProv.includes(e)).length > 0 ? ejecutivosCCProv.filter(e => !toListProv.includes(e)) : undefined,
-      subject: `Provisión de Fondos - Despacho ${nro_operacion} - PETROQUIMICA DOW S.A. REF: ${refFinal} - PUERTO: ${bl.puerto_desembarque || "SAN ANTONIO"}`,
+      subject: `Provisión de Fondos - Despacho ${nro_operacion} - PETROQUIMICA DOW S.A. REF: ${refFinal} - PUERTO: ${bl.puerto_desembarque || (blRows.length === 0 ? "LOS ANDES" : "SAN ANTONIO")}`,
       html: `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
   <p>Estimados,</p>
@@ -245,8 +245,8 @@ export async function POST(request: Request) {
 
   ${seguimientoHtml}
 
-  <h3 style="margin-top:20px;">Tracking en Vivo</h3>
-  <p><a href="https://agatrack.com/tracking/${nro_operacion}" target="_blank" style="color:#2563eb;text-decoration:underline;">Ver tracking interactivo del embarque →</a></p>
+  ${blMaster ? `<h3 style="margin-top:20px;">Tracking en Vivo</h3>
+  <p><a href="https://agatrack.com/tracking/${nro_operacion}" target="_blank" style="color:#2563eb;text-decoration:underline;">Ver tracking interactivo del embarque →</a></p>` : ""}
 
   <p style="margin-top:20px;color:#666;font-size:12px;">Referencia: ${refFinal} | Operación: ${nro_operacion}</p>
   <p style="color:#666;font-size:12px;">Agencia de Aduanas Fernando Guerra y Cía. Ltda.</p>
