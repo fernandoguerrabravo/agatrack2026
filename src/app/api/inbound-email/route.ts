@@ -171,8 +171,8 @@ async function processInboundEmail(
     const archivos: Array<{ filename: string; buffer: Buffer; contentType: string; storageUrl: string }> = [];
     for (const att of attachments) {
       const { filename, content_type, download_url } = att;
-      if (!content_type?.match(/pdf|image/i)) {
-        console.log(`[inbound] Ignorando ${filename} (${content_type})`);
+      if (!content_type?.match(/pdf/i)) {
+        console.log(`[inbound] Ignorando ${filename} (${content_type}) - solo se procesan PDFs`);
         continue;
       }
       const fileRes = await fetch(download_url);
