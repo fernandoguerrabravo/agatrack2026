@@ -32,6 +32,8 @@ const CONTACTOS_PETROQUIMICA = [
   "sai@agenciaguerra.com",
   "sanantonio@agenciaguerra.com",
   "josue@agenciaguerra.com",
+  "jgonzalez@agenciaguerra.com",
+  "valparaiso@agenciaguerra.com",
   "fguerrab@agenciaguerra.com",
 ];
 
