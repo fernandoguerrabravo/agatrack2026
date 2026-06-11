@@ -1016,8 +1016,7 @@ async function confeccionarDINTerrestre(
 
   let itemIndex = 0;
   for (const item of items) {
-    const fHtml = await aduananetGet(mercFormUrl);
-    const mf = extractFields(fHtml);
+    // Obtener datos de arancel/descriptor via HTTP
     const codigoProd = String(item.codigo_material || item.codigo_producto || "");
     const cookies = await aduananetLogin();
     const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=2710`, { headers: { Cookie: cookies } })).text();
@@ -1037,44 +1036,96 @@ async function confeccionarDINTerrestre(
     const totalNetoItem = Number(invoice.monto_total) / items.length;
     const cantidadRaw = String(item.peso_neto || item.cantidad_kg || item.cantidad || "0");
     const cantidad = parseFloat(cantidadRaw.replace(/[^0-9.,]/g, "").replace(",", "")) || 0;
-    const cifNeto = parseFloat(mf.cif_neto) || 1;
-    const fobTotal = parseFloat(mf.dus_total_valor_fob) || fobValue;
+    const cantStr = Math.round(cantidad).toString().padStart(8, "0");
+
+    // Navegar al formulario de mercancía en Puppeteer
+    await page.goto(mercFormUrl, { waitUntil: "networkidle0" });
+
+    // Leer valores precargados
+    const cifNeto = await page.evaluate(() => parseFloat((document as unknown as { frm: Record<string, HTMLInputElement> }).frm.cif_neto?.value) || 1);
+    const fobTotal = await page.evaluate(() => parseFloat((document as unknown as { frm: Record<string, HTMLInputElement> }).frm.dus_total_valor_fob?.value) || 0) || fobValue;
     const merCif = (totalNetoItem * cifNeto).toFixed(2);
     const merFob = cantidad > 0 ? ((totalNetoItem / Number(invoice.monto_total)) * fobTotal / cantidad).toFixed(6) : "0.000000";
     const ivaMonto = (parseFloat(merCif) * 19 / 100).toFixed(2);
-    const cantStr = Math.round(cantidad).toString().padStart(8, "0");
 
-    mf.linea = ""; mf.mer_producto = `${dscCod}@#~2710`; mf.mer_producto1 = codigoProd;
-    mf.descripcion_corta = "";
-    mf.mer_cod_arancel = dscPartida; mf.mer_cod_arancel_tratado = codAranTratado;
-    mf.mer_nro_correlativo_arancel = sel ? (sel[4] || "") : "";
-    mf.mer_nro_acuerdo_comercial = nroAcuerdo; mf.lmer_nro_acuerdo_comercial = nroAcuerdo;
-    mf.mer_sujeto_cupo = "0"; mf.mer_nombre = merNombre;
-    mf.ume_id = "6"; mf.lume_id = "6";
-    mf.mer_cantidad = cantidad.toFixed(4); mf.mer_cantidad_mercancia_um = "0.000000";
-    mf.mer_fob_unitario = merFob;
-    mf.mer_valor_cif_item = merCif; mf.mer_total_neto = totalNetoItem.toFixed(6);
     // Deducción tramo nacional: solo primer item
-    if (itemIndex === 0 && deduccionTramoNacional > 0) {
-      mf.mer_monto_ajuste_item = deduccionTramoNacional.toFixed(2);
-      mf.mer_sig_ajuste = "-";
-      // Observación código 09: DEDUCT. TRAMO NACIONAL
-      mf.mer_cod_obs2 = "09";
-      mf.lmer_cod_obs2 = "09";
-      mf.mer_obs2 = "DEDUCT. TRAMO NACIONAL";
-    } else {
-      mf.mer_monto_ajuste_item = "0.00";
-      mf.mer_sig_ajuste = "+";
+    const ajusteMonto = (itemIndex === 0 && deduccionTramoNacional > 0) ? deduccionTramoNacional.toFixed(2) : "0.00";
+    const ajusteSigno = (itemIndex === 0 && deduccionTramoNacional > 0) ? "-" : "+";
+    const codObs2 = (itemIndex === 0 && deduccionTramoNacional > 0) ? "09" : "";
+    const obs2 = (itemIndex === 0 && deduccionTramoNacional > 0) ? "DEDUCT. TRAMO NACIONAL" : "";
+
+    // Llenar campos via evaluate
+    await page.evaluate((data: Record<string, string>) => {
+      const frm = (document as unknown as { frm: Record<string, HTMLInputElement | HTMLSelectElement> }).frm;
+      frm.linea.value = "";
+      frm.mer_producto.value = data.merProducto;
+      frm.mer_producto1.value = data.codigoProd;
+      if (frm.descripcion_corta) frm.descripcion_corta.value = "";
+      frm.mer_cod_arancel.value = data.dscPartida;
+      frm.mer_cod_arancel_tratado.value = data.codAranTratado;
+      if (frm.mer_nro_correlativo_arancel) frm.mer_nro_correlativo_arancel.value = data.correlativo;
+      frm.mer_nro_acuerdo_comercial.value = data.nroAcuerdo;
+      if (frm.lmer_nro_acuerdo_comercial) frm.lmer_nro_acuerdo_comercial.value = data.nroAcuerdo;
+      frm.mer_sujeto_cupo.value = "0";
+      frm.mer_nombre.value = data.merNombre;
+      frm.ume_id.value = "6";
+      if (frm.lume_id) (frm.lume_id as HTMLSelectElement).value = "6";
+      frm.mer_cantidad.value = data.cantidad;
+      frm.mer_cantidad_mercancia_um.value = "0.000000";
+      frm.mer_fob_unitario.value = data.merFob;
+      frm.mer_valor_cif_item.value = data.merCif;
+      frm.mer_total_neto.value = data.totalNeto;
+      frm.mer_monto_ajuste_item.value = data.ajusteMonto;
+      frm.mer_sig_ajuste.value = data.ajusteSigno;
+      frm.mer_porc_advalorem.value = data.advalorem;
+      frm.mer_cuenta_advalorem.value = "223";
+      frm.mer_mto_cta_advalorem.value = "0.00";
+      frm.mer_cod_obs1.value = "99";
+      if (frm.lmer_cod_obs1) frm.lmer_cod_obs1.value = "99";
+      frm.mer_obs1.value = data.obs1;
+      // Obs2: DEDUCT. TRAMO NACIONAL (solo primer item)
+      frm.mer_cod_obs2.value = data.codObs2;
+      if (frm.lmer_cod_obs2) frm.lmer_cod_obs2.value = data.codObs2;
+      frm.mer_obs2.value = data.obs2;
+      frm.mer_porc_otro1.value = "19.000";
+      frm.mer_cod_otro1.value = "178";
+      frm.mer_signo_otro1.value = "+";
+      frm.mer_monto_impto_otro1.value = data.ivaMonto;
+      frm.mer_porc_otro2.value = "0.000"; frm.mer_cod_otro2.value = ""; frm.mer_monto_impto_otro2.value = "0.00";
+      frm.mer_cod_obs3.value = ""; frm.mer_obs3.value = "";
+      frm.mer_porc_otro3.value = "0.000"; frm.mer_cod_otro3.value = ""; frm.mer_monto_impto_otro3.value = "0.00";
+      frm.mer_porc_otro4.value = "0.000"; frm.mer_cod_otro4.value = ""; frm.mer_monto_impto_otro4.value = "0.00"; frm.mer_cod_obs4.value = "";
+      frm.mer_nro_item.value = "";
+      frm.comando.value = "U";
+    }, {
+      merProducto: `${dscCod}@#~2710`, codigoProd, dscPartida, codAranTratado,
+      correlativo: sel ? (sel[4] || "") : "", nroAcuerdo, merNombre,
+      cantidad: cantidad.toFixed(4), merFob, merCif,
+      totalNeto: totalNetoItem.toFixed(6), advalorem,
+      obs1: `${cantStr}.000000 KG`, ivaMonto,
+      ajusteMonto, ajusteSigno, codObs2, obs2,
+    });
+
+    // Click "Cálculo de Derechos" (TraeCuenta) — popup
+    const popupPromise = new Promise<import("puppeteer").Page | null>(resolve => {
+      browser.once("targetcreated", async target => { resolve(await target.page()); });
+      setTimeout(() => resolve(null), 10000);
+    });
+    await page.evaluate(() => { (window as unknown as Record<string, () => void>).TraeCuenta(); });
+    const popupPage = await popupPromise;
+    if (popupPage) {
+      await popupPage.waitForSelector("body", { timeout: 5000 }).catch(() => {});
+      await new Promise(r => setTimeout(r, 2000));
+      const aceptarBtn = await popupPage.$('input[value="Aceptar"]') || await popupPage.$('input[type="button"]');
+      if (aceptarBtn) await aceptarBtn.click();
+      await new Promise(r => setTimeout(r, 1000));
+      await popupPage.close().catch(() => {});
     }
-    mf.mer_porc_advalorem = advalorem; mf.mer_cuenta_advalorem = "223"; mf.mer_mto_cta_advalorem = "0.00";
-    mf.mer_cod_obs1 = "99"; mf.lmer_cod_obs1 = "99"; mf.mer_obs1 = `${cantStr}.000000 KG`;
-    mf.mer_porc_otro1 = "19.000"; mf.mer_cod_otro1 = "178"; mf.mer_signo_otro1 = "+"; mf.mer_monto_impto_otro1 = ivaMonto;
-    mf.mer_cod_obs2 = ""; mf.mer_obs2 = ""; mf.mer_porc_otro2 = "0.000"; mf.mer_cod_otro2 = ""; mf.mer_monto_impto_otro2 = "0.00";
-    mf.mer_cod_obs3 = ""; mf.mer_obs3 = ""; mf.mer_porc_otro3 = "0.000"; mf.mer_cod_otro3 = ""; mf.mer_monto_impto_otro3 = "0.00";
-    mf.mer_porc_otro4 = "0.000"; mf.mer_cod_otro4 = ""; mf.mer_monto_impto_otro4 = "0.00"; mf.mer_cod_obs4 = "";
-    mf.mer_nro_item = ""; mf.comando = "U";
-    const mercRes = await postForm(mercUrl, mf, mercFormUrl);
-    console.log(`[confeccionar-terrestre] Mercancía item POST: status=${mercRes.status} cod=${codigoProd} arancel=${dscPartida} cantidad=${cantidad} cif=${merCif} ajuste=${itemIndex === 0 ? "-" + deduccionTramoNacional : "0"}`);
+
+    // Grabar Mercadería
+    await page.evaluate(() => { (document as unknown as { frm: HTMLFormElement }).frm.submit(); });
+    await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+    console.log(`[confeccionar-terrestre] Mercancía item: cod=${codigoProd} arancel=${dscPartida} cantidad=${cantidad} cif=${merCif} ajuste=${ajusteSigno}${ajusteMonto}`);
     itemIndex++;
   }
   resultado.mercancia = `${items.length} items, deducción tramo nacional=${deduccionTramoNacional}`;
