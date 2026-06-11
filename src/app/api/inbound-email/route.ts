@@ -230,6 +230,17 @@ async function processInboundEmail(
       referencia = String(d.customer_order_number || d.internal_document_number || d.orden || d.our_reference || d.orden_compra || d.po_number || d.numero_factura || "");
     }
 
+    // Fallback: buscar referencia en la Lista de Empaque (terrestres)
+    if (!referencia) {
+      const plDoc = processedDocs.find(d => d.tipo === "Lista de Empaque (Packing List)");
+      if (plDoc) {
+        const d = plDoc.datos;
+        const orderRaw = String(d.order_number || d.customer_order_number || d.internal_document_number || d.orden || d.shipment_number || d.referencia || "");
+        // Solo los primeros 10 dígitos (terrestres: "4010521492 / 000001" → "4010521492")
+        referencia = orderRaw.replace(/\s*\/.*$/, "").trim().substring(0, 10);
+      }
+    }
+
     // Validar documentos mínimos: BL (o CRT) + Factura
     const tieneTransporte = processedDocs.some(d => d.tipo === "Bill of Lading (BL)" || d.tipo === "Carta de Porte Internacional (CRT)" || d.tipo === "MIC/DTA");
     const tieneFactura = processedDocs.some(d => d.tipo === "Invoice (Factura Comercial)");

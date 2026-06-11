@@ -129,10 +129,11 @@ export default function CustomerServicesPanel() {
     const update = (u: Partial<ProcesoEnCurso>) => setProcesos(prev => prev.map(p => p.id === procesoId ? { ...p, ...u } : p));
 
     try {
-      // PASO 1: Subir la factura primero para obtener la referencia (customer_order_number)
-      // Identificar la factura por nombre (invoice, factura, inv) o subir la primera
+      // PASO 1: Subir la factura o packing list primero para obtener la referencia
+      // Identificar la factura por nombre (invoice, factura, inv) o packing list
       const invoiceIdx = files.findIndex(f => /invoice|factura|inv/i.test(f.name));
-      const firstFile = invoiceIdx >= 0 ? files[invoiceIdx] : files[0];
+      const packingIdx = files.findIndex(f => /packing|empaque|lista/i.test(f.name));
+      const firstFile = invoiceIdx >= 0 ? files[invoiceIdx] : (packingIdx >= 0 ? files[packingIdx] : files[0]);
 
       update({ estado: "leyendo", progreso: `Leyendo ${firstFile.name} para obtener referencia...` });
 
@@ -155,7 +156,17 @@ export default function CustomerServicesPanel() {
       const datosObj = typeof datos === "string" ? JSON.parse(datos) : datos;
 
       // Extraer referencia: internal_document_number, customer_order_number, orden, etc.
-      const referencia = datosObj?.customer_order_number || datosObj?.internal_document_number || datosObj?.orden || datosObj?.our_reference || datosObj?.orden_compra || datosObj?.po_number || datosObj?.numero_factura || "";
+      let referencia = datosObj?.customer_order_number || datosObj?.internal_document_number || datosObj?.orden || datosObj?.our_reference || datosObj?.orden_compra || datosObj?.po_number || "";
+      
+      // Para terrestres: referencia viene del order_number del packing list (10 dígitos)
+      if (!referencia && datosObj?.order_number) {
+        referencia = String(datosObj.order_number).replace(/\s*\/.*$/, "").trim().substring(0, 10);
+      }
+      
+      // Último fallback: numero_factura
+      if (!referencia) {
+        referencia = datosObj?.numero_factura || ""
+      }
 
       if (!referencia) {
         update({ estado: "error", progreso: "No se encontró referencia (Customer Order Number) en el documento." });
@@ -198,7 +209,8 @@ export default function CustomerServicesPanel() {
       update({ subidos });
 
       // PASO 4: Subir el resto de documentos
-      const restantes = files.filter((_, i) => i !== (invoiceIdx >= 0 ? invoiceIdx : 0));
+      const firstIdx = invoiceIdx >= 0 ? invoiceIdx : (packingIdx >= 0 ? packingIdx : 0);
+      const restantes = files.filter((_, i) => i !== firstIdx);
       for (const archivo of restantes) {
         update({ progreso: `Op. ${nroOp} — ${archivo.name} (${subidos + 1}/${files.length})`, subidos });
         const formData = new FormData();
