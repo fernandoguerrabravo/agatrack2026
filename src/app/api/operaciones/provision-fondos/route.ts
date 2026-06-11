@@ -202,7 +202,7 @@ export async function POST(request: Request) {
       from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
       to: toListProv,
       cc: ejecutivosCCProv.filter(e => !toListProv.includes(e)).length > 0 ? ejecutivosCCProv.filter(e => !toListProv.includes(e)) : undefined,
-      subject: `Provisión de Fondos - Despacho ${nro_operacion} - PETROQUIMICA DOW S.A. REF: ${referencia}`,
+      subject: `Provisión de Fondos - Despacho ${nro_operacion} - PETROQUIMICA DOW S.A. REF: ${referencia} - PUERTO: ${bl.puerto_desembarque || "SAN ANTONIO"}`,
       html: `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
   <p>Estimados,</p>

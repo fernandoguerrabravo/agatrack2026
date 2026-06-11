@@ -53,12 +53,48 @@ export async function POST(request: Request) {
       nro_aceptacion: ap.nro_aceptacion || "",
       fecha_aceptacion: ap.fecha_aceptacion ? new Date(ap.fecha_aceptacion).toLocaleDateString("es-CL") : "",
     });
-    await pgQuery(
+    const updated = await pgQuery<{ rut_cliente: string; notas: string }>(
       `UPDATE operaciones SET estado = 'aprobada', fecha_cierre = NOW(), updated_at = NOW(),
        notas = COALESCE(notas, '') || $1
-       WHERE nro_operacion = $2 AND estado != 'aprobada'`,
+       WHERE nro_operacion = $2 AND estado != 'aprobada' RETURNING rut_cliente, notas`,
       [`\nAprobada (replica): ${ap.nro_aceptacion}`, ap.despacho]
     );
+
+    // Si se actualizó (no era ya aprobada), enviar correo + provisión
+    if (updated.length > 0) {
+      const rutCliente = updated[0].rut_cliente || "";
+      const notas = updated[0].notas || "";
+      const refMatch = notas.match(/ref:\s*([^\s|\n]+)/i);
+      const referencia = refMatch ? refMatch[1] : "";
+      const fecha = ap.fecha_aceptacion ? new Date(ap.fecha_aceptacion).toLocaleDateString("es-CL") : "";
+
+      // Enviar correo aprobación
+      try {
+        const { Resend } = await import("resend");
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const { emailsEjecutivosCliente } = await import("@/lib/permisos");
+        const ccEmails = await emailsEjecutivosCliente(rutCliente);
+
+        await resend.emails.send({
+          from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
+          to: ["oscar@agenciaguerra.com", "pbalmaceda@agenciaguerra.com", "daviles@agenciaguerra.com", "transmision@agenciaguerra.com", "comercial@agenciaguerra.com", "fguerrab@agenciaguerra.com"],
+          cc: ccEmails.length > 0 ? ccEmails : undefined,
+          subject: `✅ Despacho Aprobado ${ap.despacho} - Aceptación: ${ap.nro_aceptacion} - ${fecha}${referencia ? " - REF: " + referencia : ""}`,
+          html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;"><p>Estimados,</p><p>El despacho <b>${ap.despacho}</b> ha sido <span style="color:#16a34a;font-weight:bold;">APROBADO</span>.</p><table style="border-collapse:collapse;margin:16px 0;width:100%;max-width:600px;"><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">N° Despacho</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#2563eb;">${ap.despacho}</td></tr><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">N° Aceptación</td><td style="padding:8px 12px;border:1px solid #ddd;">${ap.nro_aceptacion}</td></tr><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Fecha</td><td style="padding:8px 12px;border:1px solid #ddd;">${fecha}</td></tr>${referencia ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Referencia</td><td style="padding:8px 12px;border:1px solid #ddd;">${referencia}</td></tr>` : ""}</table><p style="color:#666;font-size:12px;">Notificación automática de AgaTrack.</p></div>`,
+        });
+      } catch (emailErr) {
+        console.error("[verificar] Error email aprobación:", emailErr instanceof Error ? emailErr.message : emailErr);
+      }
+
+      // Auto-provisión para Petroquímica
+      if (rutCliente === "92933000-5") {
+        fetch(`http://localhost:${process.env.PORT || 3000}/api/operaciones/provision-fondos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-inbound-secret": process.env.INBOUND_SECRET || "" },
+          body: JSON.stringify({ nro_operacion: ap.despacho }),
+        }).catch(err => console.error("[verificar] Error auto-provisión:", err));
+      }
+    }
   }
 
   // Luego verificar en AduanaNet las que no se encontraron en replica
