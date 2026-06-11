@@ -840,14 +840,30 @@ async function confeccionarDINTerrestre(
   df.din_manifiesto1 = "ENVIOS PARCIALES";
   df.din_fec_manifiesto = "";
 
-  // Documento de transporte = CRT (numero_crt)
-  const numeroCrt = String(crt?.numero_crt || mic?.numero_carta_porte || "");
+  // Documento de transporte = CRT (numero_crt) o MIC (numero_mic_dta / numero_carta_porte_crt)
+  const numeroCrt = String(
+    crt?.numero_crt || 
+    mic?.numero_carta_porte_crt || 
+    (mic?.datos_crt_adjunto as Record<string, unknown>)?.numero_crt || 
+    mic?.numero_carta_porte || 
+    mic?.numero_mic_dta || 
+    ""
+  );
   df.din_nro_docto_transp = numeroCrt;
 
   // Fecha del CRT
-  const fechaCrtRaw = String(crt?.fecha_emision || "");
+  const fechaCrtRaw = String(
+    crt?.fecha_emision || 
+    (mic?.datos_crt_adjunto as Record<string, unknown>)?.lugar_fecha_porteador ||
+    mic?.fecha_emision || 
+    ""
+  );
+  // Extraer fecha del formato "Bahia Blanca - ARGENTINA - 10-06-2026" o directo
   let fechaDocto = "";
-  if (fechaCrtRaw) {
+  const fechaFromString = fechaCrtRaw.match(/(\d{2})-(\d{2})-(\d{4})/);
+  if (fechaFromString) {
+    fechaDocto = `${fechaFromString[1]}/${fechaFromString[2]}/${fechaFromString[3]}`;
+  } else if (fechaCrtRaw) {
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(fechaCrtRaw)) {
       fechaDocto = fechaCrtRaw;
     } else if (/^\d{4}-\d{2}-\d{2}$/.test(fechaCrtRaw)) {
