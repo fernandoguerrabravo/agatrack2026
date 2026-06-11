@@ -430,7 +430,23 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   // ── MÓDULO 6: MERCANCÍA (via Puppeteer — ejecuta TraeCuenta popup por cada item) ──
   const mercUrl = `${BASE_URL}/modulos/din/dus_encabezado/din_mercancia.php`;
   const mercFormUrl = `${mercUrl}?lib_base=1&lib_nid=${nroOperacion}&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0`;
-  const items = (invoice.items || []) as Array<Record<string, unknown>>;
+  const rawItems = (invoice.items || []) as Array<Record<string, unknown>>;
+
+  // Consolidar items con mismo código de producto (sumar cantidades y montos)
+  const itemMap = new Map<string, Record<string, unknown>>();
+  for (const item of rawItems) {
+    const code = String(item.codigo_material || item.codigo_producto || "UNKNOWN");
+    if (itemMap.has(code)) {
+      const existing = itemMap.get(code)!;
+      existing.peso_neto = Number(existing.peso_neto || 0) + Number(item.peso_neto || item.cantidad_kg || item.cantidad || 0);
+      existing.cantidad = Number(existing.cantidad || 0) + Number(item.cantidad || 0);
+      existing.monto = Number(existing.monto || 0) + Number(item.monto || item.total || 0);
+      existing.peso_bruto = Number(existing.peso_bruto || 0) + Number(item.peso_bruto || 0);
+    } else {
+      itemMap.set(code, { ...item, peso_neto: Number(item.peso_neto || item.cantidad_kg || item.cantidad || 0), monto: Number(item.monto || item.total || 0) });
+    }
+  }
+  const items = Array.from(itemMap.values());
 
   // Eliminar items existentes via POST
   const mercCheck = await aduananetGet(mercFormUrl);
@@ -963,7 +979,23 @@ async function confeccionarDINTerrestre(
   const mercFormUrl = `${mercUrl}?lib_base=1&lib_nid=${nroOperacion}&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0`;
   // Filter out FREIGHT items from invoice items for terrestrial
   const allItems = (invoice.items || []) as Array<Record<string, unknown>>;
-  const items = allItems.filter(item => !/^FREIGHT$/i.test(String(item.descripcion || "")));
+  const filteredItems = allItems.filter(item => !/^FREIGHT$/i.test(String(item.descripcion || "")));
+
+  // Consolidar items con mismo código de producto (sumar cantidades y montos)
+  const itemMapT = new Map<string, Record<string, unknown>>();
+  for (const item of filteredItems) {
+    const code = String(item.codigo_material || item.codigo_producto || "UNKNOWN");
+    if (itemMapT.has(code)) {
+      const existing = itemMapT.get(code)!;
+      existing.peso_neto = Number(existing.peso_neto || 0) + Number(item.peso_neto || item.cantidad_kg || item.cantidad || 0);
+      existing.cantidad = Number(existing.cantidad || 0) + Number(item.cantidad || 0);
+      existing.monto = Number(existing.monto || 0) + Number(item.monto || item.total || 0);
+      existing.peso_bruto = Number(existing.peso_bruto || 0) + Number(item.peso_bruto || 0);
+    } else {
+      itemMapT.set(code, { ...item, peso_neto: Number(item.peso_neto || item.cantidad_kg || item.cantidad || 0), monto: Number(item.monto || item.total || 0) });
+    }
+  }
+  const items = Array.from(itemMapT.values());
 
   // Eliminar existentes
   const mercCheck = await aduananetGet(mercFormUrl);
