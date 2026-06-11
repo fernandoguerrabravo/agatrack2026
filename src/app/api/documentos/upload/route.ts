@@ -28,6 +28,7 @@ const TIPOS_DOCUMENTO = [
   "Lista de Empaque (Packing List)",
   "Ficha Técnica",
   "Ficha de Seguridad",
+  "Instrucciones",
   "Certificado de Origen",
   "Certificado Fitosanitario",
   "Certificado de Calidad",
@@ -108,6 +109,7 @@ INSTRUCCIONES IMPORTANTES:
    - "Carta de Porte Internacional (CRT)": documentos titulados "CARTA DE PORTE INTERNACIONAL", "CRT", "CARTA DE PORTE POR CARRETERA", "CONOCIMIENTO DE TRANSPORTE TERRESTRE", o documentos de transporte terrestre que mencionan camión/tractor, placa de camión, conductor, ruta terrestre. Si ves campos como "Camión/Tractor", "Placa Patente", "Conductor", "País de partida" con rutas terrestres → es CRT.
    - "MIC/DTA": documentos titulados "MIC/DTA", "MANIFIESTO INTERNACIONAL DE CARGA", "Manifiesto Internacional de Carga por Carretera", "Declaracion de Transito Aduanero", "MIC", "DTA". Si ves "MIC/DTA" en el encabezado o "Tránsito Aduanero" → clasificar como "MIC/DTA". OJO: MIC/DTA y CRT suelen venir juntos — el MIC/DTA es el manifiesto de tránsito aduanero y el CRT es la carta de porte comercial.
    - "Invoice (Factura Comercial)": "COMMERCIAL INVOICE", "FACTURA COMERCIAL", "INVOICE" con precios/valores.
+   - "Instrucciones": documentos titulados "INSTRUCCION", "INSTRUCCIONES", o memos/cartas de agentes (PSA, BDP, freight forwarders) dirigidas a la agencia de aduanas con datos de la operación como: Orden, Meridian, AWB/BL/CRT, Factura, GMID, Posición Arancelaria, Prima de Seguro, ETA, Tipo de operación. Si ves un formato de memo con "A:", "ATN:", "DE:", "REF:", "FECHA:" y listado de datos de importación → es "Instrucciones".
    IMPORTANTE: NO confundir Packing List con Invoice — el Packing List NO tiene precios, solo cantidades/pesos/bultos. NO confundir Certificado de Origen con otros certificados (fitosanitario, calidad). El tipo_documento debe coincidir EXACTAMENTE con uno de la lista permitida.
 2. Extrae ABSOLUTAMENTE TODOS los datos visibles: números, fechas, nombres, direcciones, montos, pesos, medidas, códigos
 3. Para BL: identifica CADA contenedor por separado con su número, sello, contenido detallado (pallets, bolsas, peso por contenedor, volumen, descripción de mercancía, HS code). NÚMERO DE CONTENEDOR - REGLA ABSOLUTA: Todo número de contenedor tiene EXACTAMENTE 4 letras seguidas de EXACTAMENTE 7 dígitos numéricos. Total: 11 caracteres. NUNCA puede tener 6 dígitos. Si lees solo 6 dígitos, HAY UN DÍGITO QUE NO ESTÁS VIENDO entre las letras y los números — mira con más cuidado el primer dígito después de las 4 letras. Ejemplo real: "MSCU5310319" — el "5" es el primer dígito después de "MSCU", NO lo omitas. Error común: leer "MSCU310319" (6 dígitos, INCORRECTO) cuando el correcto es "MSCU5310319" (7 dígitos). Otros ejemplos correctos: TCLU6223479, OERU4815696, MEDU4718562. No confundir 6↔8, 0↔O, 1↔I, 5↔S. Si hay una sección "per container" o "per cntr" al final del listado (común en BLs de MSC/Mediterranean Shipping Company), esos detalles (peso, volumen, pallets, descripción) aplican a CADA UNO de los contenedores listados arriba — replicar esos datos en cada contenedor del array. Indicar SIEMPRE el número de pallets por contenedor (campo "pallets") si aparece en el documento. Si dice "X PALLETS PER CONTAINER" o "X PLTS", ese es el número de pallets de cada contenedor.
@@ -642,6 +644,12 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           && tipoActual !== "MIC/DTA") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Carta de Porte Internacional (CRT)");
         analysis.tipo_documento = "Carta de Porte Internacional (CRT)";
+      } else
+      // Instrucciones — memo de agente con datos de operación
+      if (/INSTRUCCI[OÓ]N|ATN\s*:|GMID\s*:|POSICI[OÓ]N\s*ARANCELARIA|MERIDIAN\s*:|TIPO\s*DE\s*OPERACI[OÓ]N/.test(textoClasif)
+          && tipoActual !== "Instrucciones") {
+        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Instrucciones");
+        analysis.tipo_documento = "Instrucciones";
       } else
       // Bill of Lading — rescatar si la IA lo puso como "Otro" pero tiene keywords de BL (SOLO marítimo)
       if (/BILL\s*OF\s*LADING|B\/L\s*N|CONOCIMIENTO\s*DE\s*EMBARQUE|SEA\s*WAYBILL|SHIPPED\s*ON\s*BOARD|OCEAN\s*BILL/.test(textoClasif)
