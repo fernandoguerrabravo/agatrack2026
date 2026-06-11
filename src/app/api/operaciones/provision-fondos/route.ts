@@ -138,7 +138,21 @@ export async function POST(request: Request) {
     const blMaster = bl.mbl_shipsgo || bl.numero_bl_master || bl.numero_bl || "";
     const nave = bl.nave_corregida || bl.nave || "";
     const viaje = bl.viaje_corregido || bl.viaje || "";
-    const referencia = inv.customer_order_number || inv.our_reference || inv.numero_factura || "";
+    const referencia = inv.customer_order_number || inv.internal_document_number || inv.our_reference || inv.numero_factura || "";
+    
+    // Fallback: para terrestres la referencia viene del packing list
+    let refFinal = referencia;
+    if (!refFinal || refFinal === inv.numero_factura) {
+      const plRows = await pgQuery<{ datos_extraidos: string }>(
+        "SELECT datos_extraidos FROM documentos WHERE nro_operacion = $1 AND tipo_documento = 'Lista de Empaque (Packing List)' LIMIT 1",
+        [nro_operacion]
+      );
+      if (plRows.length > 0) {
+        const pl = typeof plRows[0].datos_extraidos === "string" ? JSON.parse(plRows[0].datos_extraidos) : plRows[0].datos_extraidos;
+        const plRef = String(pl.order_number || "").replace(/\s*\/.*$/, "").trim().substring(0, 10);
+        if (plRef && plRef.length >= 8) refFinal = plRef;
+      }
+    }
     const contenedores = bl.contenedores || [];
     const items = inv.items || [];
 
@@ -202,7 +216,7 @@ export async function POST(request: Request) {
       from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
       to: toListProv,
       cc: ejecutivosCCProv.filter(e => !toListProv.includes(e)).length > 0 ? ejecutivosCCProv.filter(e => !toListProv.includes(e)) : undefined,
-      subject: `Provisión de Fondos - Despacho ${nro_operacion} - PETROQUIMICA DOW S.A. REF: ${referencia} - PUERTO: ${bl.puerto_desembarque || "SAN ANTONIO"}`,
+      subject: `Provisión de Fondos - Despacho ${nro_operacion} - PETROQUIMICA DOW S.A. REF: ${refFinal} - PUERTO: ${bl.puerto_desembarque || "SAN ANTONIO"}`,
       html: `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
   <p>Estimados,</p>
@@ -235,7 +249,7 @@ export async function POST(request: Request) {
   <h3 style="margin-top:20px;">Tracking en Vivo</h3>
   <p><a href="https://agatrack.com/tracking/${nro_operacion}" target="_blank" style="color:#2563eb;text-decoration:underline;">Ver tracking interactivo del embarque →</a></p>
 
-  <p style="margin-top:20px;color:#666;font-size:12px;">Referencia: ${referencia} | Operación: ${nro_operacion}</p>
+  <p style="margin-top:20px;color:#666;font-size:12px;">Referencia: ${refFinal} | Operación: ${nro_operacion}</p>
   <p style="color:#666;font-size:12px;">Agencia de Aduanas Fernando Guerra y Cía. Ltda.</p>
 </div>`,
       attachments: [
