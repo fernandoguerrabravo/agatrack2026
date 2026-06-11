@@ -438,12 +438,12 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     const code = String(item.codigo_material || item.codigo_producto || "UNKNOWN");
     if (itemMap.has(code)) {
       const existing = itemMap.get(code)!;
-      existing.peso_neto = Number(existing.peso_neto || 0) + Number(item.peso_neto || item.cantidad_kg || item.cantidad || 0);
+      existing.peso_neto = Number(existing.peso_neto || 0) + Number(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || 0);
       existing.cantidad = Number(existing.cantidad || 0) + Number(item.cantidad || 0);
       existing.monto = Number(existing.monto || 0) + Number(item.monto || item.total || 0);
       existing.peso_bruto = Number(existing.peso_bruto || 0) + Number(item.peso_bruto || 0);
     } else {
-      itemMap.set(code, { ...item, peso_neto: Number(item.peso_neto || item.cantidad_kg || item.cantidad || 0), monto: Number(item.monto || item.total || 0) });
+      itemMap.set(code, { ...item, peso_neto: Number(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || 0), monto: Number(item.monto || item.total || 0) });
     }
   }
   const items = Array.from(itemMap.values());
@@ -475,7 +475,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     const nroAcuerdo = sel ? sel[3] : "";
 
     const totalNetoItem = Number(invoice.monto_total) / items.length;
-    const cantidadRaw = String(item.peso_neto || item.cantidad_kg || item.cantidad || "0");
+    const cantidadRaw = String(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || "0");
     const cantidad = parseFloat(cantidadRaw.replace(/[^0-9.,]/g, "").replace(",", "")) || 0;
     const cantStr = Math.round(cantidad).toString().padStart(8, "0");
 
@@ -987,12 +987,12 @@ async function confeccionarDINTerrestre(
     const code = String(item.codigo_material || item.codigo_producto || "UNKNOWN");
     if (itemMapT.has(code)) {
       const existing = itemMapT.get(code)!;
-      existing.peso_neto = Number(existing.peso_neto || 0) + Number(item.peso_neto || item.cantidad_kg || item.cantidad || 0);
+      existing.peso_neto = Number(existing.peso_neto || 0) + Number(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || 0);
       existing.cantidad = Number(existing.cantidad || 0) + Number(item.cantidad || 0);
       existing.monto = Number(existing.monto || 0) + Number(item.monto || item.total || 0);
       existing.peso_bruto = Number(existing.peso_bruto || 0) + Number(item.peso_bruto || 0);
     } else {
-      itemMapT.set(code, { ...item, peso_neto: Number(item.peso_neto || item.cantidad_kg || item.cantidad || 0), monto: Number(item.monto || item.total || 0) });
+      itemMapT.set(code, { ...item, peso_neto: Number(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || 0), monto: Number(item.monto || item.total || 0) });
     }
   }
   const items = Array.from(itemMapT.values());
@@ -1066,7 +1066,7 @@ async function confeccionarDINTerrestre(
 
     // Valor total item = monto total CPT (incluye flete) / cantidad de items producto
     const totalNetoItem = Number(invoice.monto_total) / items.length;
-    const cantidadRaw = String(item.peso_neto || item.cantidad_kg || item.cantidad || "0");
+    const cantidadRaw = String(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || "0");
     const cantidad = parseFloat(cantidadRaw.replace(/[^0-9.,]/g, "").replace(",", "")) || 0;
     const cantStr = Math.round(cantidad).toString().padStart(8, "0");
 
