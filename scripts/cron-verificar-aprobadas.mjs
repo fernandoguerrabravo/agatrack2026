@@ -45,17 +45,62 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
     return;
   }
 
-  // Actualizar estado
+  // Actualizar estado y enviar notificación
   let actualizadas = 0;
   for (const ap of aprobadas) {
     const fecha = ap.fecha_aceptacion ? new Date(ap.fecha_aceptacion).toLocaleDateString("es-CL") : "";
-    await pool.query(
+    const updated = await pool.query(
       `UPDATE operaciones SET estado = 'aprobada', fecha_cierre = NOW(), updated_at = NOW(),
        notas = COALESCE(notas, '') || $1
-       WHERE nro_operacion = $2 AND estado != 'aprobada'`,
+       WHERE nro_operacion = $2 AND estado != 'aprobada' RETURNING rut_cliente, notas`,
       [`\nAprobada (replica): ${ap.nro_aceptacion} (${fecha})`, ap.despacho]
     );
-    actualizadas++;
+    if (updated.rowCount > 0) {
+      actualizadas++;
+      // Enviar correo de notificación de aprobación
+      try {
+        const rutCliente = updated.rows[0]?.rut_cliente || "";
+        const notas = updated.rows[0]?.notas || "";
+        const refMatch = notas.match(/ref:\s*([^\s|\n]+)/i);
+        const referencia = refMatch ? refMatch[1] : "";
+        
+        // Obtener ejecutivos asignados
+        const ejecutivos = await pool.query(
+          "SELECT u.email FROM usuarios u INNER JOIN asignaciones_ejecutivo a ON u.rut = a.rut_ejecutivo WHERE a.rut_cliente = $1 AND u.email IS NOT NULL",
+          [rutCliente]
+        );
+        const ccEmails = ejecutivos.rows.map(r => r.email).filter(Boolean);
+
+        const { Resend } = await import("resend");
+        const resend = new Resend(get("RESEND_API_KEY"));
+        await resend.emails.send({
+          from: get("RESEND_FROM") || "AgaTrack <reportes@agatrack.com>",
+          to: [
+            "BARomanini@dow.com", "HZachariotto@dow.com", "LNuez@dow.com", "MLIbarraRocha@dow.com",
+            "jfernandez@agenciaguerra.com", "losandes@agenciaguerra.com", "hector@agenciaguerra.com",
+            "boris@agenciaguerra.com", "bdpcl.dow@bdpint.com", "isabel.riveros@psabdp.com",
+            "roberto.santibanez@psabdp.com", "sara.arcos@psabdp.com",
+            "bastian.monsalve@agenciaguerra.com", "ehenriquez@agenciaguerra.com", "fguerrab@agenciaguerra.com",
+          ],
+          cc: ccEmails.length > 0 ? ccEmails : undefined,
+          subject: `✅ Despacho Aprobado ${ap.despacho} - Aceptación: ${ap.nro_aceptacion} - ${fecha}${referencia ? " - REF: " + referencia : ""}`,
+          html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
+  <p>Estimados,</p>
+  <p>El despacho <b>${ap.despacho}</b> ha sido <span style="color:#16a34a;font-weight:bold;">APROBADO</span>.</p>
+  <table style="border-collapse:collapse;margin:16px 0;width:100%;max-width:600px;">
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;width:180px;">N° Despacho</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#2563eb;">${ap.despacho}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">N° Aceptación</td><td style="padding:8px 12px;border:1px solid #ddd;">${ap.nro_aceptacion}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Fecha Aceptación</td><td style="padding:8px 12px;border:1px solid #ddd;">${fecha}</td></tr>
+    ${referencia ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Referencia</td><td style="padding:8px 12px;border:1px solid #ddd;">${referencia}</td></tr>` : ""}
+  </table>
+  <p style="color:#666;font-size:12px;margin-top:20px;">Notificación automática de AgaTrack.</p>
+</div>`,
+        });
+        console.log(`[${new Date().toISOString()}] Email aprobación enviado para ${ap.despacho}`);
+      } catch (emailErr) {
+        console.error(`[${new Date().toISOString()}] Error email aprobación ${ap.despacho}:`, emailErr.message || emailErr);
+      }
+    }
   }
 
   if (actualizadas > 0) {
