@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { aduananetLogin } from "@/lib/aduananet";
-import { clientesVisibles } from "@/lib/permisos";
+import { clientesVisibles, emailsEjecutivosCliente } from "@/lib/permisos";
 import { pgQuery } from "@/lib/postgres";
 import { Resend } from "resend";
 
@@ -210,9 +210,11 @@ export async function POST(request: Request) {
           "ehenriquez@agenciaguerra.com",
           "fguerrab@agenciaguerra.com",
         ];
+        const ejecutivosCC = rut_cliente ? await emailsEjecutivosCliente(rut_cliente) : [];
         await resend.emails.send({
           from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
           to: CONTACTOS_PROVISION,
+          cc: ejecutivosCC.filter(e => !CONTACTOS_PROVISION.includes(e)).length > 0 ? ejecutivosCC.filter(e => !CONTACTOS_PROVISION.includes(e)) : undefined,
           subject: `Nuevo Despacho ${nroOperacion} - REF: ${referencia || "S/R"}`,
           html: `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">

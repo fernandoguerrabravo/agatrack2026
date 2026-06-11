@@ -4,6 +4,7 @@ import { pgQuery } from "@/lib/postgres";
 import { aduananetLogin } from "@/lib/aduananet";
 import { browserProvisionFondos } from "@/lib/aduananet-browser";
 import { uploadToSpaces } from "@/lib/spaces";
+import { emailsEjecutivosCliente } from "@/lib/permisos";
 import { Resend } from "resend";
 
 export const runtime = "nodejs";
@@ -172,9 +173,10 @@ export async function POST(request: Request) {
     const contTable = contenedores.map((c: Record<string, unknown>) => `<tr><td style="padding:4px 12px;border:1px solid #ddd;">${c.numero_contenedor}</td><td style="padding:4px 12px;border:1px solid #ddd;">${c.peso_bruto || ""} KG</td><td style="padding:4px 12px;border:1px solid #ddd;">${c.tipo_contenedor || ""}</td></tr>`).join("");
     const itemsList = items.map((i: Record<string, unknown>) => `<li>${i.descripcion || i.description || ""} — ${i.cantidad || ""} ${i.unidad || "KG"}</li>`).join("");
 
-    const emailResult = await resend.emails.send({
-      from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
-      to: [
+    // Obtener ejecutivos asignados para CC
+    const opInfo2 = await pgQuery<{ rut_cliente: string }>("SELECT rut_cliente FROM operaciones WHERE nro_operacion = $1", [nro_operacion]);
+    const ejecutivosCCProv = opInfo2[0]?.rut_cliente ? await emailsEjecutivosCliente(opInfo2[0].rut_cliente) : [];
+    const toListProv = [
         "BARomanini@dow.com",
         "HZachariotto@dow.com",
         "LNuez@dow.com",
@@ -190,7 +192,12 @@ export async function POST(request: Request) {
         "bastian.monsalve@agenciaguerra.com",
         "ehenriquez@agenciaguerra.com",
         "fguerrab@agenciaguerra.com",
-      ],
+    ];
+
+    const emailResult = await resend.emails.send({
+      from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
+      to: toListProv,
+      cc: ejecutivosCCProv.filter(e => !toListProv.includes(e)).length > 0 ? ejecutivosCCProv.filter(e => !toListProv.includes(e)) : undefined,
       subject: `Provisión de Fondos - Despacho ${nro_operacion} - PETROQUIMICA DOW S.A. REF: ${referencia}`,
       html: `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">

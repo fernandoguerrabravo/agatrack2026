@@ -1,6 +1,7 @@
 import "server-only";
 import { Resend } from "resend";
 import { pgQuery } from "./postgres";
+import { emailsEjecutivosCliente } from "./permisos";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>";
@@ -169,9 +170,12 @@ export async function enviarEmailSolicitudTTE(nroOperacion: string): Promise<{ o
     }
 
     // Enviar
+    // Obtener ejecutivos asignados para CC
+    const ejecutivosCCTte = await emailsEjecutivosCliente("92933000-5");
     const result = await resend.emails.send({
       from: FROM,
       to: CONTACTOS_PETROQUIMICA,
+      cc: ejecutivosCCTte.filter(e => !CONTACTOS_PETROQUIMICA.includes(e)).length > 0 ? ejecutivosCCTte.filter(e => !CONTACTOS_PETROQUIMICA.includes(e)) : undefined,
       subject,
       html,
       attachments,

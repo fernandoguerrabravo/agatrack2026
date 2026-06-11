@@ -54,3 +54,17 @@ export async function clientesVisibles(session: SessionPayload): Promise<string[
 
   return [session.rut];
 }
+
+
+/**
+ * Retorna los emails de los ejecutivos asignados a un cliente.
+ */
+export async function emailsEjecutivosCliente(rutCliente: string): Promise<string[]> {
+  const rows = await pgQuery<{ email: string }>(
+    `SELECT u.email FROM usuarios u 
+     INNER JOIN asignaciones_ejecutivo a ON u.rut = a.rut_ejecutivo 
+     WHERE a.rut_cliente = $1 AND u.email IS NOT NULL AND u.email != ''`,
+    [rutCliente]
+  );
+  return rows.map(r => r.email);
+}

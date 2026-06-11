@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { pgQuery } from "@/lib/postgres";
 import { confeccionarDIN } from "@/lib/confeccionar-din";
+import { emailsEjecutivosCliente } from "@/lib/permisos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -129,9 +130,14 @@ export async function POST(request: Request) {
         }
       }
 
+      // Obtener ejecutivos asignados al cliente para CC
+      const opInfo = await pgQuery<{ rut_cliente: string }>("SELECT rut_cliente FROM operaciones WHERE nro_operacion = $1", [nro_operacion]);
+      const ejecutivosCC = opInfo[0]?.rut_cliente ? await emailsEjecutivosCliente(opInfo[0].rut_cliente) : [];
+
       await resend.emails.send({
         from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
         to: ["documentos@agenciaguerra.com", "fguerrab@agenciaguerra.com"],
+        cc: ejecutivosCC.length > 0 ? ejecutivosCC : undefined,
         subject: `Confección Despacho ${nro_operacion} - REF: ${referencia}${eta ? " - ETA: " + eta : ""}`,
         html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
   <p>Estimados,</p>
