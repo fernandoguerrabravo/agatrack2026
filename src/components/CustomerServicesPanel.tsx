@@ -411,7 +411,7 @@ export default function CustomerServicesPanel() {
         <div className="px-4 py-3">
           {op.estado !== "aprobada" && (
             <div className="flex items-center gap-2 mb-3">
-              <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" className="file-input file-input-bordered file-input-xs flex-1" disabled={uploadingOp === op.nro_operacion} onChange={(e) => handleSubirAOperacion(op.nro_operacion, e.target.files)} />
+              <input type="file" multiple accept=".pdf" className="file-input file-input-bordered file-input-xs flex-1" disabled={uploadingOp === op.nro_operacion} onChange={(e) => handleSubirAOperacion(op.nro_operacion, e.target.files)} />
               {uploadingOp === op.nro_operacion && (
                 <div className="flex items-center gap-1"><span className="loading loading-spinner loading-xs"></span><span className="text-xs text-info">{uploadingProgress[op.nro_operacion]}</span></div>
               )}
@@ -520,7 +520,7 @@ export default function CustomerServicesPanel() {
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".pdf,.jpg,.jpeg,.png"
+              accept=".pdf"
               className="file-input file-input-bordered file-input-sm flex-1"
               onChange={(e) => setArchivos(Array.from(e.target.files || []))}
             />
