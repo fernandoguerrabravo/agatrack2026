@@ -387,6 +387,7 @@ export default function CustomerServicesPanel() {
               ? `https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/din.php?lbac_nid=0&lib_base=1&lib_nid=${op.nro_operacion}&dus_tipo_envio=2&copias=1&tipo=0&borrador=0&dolar=1&ref=1&pedidor=1&archivo=din.php-1&impresion=windows&pagina_inicial=1&cont_todas=1&rango=2-1`
               : `https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/din.php?lib_base=1&lib_nid=${op.nro_operacion}&lbac_nid=0&dus_tipo_envio=2&pagno=0&tipo=&copias=1&borrador=1&ref=1&dolar=1&imp_masiva=0&comando=U`
             } target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-info">{op.estado === "aprobada" ? "DIN Aprobada" : "Borrador"}</a>
+            {op.estado !== "aprobada" && <a href={`/api/operaciones/caratula?nro_operacion=${op.nro_operacion}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-accent">Carátula</a>}
             {op.estado === "aprobada" && <button className="btn btn-xs btn-secondary" onClick={() => handleProvisionFondos(op.nro_operacion)}>Provisión de Fondos</button>}
             {op.estado === "aprobada" && op.notas?.includes("provision_url:") && (
               <a href={op.notas.match(/provision_url:(https?:\/\/[^\s\n]+)/)?.[1] || "#"} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-secondary">Ver Provisión</a>
