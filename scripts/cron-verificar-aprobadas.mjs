@@ -76,11 +76,12 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
         await resend.emails.send({
           from: get("RESEND_FROM") || "AgaTrack <reportes@agatrack.com>",
           to: [
-            "BARomanini@dow.com", "HZachariotto@dow.com", "LNuez@dow.com", "MLIbarraRocha@dow.com",
-            "jfernandez@agenciaguerra.com", "losandes@agenciaguerra.com", "hector@agenciaguerra.com",
-            "boris@agenciaguerra.com", "bdpcl.dow@bdpint.com", "isabel.riveros@psabdp.com",
-            "roberto.santibanez@psabdp.com", "sara.arcos@psabdp.com",
-            "bastian.monsalve@agenciaguerra.com", "ehenriquez@agenciaguerra.com", "fguerrab@agenciaguerra.com",
+            "oscar@agenciaguerra.com",
+            "pbalmaceda@agenciaguerra.com",
+            "daviles@agenciaguerra.com",
+            "transmision@agenciaguerra.com",
+            "comercial@agenciaguerra.com",
+            "fguerrab@agenciaguerra.com",
           ],
           cc: ccEmails.length > 0 ? ccEmails : undefined,
           subject: `✅ Despacho Aprobado ${ap.despacho} - Aceptación: ${ap.nro_aceptacion} - ${fecha}${referencia ? " - REF: " + referencia : ""}`,
