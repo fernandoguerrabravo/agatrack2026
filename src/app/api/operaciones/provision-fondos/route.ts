@@ -229,7 +229,7 @@ export async function POST(request: Request) {
     <tr><td style="padding:4px 12px;font-weight:bold;">Viaje:</td><td style="padding:4px 12px;">${viaje}</td></tr>
     <tr><td style="padding:4px 12px;font-weight:bold;">Puerto Embarque:</td><td style="padding:4px 12px;">${bl.puerto_embarque || ""}</td></tr>
     <tr><td style="padding:4px 12px;font-weight:bold;">Puerto Transbordo:</td><td style="padding:4px 12px;">${bl.puerto_transbordo || ""}</td></tr>
-    <tr><td style="padding:4px 12px;font-weight:bold;">Puerto Desembarque:</td><td style="padding:4px 12px;">SAN ANTONIO</td></tr>
+    <tr><td style="padding:4px 12px;font-weight:bold;">Puerto Desembarque:</td><td style="padding:4px 12px;">${bl.puerto_desembarque || (blRows.length === 0 ? "LOS ANDES" : "SAN ANTONIO")}</td></tr>
     <tr><td style="padding:4px 12px;font-weight:bold;">ETA:</td><td style="padding:4px 12px;">${eta}</td></tr>
     <tr><td style="padding:4px 12px;font-weight:bold;">Huella de Carbono:</td><td style="padding:4px 12px;">${sgRoute?.co2_emission ? sgRoute.co2_emission + " ton CO₂" : "N/D"}</td></tr>
   </table>
