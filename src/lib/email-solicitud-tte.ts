@@ -29,6 +29,9 @@ const CONTACTOS_PETROQUIMICA = [
   "bastian.monsalve@agenciaguerra.com",
   "ehenriquez@agenciaguerra.com",
   "camila.quinones@atlogistica.cl",
+  "sai@agenciaguerra.com",
+  "sanantonio@agenciaguerra.com",
+  "josue@agenciaguerra.com",
   "fguerrab@agenciaguerra.com",
 ];
 
