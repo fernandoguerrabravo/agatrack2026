@@ -448,7 +448,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=2710`, { headers: { Cookie: cookies } })).text();
     const dscPartida = pickXml(descXml, "dsc_partida") || String((co?.mercancia as Record<string, unknown>)?.clasificacion_arancelaria_hs || "");
     const dscCod = pickXml(descXml, "dsc_cod_producto") || codigoProd;
-    const merNombre = [dscCod.padEnd(15), pickXml(descXml, "dsc_descrip_corta"), pickXml(descXml, "dsc_otro1"), pickXml(descXml, "dsc_otro2"), pickXml(descXml, "dsc_obs")].join(";");
+    const merNombre = [dscCod.padEnd(16), pickXml(descXml, "dsc_descrip_corta"), pickXml(descXml, "dsc_otro1"), pickXml(descXml, "dsc_otro2"), pickXml(descXml, "dsc_obs")].join(";");
 
     // Consultar arancel
     const arancelHtml = await aduananetGet(`/modulos/din/dus_encabezado/consulta_arancel_json.php?partida=${dscPartida}&pais=${(await aduananetGet(mercFormUrl)).match(/pai_id_origen[^>]*value\s*=\s*["']([^"']+)/i)?.[1] || "225"}&regimen=${regimen.regId}`);
@@ -1022,7 +1022,7 @@ async function confeccionarDINTerrestre(
     const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=2710`, { headers: { Cookie: cookies } })).text();
     const dscPartida = pickXml(descXml, "dsc_partida") || coPartida || "";
     const dscCod = pickXml(descXml, "dsc_cod_producto") || codigoProd;
-    const merNombre = [dscCod.padEnd(15), pickXml(descXml, "dsc_descrip_corta"), pickXml(descXml, "dsc_otro1"), pickXml(descXml, "dsc_otro2"), pickXml(descXml, "dsc_obs")].join(";");
+    const merNombre = [dscCod.padEnd(16), pickXml(descXml, "dsc_descrip_corta"), pickXml(descXml, "dsc_otro1"), pickXml(descXml, "dsc_otro2"), pickXml(descXml, "dsc_obs")].join(";");
 
     // Consultar arancel con país Argentina (224)
     const arancelHtml = await aduananetGet(`/modulos/din/dus_encabezado/consulta_arancel_json.php?partida=${dscPartida}&pais=224&regimen=${regimen.regId}`);
