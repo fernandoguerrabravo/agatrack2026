@@ -716,7 +716,12 @@ async function confeccionarDINTerrestre(
       : (invoice.proveedor as Record<string, unknown>)?.nombre || invoice.proveedor || ""
   );
   if (proveedorNombre) {
-    const keyword = proveedorNombre.split(/\s+/).filter((w: string) => w.length > 3).slice(0, 2).join(" ");
+    // Limpiar nombre: quitar país, guiones, "Dow Argentina -" → solo el nombre real
+    const cleanedName = proveedorNombre
+      .replace(/^.*?-\s*/, "") // "Dow Argentina - PBBPOLISUR S.R.L." → "PBBPOLISUR S.R.L."
+      .replace(/\b(S\.?R\.?L\.?|S\.?A\.?|LTDA\.?|INC\.?|LLC)\b/gi, "")
+      .trim();
+    const keyword = (cleanedName || proveedorNombre).split(/\s+/).filter((w: string) => w.length > 3).slice(0, 2).join(" ");
     const csgSearchUrl = `/modulos/general/ventanas/listados/consignante.php?identificador=&fil_csg_nombre=${encodeURIComponent(keyword)}`;
     const csgHtml = await aduananetGet(csgSearchUrl);
     const csgMatches = [...csgHtml.matchAll(/seleccion\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'/gi)];
