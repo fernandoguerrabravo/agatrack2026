@@ -73,6 +73,30 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
 
         const { Resend } = await import("resend");
         const resend = new Resend(get("RESEND_API_KEY"));
+        
+        // Descargar PDF de la DIN aprobada de AduanaNet
+        let dinPdfBuffer = null;
+        try {
+          const BASE_URL = get("ADUANANET_URL") || "https://fguerragodoy.aduananet2.cl";
+          const loginBody = "login=" + encodeURIComponent(get("ADUANANET_LOGIN")) + "&clave=" + encodeURIComponent(get("ADUANANET_CLAVE"));
+          const loginRes = await fetch(BASE_URL + "/modulos/usuarios/login.php", {
+            method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: loginBody, redirect: "manual"
+          });
+          const cookies = loginRes.headers.getSetCookie().map(c => c.split(";")[0]).join("; ");
+          const dinUrl = `${BASE_URL}/modulos/din/dus_encabezado/din.php?lbac_nid=0&lib_base=1&lib_nid=${ap.despacho}&dus_tipo_envio=2&copias=1&tipo=0&borrador=0&dolar=1&ref=1&pedidor=1&archivo=din.php-1&impresion=windows&pagina_inicial=1&cont_todas=1&rango=2-1`;
+          const dinRes = await fetch(dinUrl, { headers: { Cookie: cookies } });
+          if (dinRes.ok) {
+            const ct = dinRes.headers.get("content-type") || "";
+            if (ct.includes("pdf") || ct.includes("octet")) {
+              dinPdfBuffer = Buffer.from(await dinRes.arrayBuffer());
+              console.log(`[${new Date().toISOString()}] DIN PDF descargado: ${dinPdfBuffer.length} bytes`);
+            }
+          }
+        } catch (pdfErr) {
+          console.error(`[${new Date().toISOString()}] Error descargando DIN PDF:`, pdfErr.message || pdfErr);
+        }
+
         await resend.emails.send({
           from: get("RESEND_FROM") || "AgaTrack <reportes@agatrack.com>",
           to: [
@@ -96,6 +120,7 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
   </table>
   <p style="color:#666;font-size:12px;margin-top:20px;">Notificación automática de AgaTrack.</p>
 </div>`,
+          attachments: dinPdfBuffer ? [{ filename: `DIN_Aprobada_${ap.despacho}.pdf`, content: dinPdfBuffer }] : [],
         });
         console.log(`[${new Date().toISOString()}] Email aprobación enviado para ${ap.despacho}`);
       } catch (emailErr) {
