@@ -17,7 +17,7 @@ const INBOUND_MAP: Record<string, { cli_id: string; rut_cliente: string; cliente
     cli_id: "2710",
     rut_cliente: "92933000-5",
     cliente_nombre: "PETROQUIMICA DOW S.A.",
-    remitentes_permitidos: ["@psabdp.com"],
+    remitentes_permitidos: ["@psabdp.com", "@agenciaguerra.com"],
   },
 };
 
