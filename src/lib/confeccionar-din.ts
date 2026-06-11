@@ -663,10 +663,17 @@ async function confeccionarDINTerrestre(
   const cvtId = "8"; // Terrestre CPT → código 8 (OTRA) en AduanaNet
   const fobValue = Number(invoice.fob_value || invoice.monto_total || 0);
   
-  // Flete terrestre: del CRT gastos.flete.monto_remitente
+  // Flete terrestre: del CRT gastos.flete.monto_remitente o datos_crt_adjunto del MIC
   const gastosRaw = crt?.gastos as Record<string, unknown> | undefined;
   const fleteRaw = gastosRaw?.flete as Record<string, unknown> | undefined;
-  const fleteValue = Number(fleteRaw?.monto_remitente || mic?.flete_usd || 0);
+  const datosCrtAdjunto = mic?.datos_crt_adjunto as Record<string, unknown> | undefined;
+  const fleteValue = Number(
+    fleteRaw?.monto_remitente || 
+    datosCrtAdjunto?.flete_remitente || 
+    datosCrtAdjunto?.total_remitente ||
+    mic?.flete_usd || 
+    0
+  );
   
   const primaRaw = poliza?.prima || (poliza?.marcas_y_numeros as Record<string, unknown>)?.prima || "0";
   const seguroValue = parseFloat(String(primaRaw).replace(",", ".")) || 0;
