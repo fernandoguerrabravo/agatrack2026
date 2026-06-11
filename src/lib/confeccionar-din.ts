@@ -475,7 +475,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     const nroAcuerdo = sel ? sel[3] : "";
 
     const totalNetoItem = Number(invoice.monto_total) / items.length;
-    const cantidadRaw = String(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || "0");
+    const cantidadRaw = String(item.peso_neto || item.cantidad_kg || item.cantidad || "0");
     const cantidad = parseFloat(cantidadRaw.replace(/[^0-9.,]/g, "").replace(",", "")) || 0;
     const cantStr = Math.round(cantidad).toString().padStart(8, "0");
 
@@ -1066,7 +1066,7 @@ async function confeccionarDINTerrestre(
 
     // Valor total item = monto total CPT (incluye flete) / cantidad de items producto
     const totalNetoItem = Number(invoice.monto_total) / items.length;
-    const cantidadRaw = String(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || "0");
+    const cantidadRaw = String(item.peso_neto || item.cantidad_kg || item.cantidad || "0");
     const cantidad = parseFloat(cantidadRaw.replace(/[^0-9.,]/g, "").replace(",", "")) || 0;
     const cantStr = Math.round(cantidad).toString().padStart(8, "0");
 
