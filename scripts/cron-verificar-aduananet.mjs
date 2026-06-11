@@ -134,6 +134,27 @@ const CLAVE = get("ADUANANET_CLAVE");
           } catch (emailErr) {
             console.error(`[${new Date().toISOString()}] Error email:`, emailErr.message || emailErr);
           }
+
+          // Auto-generar provisión de fondos para Petroquímica DOW
+          if (op.rut_cliente === "92933000-5") {
+            try {
+              console.log(`[${new Date().toISOString()}] Auto-generando provisión de fondos para ${op.nro_operacion}...`);
+              const provRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/operaciones/provision-fondos`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-inbound-secret": get("INBOUND_SECRET") || "" },
+                body: JSON.stringify({ nro_operacion: op.nro_operacion }),
+              });
+              if (provRes.ok) {
+                const provData = await provRes.json();
+                console.log(`[${new Date().toISOString()}] ✅ Provisión generada para ${op.nro_operacion}: total=${provData.total}`);
+              } else {
+                const errText = await provRes.text().catch(() => "");
+                console.error(`[${new Date().toISOString()}] Error provisión: ${provRes.status} ${errText.substring(0, 100)}`);
+              }
+            } catch (provErr) {
+              console.error(`[${new Date().toISOString()}] Error auto-provisión:`, provErr.message || provErr);
+            }
+          }
         }
       }
     } catch (err) {

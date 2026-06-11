@@ -27,7 +27,11 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    // Permitir acceso via inbound_secret (para crons automáticos)
+    const inboundSecret = request.headers.get("x-inbound-secret");
+    if (!inboundSecret || inboundSecret !== process.env.INBOUND_SECRET) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    }
   }
 
   const { nro_operacion } = await request.json();
