@@ -201,7 +201,6 @@ export async function POST(request: Request) {
         "MLIbarraRocha@dow.com",
         "jfernandez@agenciaguerra.com",
         "losandes@agenciaguerra.com",
-        "hector@agenciaguerra.com",
         "boris@agenciaguerra.com",
         "bdpcl.dow@bdpint.com",
         "isabel.riveros@psabdp.com",
