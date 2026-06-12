@@ -35,6 +35,28 @@ export async function GET(request: Request, { params }: { params: Promise<{ nro:
     // Crear PDF combinado
     const mergedPdf = await PDFDocument.create();
 
+    // Agregar carátula al principio
+    try {
+      const { aduananetLogin } = await import("@/lib/aduananet");
+      const cookies = await aduananetLogin();
+      const BASE_URL = process.env.ADUANANET_URL || "https://fguerragodoy.aduananet2.cl";
+      const caratulaUrl = `${BASE_URL}/modulos/comex/orden_compra/antecedentes_pdf.php?lib_nid=${nro}&lib_base=1`;
+      const caratulaRes = await fetch(caratulaUrl, { headers: { Cookie: cookies } });
+      if (caratulaRes.ok) {
+        const caratulaBuf = await caratulaRes.arrayBuffer();
+        if (caratulaBuf.byteLength > 100) {
+          const header = new Uint8Array(caratulaBuf.slice(0, 5));
+          if (String.fromCharCode(...header) === "%PDF-") {
+            const caratulaPdf = await PDFDocument.load(caratulaBuf, { ignoreEncryption: true });
+            const pages = await mergedPdf.copyPages(caratulaPdf, caratulaPdf.getPageIndices());
+            for (const page of pages) mergedPdf.addPage(page);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[descargar-todos] Error con carátula:", err instanceof Error ? err.message : err);
+    }
+
     for (const doc of docs) {
       if (!doc.storage_url) continue;
       try {
