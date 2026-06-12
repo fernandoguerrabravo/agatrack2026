@@ -639,8 +639,9 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ MIC/DTA");
         analysis.tipo_documento = "MIC/DTA";
       } else
-      // Carta de Porte Internacional (CRT)
+      // Carta de Porte Internacional (CRT) — NO si es póliza de seguro
       if (/CARTA\s*DE\s*PORTE\s*INTERNACIONAL|CRT\b|CONOCIMIENTO\s*DE\s*TRANSPORTE\s*TERRESTRE|PORTE\s*INTERNACIONAL\s*POR\s*CARRETERA/.test(textoClasif)
+          && !/INSURANCE|INSURED|POLICY|P[OÓ]LIZA|CERTIFICATE\s*NO|SECURITY\s*NO/.test(textoClasif)
           && tipoActual !== "Carta de Porte Internacional (CRT)"
           && tipoActual !== "MIC/DTA") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Carta de Porte Internacional (CRT)");
