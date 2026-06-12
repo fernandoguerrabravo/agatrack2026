@@ -602,9 +602,9 @@ export default function CustomerServicesPanel() {
           {/* Tabs por cliente */}
           {clientes.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
-              <button className={`btn btn-sm ${clienteActivo === "todos" ? "btn-success" : "btn-ghost"}`} onClick={() => setClienteActivo("todos")}>Todos</button>
+              <button className={`badge badge-lg cursor-pointer ${clienteActivo === "todos" ? "badge-success text-white" : "badge-neutral badge-outline"}`} onClick={() => setClienteActivo("todos")}>Todos</button>
               {clientes.map(c => (
-                <button key={c.rut} className={`btn btn-sm ${clienteActivo === c.rut ? "btn-success" : "btn-ghost"}`} onClick={() => setClienteActivo(c.rut)}>
+                <button key={c.rut} className={`badge badge-lg cursor-pointer ${clienteActivo === c.rut ? "badge-success text-white" : "badge-neutral badge-outline"}`} onClick={() => setClienteActivo(c.rut)}>
                   {c.nombre}
                 </button>
               ))}
