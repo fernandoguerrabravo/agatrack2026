@@ -524,10 +524,10 @@ export default function CustomerServicesPanel() {
     <div className="space-y-4">
       {/* Tabs por cliente */}
       {clientes.length > 0 && (
-        <div className="tabs tabs-boxed">
-          <button className={`tab ${clienteActivo === "todos" ? "tab-active" : ""}`} onClick={() => setClienteActivo("todos")}>Todos</button>
+        <div className="flex flex-wrap gap-2">
+          <button className={`btn btn-sm ${clienteActivo === "todos" ? "btn-primary" : "btn-outline btn-primary"}`} onClick={() => setClienteActivo("todos")}>Todos</button>
           {clientes.map(c => (
-            <button key={c.rut} className={`tab ${clienteActivo === c.rut ? "tab-active" : ""}`} onClick={() => setClienteActivo(c.rut)}>
+            <button key={c.rut} className={`btn btn-sm ${clienteActivo === c.rut ? "btn-primary" : "btn-outline btn-primary"}`} onClick={() => setClienteActivo(c.rut)}>
               {c.nombre}
             </button>
           ))}
