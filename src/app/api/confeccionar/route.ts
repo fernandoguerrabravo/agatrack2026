@@ -136,7 +136,7 @@ export async function POST(request: Request) {
 
       await resend.emails.send({
         from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
-        to: ["documentos@agenciaguerra.com", "fguerrab@agenciaguerra.com"],
+        to: ["documentos@agenciaguerra.com", "fguerrab@agenciaguerra.com", "fguerra@agenciaguerra.com"],
         cc: ejecutivosCC.length > 0 ? ejecutivosCC : undefined,
         subject: `Confección Despacho ${nro_operacion} - REF: ${referencia}${eta ? " - ETA: " + eta : ""}`,
         html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">

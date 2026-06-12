@@ -129,7 +129,7 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
 
   await resend.emails.send({
     from: get("RESEND_FROM") || "AgaTrack <reportes@agatrack.com>",
-    to: ["documentos@agenciaguerra.com", "fguerrab@agenciaguerra.com"],
+    to: ["documentos@agenciaguerra.com", "fguerrab@agenciaguerra.com", "fguerra@agenciaguerra.com"],
     cc: ccEmails.length > 0 ? ccEmails : undefined,
     subject: `📋 Operaciones Pendientes de Aprobación (${pendientes.length}) - ${new Date().toLocaleDateString("es-CL", { timeZone: "America/Santiago" })}`,
     html,
