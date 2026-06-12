@@ -47,6 +47,7 @@ export default function CustomerServicesPanel() {
   const [cargando, setCargando] = useState(true);
   const [clientes, setClientes] = useState<Array<{ rut: string; nombre: string }>>([]);
   const [clienteActivo, setClienteActivo] = useState<string>("todos");
+  const [tiposDocumento, setTiposDocumento] = useState<string[]>([]);
 
   // Upload
   const [archivos, setArchivos] = useState<File[]>([]);
@@ -91,6 +92,9 @@ export default function CustomerServicesPanel() {
   useEffect(() => {
     fetch("/api/operaciones/clientes").then(r => r.json()).then(data => {
       if (data.clientes) setClientes(data.clientes);
+    }).catch(() => {});
+    fetch("/api/tipos-documento").then(r => r.json()).then(data => {
+      if (data.tipos) setTiposDocumento(data.tipos);
     }).catch(() => {});
   }, []);
 
@@ -498,21 +502,7 @@ export default function CustomerServicesPanel() {
                       <td>
                         {op.estado === "aprobada" ? <span className="text-xs">{doc.tipo_documento}</span> : (
                           <select className="select select-xs select-bordered w-full max-w-[180px]" value={doc.tipo_documento} onChange={(e) => handleCambiarTipo(doc.id, e.target.value)}>
-                            <option value="Bill of Lading (BL)">Bill of Lading (BL)</option>
-                            <option value="Carta de Porte Internacional (CRT)">Carta de Porte Internacional (CRT)</option>
-                            <option value="MIC/DTA">MIC/DTA</option>
-                            <option value="Invoice (Factura Comercial)">Invoice (Factura Comercial)</option>
-                            <option value="Lista de Empaque (Packing List)">Lista de Empaque (Packing List)</option>
-                            <option value="Certificado de Origen">Certificado de Origen</option>
-                            <option value="Póliza de Seguro">Póliza de Seguro</option>
-                            <option value="Ficha Técnica">Ficha Técnica</option>
-                            <option value="Ficha de Seguridad">Ficha de Seguridad</option>
-                            <option value="Instrucciones">Instrucciones</option>
-                            <option value="Declaración de Bien de Capital">Declaración de Bien de Capital</option>
-                            <option value="Certificado Fitosanitario">Certificado Fitosanitario</option>
-                            <option value="Certificado de Calidad">Certificado de Calidad</option>
-                            <option value="Certificado Sanitario (SEREMI)">Certificado Sanitario (SEREMI)</option>
-                            <option value="Mandato">Mandato</option>
+                            {tiposDocumento.map(t => <option key={t} value={t}>{t}</option>)}
                           </select>
                         )}
                       </td>
