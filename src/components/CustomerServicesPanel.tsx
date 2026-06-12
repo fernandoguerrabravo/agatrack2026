@@ -185,6 +185,22 @@ export default function CustomerServicesPanel() {
       update({ estado: "creando", referencia, progreso: `Ref: ${referencia} — Creando operación en AduanaNet...` });
 
       // PASO 2: Crear operación en AduanaNet con la referencia
+      // Detectar cliente por consignatario de la factura
+      const consignatarioNombre = String(datosObj?.comprador_sold_to?.nombre || datosObj?.comprador?.nombre || datosObj?.ship_to?.nombre || datosObj?.consignee?.nombre || datosObj?.comprador || "");
+      // Detectar cliente via API
+      let clienteDetectado = { cli_id: "2710", rut_cliente: "92933000-5" }; // default Petroquímica
+      if (consignatarioNombre) {
+        try {
+          const detectRes = await fetch(`/api/operaciones/detectar-cliente?nombre=${encodeURIComponent(consignatarioNombre)}`);
+          if (detectRes.ok) {
+            const detectData = await detectRes.json();
+            if (detectData.cli_id && detectData.rut) {
+              clienteDetectado = { cli_id: detectData.cli_id, rut_cliente: detectData.rut };
+            }
+          }
+        } catch {}
+      }
+
       // Detectar si es terrestre por transport_mode de la factura
       const isTerrestre = /cami[oó]n|terrestre|truck|carretera/i.test(String(datosObj?.transport_mode || datosObj?.tipo_transporte || ""));
       const puertoDesembarque = isTerrestre ? "LOS ANDES" : "SAN ANTONIO";
@@ -192,7 +208,7 @@ export default function CustomerServicesPanel() {
       const crearRes = await fetch("/api/aduananet-operaciones", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cli_id: "2710", rut_cliente: "92933000-5", referencia, puerto_desembarque: puertoDesembarque, tio_id: "101" }),
+        body: JSON.stringify({ cli_id: clienteDetectado.cli_id, rut_cliente: clienteDetectado.rut_cliente, referencia, puerto_desembarque: puertoDesembarque, tio_id: "101" }),
       });
       const crearData = await crearRes.json();
 
