@@ -538,24 +538,12 @@ export default function CustomerServicesPanel() {
 
   return (
     <div className="space-y-4">
-      {/* Tabs por cliente */}
-      {clientes.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <button className={`btn btn-sm ${clienteActivo === "todos" ? "btn-primary" : "btn-outline btn-primary"}`} onClick={() => setClienteActivo("todos")}>Todos</button>
-          {clientes.map(c => (
-            <button key={c.rut} className={`btn btn-sm ${clienteActivo === c.rut ? "btn-primary" : "btn-outline btn-primary"}`} onClick={() => setClienteActivo(c.rut)}>
-              {c.nombre}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Nueva Operación */}
+      {/* Nueva Operación (independiente del tab - detecta cliente automáticamente) */}
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           <h2 className="card-title text-lg">Nueva Operación</h2>
           <p className="text-xs text-base-content/60 mb-3">
-            Sube los documentos (incluir factura) → se extrae la referencia automáticamente → se crea la operación en AduanaNet
+            Sube los documentos (incluir factura) → se detecta el cliente y referencia automáticamente → se crea la operación en AduanaNet
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <input
@@ -610,6 +598,18 @@ export default function CustomerServicesPanel() {
               <input type="text" placeholder="Filtrar..." className="input input-bordered input-sm w-48" value={filterOp} onChange={(e) => setFilterOp(e.target.value)} />
             </div>
           </div>
+
+          {/* Tabs por cliente */}
+          {clientes.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              <button className={`btn btn-sm ${clienteActivo === "todos" ? "btn-primary" : "btn-outline btn-primary"}`} onClick={() => setClienteActivo("todos")}>Todos</button>
+              {clientes.map(c => (
+                <button key={c.rut} className={`btn btn-sm ${clienteActivo === c.rut ? "btn-primary" : "btn-outline btn-primary"}`} onClick={() => setClienteActivo(c.rut)}>
+                  {c.nombre}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Pestañas por estado */}
           {cargando ? (
