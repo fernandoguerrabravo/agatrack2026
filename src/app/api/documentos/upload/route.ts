@@ -29,6 +29,7 @@ const TIPOS_DOCUMENTO = [
   "Ficha Técnica",
   "Ficha de Seguridad",
   "Instrucciones",
+  "Declaración de Bien de Capital",
   "Certificado de Origen",
   "Certificado Fitosanitario",
   "Certificado de Calidad",
