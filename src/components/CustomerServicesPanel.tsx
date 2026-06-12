@@ -523,7 +523,7 @@ export default function CustomerServicesPanel() {
   return (
     <div className="space-y-4">
       {/* Tabs por cliente */}
-      {clientes.length > 1 && (
+      {clientes.length > 0 && (
         <div className="tabs tabs-boxed">
           <button className={`tab ${clienteActivo === "todos" ? "tab-active" : ""}`} onClick={() => setClienteActivo("todos")}>Todos</button>
           {clientes.map(c => (
