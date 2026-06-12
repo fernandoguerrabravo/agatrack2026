@@ -208,7 +208,7 @@ export default function CustomerServicesPanel() {
       const crearRes = await fetch("/api/aduananet-operaciones", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cli_id: clienteDetectado.cli_id, rut_cliente: clienteDetectado.rut_cliente, referencia, puerto_desembarque: puertoDesembarque, tio_id: "101" }),
+        body: JSON.stringify({ cli_id: clienteDetectado.cli_id, rut_cliente: clienteDetectado.rut_cliente, referencia, puerto_desembarque: puertoDesembarque, tio_id: "151" }),
       });
       const crearData = await crearRes.json();
 

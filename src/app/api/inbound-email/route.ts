@@ -289,8 +289,8 @@ async function processInboundEmail(
     grabarBody.set("txt_cli_id", "");
     grabarBody.set("orc_tio", "DIN");
     grabarBody.set("tipo_doc", "IMPO");
-    grabarBody.set("tio_id", "101");
-    grabarBody.set("sel_tio_id", "101");
+    grabarBody.set("tio_id", "151");
+    grabarBody.set("sel_tio_id", "151");
     grabarBody.set("emp_id", "C69");
     grabarBody.set("sel_emp_id", "C69");
     grabarBody.set("ejecutivo_id", "");
