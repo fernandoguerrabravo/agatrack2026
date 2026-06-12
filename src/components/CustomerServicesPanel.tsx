@@ -45,6 +45,8 @@ export default function CustomerServicesPanel() {
   const [filterOp, setFilterOp] = useState("");
   const [confeccionando, setConfeccionando] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [clientes, setClientes] = useState<Array<{ rut: string; nombre: string }>>([]);
+  const [clienteActivo, setClienteActivo] = useState<string>("todos");
 
   // Upload
   const [archivos, setArchivos] = useState<File[]>([]);
@@ -84,6 +86,13 @@ export default function CustomerServicesPanel() {
   }, [filterOp]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Obtener lista de clientes asignados
+  useEffect(() => {
+    fetch("/api/operaciones/clientes").then(r => r.json()).then(data => {
+      if (data.clientes) setClientes(data.clientes);
+    }).catch(() => {});
+  }, []);
 
   // Verificar aprobaciones al cargar
   useEffect(() => {
@@ -506,8 +515,25 @@ export default function CustomerServicesPanel() {
     );
   }
 
+  // Filtrar operaciones por cliente activo
+  const operacionesFiltradas = clienteActivo === "todos"
+    ? operaciones
+    : operaciones.filter(op => op.rut_cliente === clienteActivo);
+
   return (
     <div className="space-y-4">
+      {/* Tabs por cliente */}
+      {clientes.length > 1 && (
+        <div className="tabs tabs-boxed">
+          <button className={`tab ${clienteActivo === "todos" ? "tab-active" : ""}`} onClick={() => setClienteActivo("todos")}>Todos</button>
+          {clientes.map(c => (
+            <button key={c.rut} className={`tab ${clienteActivo === c.rut ? "tab-active" : ""}`} onClick={() => setClienteActivo(c.rut)}>
+              {c.nombre}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Nueva Operación */}
       <div className="card bg-base-100 shadow">
         <div className="card-body">
@@ -576,10 +602,10 @@ export default function CustomerServicesPanel() {
               <span className="text-base-content/60">Cargando operaciones...</span>
             </div>
           ) : ((() => {
-            const abiertas = operaciones.filter(o => o.estado === "abierta");
-            const tteEnviado = operaciones.filter(o => o.estado === "tte_enviado");
-            const confeccionadas = operaciones.filter(o => o.estado === "confeccionada");
-            const aprobadas = operaciones.filter(o => o.estado === "aprobada");
+            const abiertas = operacionesFiltradas.filter(o => o.estado === "abierta");
+            const tteEnviado = operacionesFiltradas.filter(o => o.estado === "tte_enviado");
+            const confeccionadas = operacionesFiltradas.filter(o => o.estado === "confeccionada");
+            const aprobadas = operacionesFiltradas.filter(o => o.estado === "aprobada");
 
             return (
               <div className="mt-3">
