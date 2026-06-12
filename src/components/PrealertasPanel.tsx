@@ -427,6 +427,9 @@ export default function PrealertasPanel() {
                                   <option value="Certificado de Origen">Certificado de Origen</option>
                                   <option value="Póliza de Seguro">Póliza de Seguro</option>
                                   <option value="Ficha Técnica">Ficha Técnica</option>
+                                  <option value="Ficha de Seguridad">Ficha de Seguridad</option>
+                                  <option value="Instrucciones">Instrucciones</option>
+                                  <option value="Declaración de Bien de Capital">Declaración de Bien de Capital</option>
                                   <option value="Certificado Fitosanitario">Certificado Fitosanitario</option>
                                   <option value="Certificado de Calidad">Certificado de Calidad</option>
                                   <option value="Certificado Sanitario (SEREMI)">Certificado Sanitario (SEREMI)</option>
