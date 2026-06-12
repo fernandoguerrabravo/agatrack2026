@@ -21,9 +21,11 @@ const POSTGRES_URL = get("POSTGRES_URL").replace(/[?&]sslmode=[^&]*/g, "");
 const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthorized: false } });
 
 (async () => {
-  // Obtener operaciones pendientes (no aprobadas, no cerradas)
+  // Obtener operaciones pendientes y nombres de clientes
   const { rows: pendientes } = await pool.query(
-    "SELECT nro_operacion, estado, rut_cliente, notas, fecha_apertura FROM operaciones WHERE estado NOT IN ('aprobada', 'cerrada', 'procesando') ORDER BY nro_operacion"
+    `SELECT o.nro_operacion, o.estado, o.rut_cliente, o.notas, o.fecha_apertura, c.razon as cliente_nombre
+     FROM operaciones o LEFT JOIN clientes c ON o.rut_cliente = c.rut
+     WHERE o.estado NOT IN ('aprobada', 'cerrada', 'procesando') ORDER BY o.nro_operacion`
   );
 
   if (pendientes.length === 0) {
@@ -70,7 +72,7 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
       }
     }
 
-    rows.push({ ...op, referencia, eta, nave, blMaster, puertoDesembarque, esTerrestre });
+    rows.push({ ...op, referencia, eta, nave, blMaster, puertoDesembarque, esTerrestre, clienteNombre: op.cliente_nombre || op.rut_cliente });
   }
 
   // Generar HTML del reporte
@@ -83,6 +85,7 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
     return `<tr>
       <td style="padding:6px 12px;border:1px solid #ddd;font-weight:bold;">${op.nro_operacion}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${tipo}</td>
+      <td style="padding:6px 12px;border:1px solid #ddd;">${op.clienteNombre}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${op.referencia}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${estadoLabel}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${op.nave || "-"}</td>
@@ -100,6 +103,7 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
       <tr style="background:#f5f5f5;">
         <th style="padding:8px 12px;border:1px solid #ddd;">Despacho</th>
         <th style="padding:8px 12px;border:1px solid #ddd;">Vía</th>
+        <th style="padding:8px 12px;border:1px solid #ddd;">Cliente</th>
         <th style="padding:8px 12px;border:1px solid #ddd;">Referencia</th>
         <th style="padding:8px 12px;border:1px solid #ddd;">Estado</th>
         <th style="padding:8px 12px;border:1px solid #ddd;">Nave/TTE</th>
