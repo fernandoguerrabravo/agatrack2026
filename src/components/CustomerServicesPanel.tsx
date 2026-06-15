@@ -423,7 +423,7 @@ export default function CustomerServicesPanel() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-base-300 cursor-pointer" onClick={() => toggleCollapse(op.nro_operacion)}>
           <div className="flex items-center gap-3">
             <span className="text-xs">{isCollapsed ? "▶" : "▼"}</span>
-            <span className="badge badge-primary badge-sm font-mono">Op. {op.nro_operacion}</span>
+            <span className="badge badge-primary badge-sm font-mono">{op.nro_operacion}</span>
             {op.cliente_nombre && <span className="text-xs text-base-content/60">{op.cliente_nombre}</span>}
             {op.notas?.match(/ref:\s*([^\s|\n]+)/i) && <span className="text-xs text-base-content/50 font-mono">REF: {op.notas.match(/ref:\s*([^\s|\n]+)/i)?.[1]}</span>}
             {sg && <span className="text-xs text-base-content/50">| {naveShipsgo} {viajeShipsgo} → {String(pod?.name || "")} ETA: {podDate}</span>}
