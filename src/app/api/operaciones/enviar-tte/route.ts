@@ -15,10 +15,12 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
-
-  if (session.rol === "cliente") {
+    // Permitir acceso via inbound_secret (para triggers automáticos)
+    const inboundSecret = request.headers.get("x-inbound-secret");
+    if (!inboundSecret || inboundSecret !== process.env.INBOUND_SECRET) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    }
+  } else if (session.rol === "cliente") {
     return NextResponse.json({ error: "Sin permisos." }, { status: 403 });
   }
 

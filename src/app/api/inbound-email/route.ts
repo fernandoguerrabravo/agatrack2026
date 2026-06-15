@@ -582,6 +582,31 @@ async function processInboundEmail(
                         console.error("[inbound] Error correo actualización ETA:", etaEmailErr instanceof Error ? etaEmailErr.message : etaEmailErr);
                       }
 
+                      // Auto-envío solicitud de transporte para Petroquímica
+                      if (config.rut_cliente === "92933000-5") {
+                        try {
+                          const opEstado = await pgQuery<{ estado: string }>(
+                            "SELECT estado FROM operaciones WHERE nro_operacion = $1",
+                            [nroOperacion]
+                          );
+                          if (opEstado.length > 0 && opEstado[0].estado === "abierta") {
+                            const { enviarEmailSolicitudTTE } = await import("@/lib/email-solicitud-tte");
+                            const tteResult = await enviarEmailSolicitudTTE(nroOperacion);
+                            if (tteResult.ok) {
+                              await pgQuery(
+                                "UPDATE operaciones SET estado = 'tte_enviado', updated_at = NOW() WHERE nro_operacion = $1",
+                                [nroOperacion]
+                              );
+                              console.log(`[inbound] ✅ Auto-envío solicitud TTE para op ${nroOperacion} (Petroquímica)`);
+                            } else {
+                              console.error(`[inbound] Error auto-envío TTE: ${tteResult.error}`);
+                            }
+                          }
+                        } catch (tteErr) {
+                          console.error("[inbound] Error auto-envío TTE:", tteErr instanceof Error ? tteErr.message : tteErr);
+                        }
+                      }
+
                       break;
                     }
                   }

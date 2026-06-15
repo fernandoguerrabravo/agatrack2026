@@ -1773,6 +1773,32 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
                       console.error("[upload] Error correo ETA:", etaErr instanceof Error ? etaErr.message : etaErr);
                     }
                   }
+
+                  // Auto-envío solicitud de transporte para Petroquímica
+                  // Solo si tiene datos ShipsGo (ruta/ETA), es Petroquímica, y estado es "abierta"
+                  if (finalRutCliente === "92933000-5") {
+                    try {
+                      const opEstado = await pgQuery<{ estado: string }>(
+                        "SELECT estado FROM operaciones WHERE nro_operacion = $1",
+                        [nroOperacion]
+                      );
+                      if (opEstado.length > 0 && opEstado[0].estado === "abierta") {
+                        const { enviarEmailSolicitudTTE } = await import("@/lib/email-solicitud-tte");
+                        const tteResult = await enviarEmailSolicitudTTE(nroOperacion);
+                        if (tteResult.ok) {
+                          await pgQuery(
+                            "UPDATE operaciones SET estado = 'tte_enviado', updated_at = NOW() WHERE nro_operacion = $1",
+                            [nroOperacion]
+                          );
+                          console.log(`[upload] ✅ Auto-envío solicitud TTE para op ${nroOperacion} (Petroquímica)`);
+                        } else {
+                          console.error(`[upload] Error auto-envío TTE: ${tteResult.error}`);
+                        }
+                      }
+                    } catch (tteErr) {
+                      console.error("[upload] Error auto-envío TTE:", tteErr instanceof Error ? tteErr.message : tteErr);
+                    }
+                  }
                 }
               }
             } catch (err) {
