@@ -374,6 +374,25 @@ export default function CustomerServicesPanel() {
     } catch (err) { await Swal.fire({ title: "Error", text: err instanceof Error ? err.message : "Error", icon: "error" }); }
   }
 
+  async function handleVerificarConsistencia(nroOp: string) {
+    const Swal = (await import("sweetalert2")).default;
+    Swal.fire({ title: "Verificando consistencia...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+      const res = await fetch("/api/operaciones/verificar-consistencia", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nro_operacion: nroOp }) });
+      const data = await res.json();
+      if (data.consistente) {
+        await Swal.fire({ title: "✅ Consistente", text: data.resumen || "Sin inconsistencias detectadas.", icon: "success" });
+      } else {
+        const alertasHtml = (data.alertas || []).map((a: { tipo: string; campo: string; detalle: string }) => 
+          `<div style="text-align:left;margin:8px 0;padding:8px;background:${a.tipo === "error" ? "#fef2f2" : "#fffbeb"};border-radius:4px;"><b>${a.tipo === "error" ? "❌" : "⚠️"} ${a.campo}</b>: ${a.detalle}</div>`
+        ).join("");
+        await Swal.fire({ title: "Inconsistencias detectadas", html: alertasHtml || data.resumen, icon: "warning", width: 600 });
+      }
+    } catch (err) {
+      await Swal.fire({ title: "Error", text: err instanceof Error ? err.message : "Error", icon: "error" });
+    }
+  }
+
   async function handleEnviarTTE(nroOp: string) {
     const Swal = (await import("sweetalert2")).default;
     const c = await Swal.fire({ title: "¿Enviar solicitud de transporte?", html: `Se enviará email con BL adjunto para la operación <b>${nroOp}</b>`, icon: "question", showCancelButton: true, confirmButtonText: "Enviar", confirmButtonColor: "#6366f1" });
@@ -430,6 +449,7 @@ export default function CustomerServicesPanel() {
             } target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-info">{op.estado === "aprobada" ? "DIN Aprobada" : "Borrador"}</a>
             <a href={`/api/operaciones/caratula?nro_operacion=${op.nro_operacion}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-accent">Carátula</a>
             <a href={`/api/operaciones/${op.nro_operacion}/descargar-todos`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline">📑 Carpeta Despacho</a>
+            {op.estado !== "aprobada" && <button className="btn btn-xs btn-outline btn-warning" onClick={() => handleVerificarConsistencia(op.nro_operacion)}>🔍 Verificar</button>}
             {op.estado === "aprobada" && <button className="btn btn-xs btn-secondary" onClick={() => handleProvisionFondos(op.nro_operacion)}>Provisión de Fondos</button>}
             {op.estado === "aprobada" && op.notas?.includes("provision_url:") && (
               <a href={op.notas.match(/provision_url:(https?:\/\/[^\s\n]+)/)?.[1] || "#"} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-secondary">Ver Provisión</a>
