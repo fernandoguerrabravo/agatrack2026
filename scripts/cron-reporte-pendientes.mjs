@@ -83,7 +83,7 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
       ? `<td style="padding:6px 12px;border:1px solid #ddd;color:#dc2626;font-weight:bold;font-size:16px;">${op.eta}</td>`
       : `<td style="padding:6px 12px;border:1px solid #ddd;color:#666;">-</td>`;
     const tipo = op.esTerrestre ? "🚛" : "🚢";
-    const estadoLabel = op.estado === "confeccionada" ? "Enviada a Confección" : op.estado === "abierta" ? "Abierta" : op.estado;
+    const estadoLabel = op.estado === "confeccionada" ? "Enviada a Confección" : op.estado === "abierta" ? "Abierta" : op.estado === "tte_enviado" ? "Solicitud Transporte Enviada" : op.estado;
     return `<tr>
       <td style="padding:6px 12px;border:1px solid #ddd;font-weight:bold;">${op.nro_operacion}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${tipo}</td>

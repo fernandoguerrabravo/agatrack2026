@@ -645,7 +645,7 @@ export default function CustomerServicesPanel() {
                     )}
                   </div>
 
-                  <input type="radio" name="op_tabs" role="tab" className="tab checked:bg-accent checked:text-accent-content font-semibold" aria-label={`📧 TTE Enviado (${tteEnviado.length})`} />
+                  <input type="radio" name="op_tabs" role="tab" className="tab checked:bg-accent checked:text-accent-content font-semibold" aria-label={`📧 Sol. TTE Enviada (${tteEnviado.length})`} />
                   <div role="tabpanel" className="tab-content pt-4">
                     {tteEnviado.length === 0 ? <p className="text-base-content/50 text-sm py-2">Sin solicitudes de transporte enviadas.</p> : (
                       <div className="space-y-4">{tteEnviado.map(op => renderOperacion(op))}</div>
