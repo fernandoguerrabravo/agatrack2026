@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { pgQuery } from "@/lib/postgres";
 import { uploadToSpaces } from "@/lib/spaces";
 import { aduananetLogin } from "@/lib/aduananet";
@@ -122,9 +123,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, message: "Ya en proceso" });
     }
 
-    // Procesar en background (no bloquear el webhook response)
-    processInboundEmail(email_id, from, subject, config, tempNro).catch(err => {
-      console.error(`[inbound] Error en procesamiento background:`, err instanceof Error ? err.message : err);
+    // Procesar en background usando after() de Next.js (garantiza que continúe después de responder)
+    after(async () => {
+      try {
+        await processInboundEmail(email_id, from, subject, config, tempNro);
+      } catch (err) {
+        console.error(`[inbound] Error en procesamiento background:`, err instanceof Error ? err.message : err);
+      }
     });
 
     // Responder inmediatamente al webhook
