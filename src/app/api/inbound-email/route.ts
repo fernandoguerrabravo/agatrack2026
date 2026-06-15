@@ -122,16 +122,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, message: "Ya en proceso" });
     }
 
-    // Procesar sincrónicamente (maxDuration=300 permite hasta 5 min)
-    // Resend reintentará si no respondemos en 30s, pero el procesamiento ya estará en curso
-    // La idempotencia previene duplicados de los retries
-    try {
-      await processInboundEmail(email_id, from, subject, config, tempNro);
-    } catch (err) {
-      console.error(`[inbound] Error en procesamiento:`, err instanceof Error ? err.message : err);
-    }
+    // Responder 200 inmediatamente a Resend (evita retries)
+    // Luego procesar en background via unref'd promise
+    const response = NextResponse.json({ ok: true, message: "Recibido, procesando" });
+    
+    // Ejecutar procesamiento en background (no bloquea la respuesta)
+    // Usamos una promesa global para que Node.js no la garbage-collecte
+    const bgKey = `__inbound_${tempNro}`;
+    (globalThis as Record<string, unknown>)[bgKey] = processInboundEmail(email_id, from, subject, config, tempNro)
+      .catch(err => {
+        console.error(`[inbound] Error en procesamiento:`, err instanceof Error ? err.message : err);
+      })
+      .finally(() => {
+        delete (globalThis as Record<string, unknown>)[bgKey];
+      });
 
-    return NextResponse.json({ ok: true, message: "Procesado" });
+    return response;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     console.error("[inbound] Error:", msg);
