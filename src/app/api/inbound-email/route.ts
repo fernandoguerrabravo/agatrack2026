@@ -178,7 +178,10 @@ async function processInboundEmail(
         continue;
       }
       const fileRes = await fetch(download_url);
-      if (!fileRes.ok) continue;
+      if (!fileRes.ok) {
+        console.error(`[inbound] Error descargando ${filename}: HTTP ${fileRes.status}`);
+        continue;
+      }
       const buffer = Buffer.from(await fileRes.arrayBuffer());
       const storageKey = `documentos/${config.rut_cliente}/inbound_${email_id}/${filename}`;
       const storageUrl = await uploadToSpaces(buffer, storageKey, content_type);
@@ -187,6 +190,7 @@ async function processInboundEmail(
     }
 
     if (archivos.length === 0) {
+      console.log("[inbound] No se pudieron descargar PDFs (URLs expiradas o error). Abortando.");
       return;
     }
 
