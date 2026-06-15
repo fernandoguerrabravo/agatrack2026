@@ -1775,8 +1775,8 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
                   }
 
                   // Auto-envío solicitud de transporte para Petroquímica
-                  // Solo si tiene datos ShipsGo (ruta/ETA), es Petroquímica, y estado es "abierta"
-                  if (finalRutCliente === "92933000-5") {
+                  // Solo si tiene datos ShipsGo (ruta/ETA), es Petroquímica, estado "abierta", y NO es operación temporal
+                  if (finalRutCliente === "92933000-5" && !nroOperacion.startsWith("INBOUND_") && !nroOperacion.startsWith("TEMP_")) {
                     try {
                       const opEstado = await pgQuery<{ estado: string }>(
                         "SELECT estado FROM operaciones WHERE nro_operacion = $1",

@@ -628,6 +628,38 @@ async function processInboundEmail(
 
     console.log(`[inbound] ✅ Completado: ${processedDocs.length} docs, op=${nroOperacion}, ref=${referencia}`);
 
+    // Auto-envío solicitud de transporte para Petroquímica (solo marítimas con ShipsGo listo)
+    if (config.rut_cliente === "92933000-5" && !esTerrestreDoc) {
+      try {
+        // Verificar que la operación tiene datos ShipsGo (ya consultado por upload)
+        const blConShipsgo = await pgQuery<{ datos_shipsgo: string }>(
+          "SELECT datos_shipsgo FROM documentos WHERE nro_operacion = $1 AND tipo_documento = 'Bill of Lading (BL)' AND datos_shipsgo IS NOT NULL AND datos_shipsgo != '{}' LIMIT 1",
+          [nroOperacion]
+        );
+        if (blConShipsgo.length > 0) {
+          const opEstado = await pgQuery<{ estado: string }>(
+            "SELECT estado FROM operaciones WHERE nro_operacion = $1",
+            [nroOperacion]
+          );
+          if (opEstado.length > 0 && opEstado[0].estado === "abierta") {
+            const { enviarEmailSolicitudTTE } = await import("@/lib/email-solicitud-tte");
+            const tteResult = await enviarEmailSolicitudTTE(nroOperacion);
+            if (tteResult.ok) {
+              await pgQuery(
+                "UPDATE operaciones SET estado = 'tte_enviado', updated_at = NOW() WHERE nro_operacion = $1",
+                [nroOperacion]
+              );
+              console.log(`[inbound] ✅ Auto-envío solicitud TTE para op ${nroOperacion} (Petroquímica)`);
+            } else {
+              console.error(`[inbound] Error auto-envío TTE: ${tteResult.error}`);
+            }
+          }
+        }
+      } catch (tteErr) {
+        console.error("[inbound] Error auto-envío TTE:", tteErr instanceof Error ? tteErr.message : tteErr);
+      }
+    }
+
     // Borrar operación temporal
     await pgQuery("DELETE FROM operaciones WHERE nro_operacion = $1", [tempNro]);
 }
