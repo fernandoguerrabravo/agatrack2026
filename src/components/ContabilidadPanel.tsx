@@ -160,7 +160,6 @@ export default function ContabilidadPanel() {
                   <th className="font-semibold text-xs uppercase tracking-wider">Despacho</th>
                   <th className="font-semibold text-xs uppercase tracking-wider">Fecha</th>
                   <th className="font-semibold text-xs uppercase tracking-wider">Cliente</th>
-                  <th className="font-semibold text-xs uppercase tracking-wider">Referencia</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-right">CIF USD</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-right">IVA</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-right">Derechos</th>
@@ -172,7 +171,7 @@ export default function ContabilidadPanel() {
               </thead>
               <tbody>
                 {despachosPagina.length === 0 ? (
-                  <tr><td colSpan={11} className="text-center py-8 text-base-content/50">Sin resultados</td></tr>
+                  <tr><td colSpan={10} className="text-center py-8 text-base-content/50">Sin resultados</td></tr>
                 ) : despachosPagina.map((d, i) => (
                   <tr key={d.nro_aceptacion || d.despacho} className={`hover:bg-base-200/30 transition-colors ${i % 2 === 0 ? "" : "bg-base-200/10"}`}>
                     <td>
@@ -184,7 +183,6 @@ export default function ContabilidadPanel() {
                     <td>
                       <span className="text-sm max-w-36 block truncate" title={d.cliente}>{d.cliente}</span>
                     </td>
-                    <td className="text-sm font-mono">{d.referencia || "-"}</td>
                     <td className="text-right font-mono text-sm">{d.total_cif ? Number(d.total_cif).toLocaleString("es-CL") : "-"}</td>
                     <td className="text-right font-mono text-sm">{d.iva ? Number(d.iva).toLocaleString("es-CL") : "-"}</td>
                     <td className="text-right font-mono text-sm">{d.gravamenes_valor_1 ? Number(d.gravamenes_valor_1).toLocaleString("es-CL") : "-"}</td>
