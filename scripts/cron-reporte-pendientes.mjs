@@ -21,11 +21,11 @@ const POSTGRES_URL = get("POSTGRES_URL").replace(/[?&]sslmode=[^&]*/g, "");
 const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthorized: false } });
 
 (async () => {
-  // Obtener operaciones pendientes y nombres de clientes (solo Petroquímica por ahora)
+  // Obtener operaciones pendientes de aprobación (solo confeccionadas, Petroquímica por ahora)
   const { rows: pendientes } = await pool.query(
     `SELECT o.nro_operacion, o.estado, o.rut_cliente, o.notas, o.fecha_apertura, c.razon as cliente_nombre
      FROM operaciones o LEFT JOIN clientes c ON o.rut_cliente = c.rut
-     WHERE o.estado NOT IN ('aprobada', 'cerrada', 'procesando')
+     WHERE o.estado = 'confeccionada'
        AND o.rut_cliente = '92933000-5'
      ORDER BY o.nro_operacion`
   );
