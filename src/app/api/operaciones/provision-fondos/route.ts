@@ -63,8 +63,22 @@ export async function POST(request: Request) {
     });
     const listaHtml = await listaRes.text();
 
+    // Si la respuesta es un redirect de login (HTML sin tabla), reintentar con login fresco
+    let finalHtml = listaHtml;
+    if (!listaHtml.includes("reporte(") && listaHtml.includes("<html")) {
+      console.log("[provision] Sesión expirada, reintentando login...");
+      const { aduananetLogin: freshLogin } = await import("@/lib/aduananet");
+      const freshCookies = await freshLogin(true);
+      const retryRes = await fetch(`${BASE_URL}/modulos/contabilidad/solicitud_fondos/lista.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: freshCookies },
+        body: filterBody.toString(),
+      });
+      finalHtml = await retryRes.text();
+    }
+
     // Extraer sofo_id más reciente
-    const sofoIds = [...listaHtml.matchAll(/reporte\(\s*['"]?(\d+)['"]?\s*\)/gi)].map(m => Number(m[1]));
+    const sofoIds = [...finalHtml.matchAll(/reporte\(\s*['"]?(\d+)['"]?\s*\)/gi)].map(m => Number(m[1]));
     const sofoId = sofoIds.length > 0 ? Math.max(...sofoIds) : 0;
 
     if (!sofoId) {
