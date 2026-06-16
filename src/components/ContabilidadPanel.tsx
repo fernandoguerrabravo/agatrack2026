@@ -209,6 +209,9 @@ export default function ContabilidadPanel() {
                         {d.url_factura && <a href={`/api/operaciones/factura?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline btn-primary" title="Factura + DIN + TGR">
                           <span className="text-xs">📄</span>
                         </a>}
+                        <a href={`https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/din.php?lbac_nid=0&lib_base=1&lib_nid=${d.despacho}&dus_tipo_envio=2&copias=1&tipo=0&borrador=0&dolar=1&ref=1&pedidor=1&archivo=din.php-1&impresion=windows&pagina_inicial=1&cont_todas=1&rango=2-1`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline btn-info" title="DIN Aprobada">
+                          <span className="text-xs">📋</span>
+                        </a>
                         {d.tgr_url && <a href={`/api/operaciones/imprimir-tgr-din?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline" title="Imprimir TGR + DIN">
                           <span className="text-xs">🖨</span>
                         </a>}
