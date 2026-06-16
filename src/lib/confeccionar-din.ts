@@ -668,10 +668,13 @@ async function confeccionarDINTerrestre(
   docs: DocRow[],
   invoice: Record<string, unknown>,
   co: Record<string, unknown> | null,
-  crt: Record<string, unknown> | null,
-  mic: Record<string, unknown> | null,
+  crtRaw: Record<string, unknown> | null,
+  micRaw: Record<string, unknown> | null,
   poliza: Record<string, unknown> | null
 ) {
+  // Normalizar: si el documento CRT tiene sub-objetos crt y mic_dta, extraerlos
+  const crt = (crtRaw?.crt as Record<string, unknown>) || crtRaw;
+  const mic = (crtRaw?.mic_dta as Record<string, unknown>) || (micRaw?.mic_dta as Record<string, unknown>) || micRaw;
   // Datos base
   let regimen = co ? resolverRegimen(String(co.tratado_aplicable || co.pais_origen || "")) : { regId: "1", nombre: "GENERAL" };
 
@@ -679,14 +682,12 @@ async function confeccionarDINTerrestre(
   const cvtId = "8"; // Terrestre CPT → código 8 (OTRA) en AduanaNet
   const fobValue = Number(invoice.fob_value || invoice.monto_total || 0);
   
-  // Flete terrestre: del CRT gastos.flete.monto_remitente o datos_crt_adjunto del MIC
+  // Flete terrestre: del CRT gastos.flete_monto_remitente o del MIC flete_usd
   const gastosRaw = crt?.gastos as Record<string, unknown> | undefined;
-  const fleteRaw = gastosRaw?.flete as Record<string, unknown> | undefined;
-  const datosCrtAdjunto = mic?.datos_crt_adjunto as Record<string, unknown> | undefined;
   const fleteValue = Number(
-    fleteRaw?.monto_remitente || 
-    datosCrtAdjunto?.flete_remitente || 
-    datosCrtAdjunto?.total_remitente ||
+    gastosRaw?.flete_monto_remitente ||
+    gastosRaw?.total_remitente ||
+    (gastosRaw?.flete as Record<string, unknown>)?.monto_remitente ||
     mic?.flete_usd || 
     0
   );
@@ -783,7 +784,7 @@ async function confeccionarDINTerrestre(
   df.via_id = "7";
 
   // Puerto embarque = aduana_partida del MIC (ej: BAHIA BLANCA)
-  const puertoEmbRaw = String(mic?.aduana_partida || crt?.lugar_emision || "BAHIA BLANCA").toUpperCase()
+  const puertoEmbRaw = String(mic?.aduana_ciudad_pais_partida || mic?.aduana_partida || crt?.lugar_emision || "BAHIA BLANCA").toUpperCase()
     .replace(/-.*$/, "").replace(/\(.*\)/, "").trim(); // "BAHIA BLANCA-ARGENTINA" → "BAHIA BLANCA"
   const puertoRes = await resolverPuerto(puertoEmbRaw, false);
   if (puertoRes) {
@@ -984,7 +985,7 @@ async function confeccionarDINTerrestre(
   // Consolidar items con mismo código de producto (sumar cantidades y montos)
   const itemMapT = new Map<string, Record<string, unknown>>();
   for (const item of filteredItems) {
-    const code = String(item.codigo_material || item.codigo_producto || "UNKNOWN");
+    const code = String(item.codigo_material || item.codigo_producto || item.product_code || "UNKNOWN");
     if (itemMapT.has(code)) {
       const existing = itemMapT.get(code)!;
       existing.peso_neto = Number(existing.peso_neto || 0) + Number(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || 0);
@@ -1012,18 +1013,24 @@ async function confeccionarDINTerrestre(
     : String((co?.mercancia as Record<string, unknown>)?.clasificacion_arancelaria_hs || "");
 
   // ── DEDUCCIÓN TRAMO NACIONAL (solo terrestre, primer item) ──
-  // Calcular distancia puerto embarque → destinatario del MIC usando IA
+  // Usar ruta del MIC si existe, sino calcular con IA
   let deduccionTramoNacional = 0;
-  const origenDir = String(mic?.aduana_partida || crt?.lugar_emision || "BAHIA BLANCA").replace(/-.*$/, "").trim();
-  const destinoDir = String((mic?.destinatario as Record<string, unknown>)?.direccion || (mic?.destinatario as Record<string, unknown>)?.nombre || "");
-  if (origenDir && destinoDir && fleteValue > 0) {
+  if (fleteValue > 0) {
     try {
+      const rutaTransporte = String(mic?.ruta_transporte || "");
+      const origenDir = String(mic?.aduana_ciudad_pais_partida || mic?.aduana_partida || crt?.lugar_emision || "BAHIA BLANCA").replace(/-.*$/, "").trim();
+      const destinoDir = "LOS ANDES, CHILE"; // siempre LOS ANDES para terrestre
+
       const { generateText: genText } = await import("ai");
       const { openai: oai } = await import("@ai-sdk/openai");
+      const prompt = rutaTransporte
+        ? `La ruta de transporte terrestre es: "${rutaTransporte}". ¿Cuál es la distancia total aproximada en kilómetros POR CARRETERA de esta ruta? Responde SOLO con el número (sin texto, sin "km"). Ejemplo: 1450`
+        : `¿Cuál es la distancia aproximada en kilómetros POR CARRETERA (ruta terrestre) entre "${origenDir}" y "${destinoDir}"? Considera el paso Los Libertadores/Cristo Redentor. Responde SOLO con el número (sin texto, sin "km"). Ejemplo: 1450`;
+
       const distResult = await genText({
         model: oai("gpt-4o-mini"),
         maxOutputTokens: 100,
-        messages: [{ role: "user", content: `¿Cuál es la distancia aproximada en kilómetros POR CARRETERA (ruta terrestre, no línea recta) entre "${origenDir}" y "${destinoDir}"? Considera que la ruta cruza la cordillera de los Andes por el paso Los Libertadores/Cristo Redentor. Responde SOLO con el número de kilómetros (sin texto adicional, sin "km"). Ejemplo: 1450` }],
+        messages: [{ role: "user", content: prompt }],
       });
       const kmStr = distResult.text.replace(/[^0-9]/g, "");
       const km = parseInt(kmStr) || 0;
@@ -1049,7 +1056,7 @@ async function confeccionarDINTerrestre(
   let itemIndex = 0;
   for (const item of items) {
     // Obtener datos de arancel/descriptor via HTTP
-    const codigoProd = String(item.codigo_material || item.codigo_producto || "");
+    const codigoProd = String(item.codigo_material || item.codigo_producto || item.product_code || "");
     const cookies = await aduananetLogin();
     const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=2710`, { headers: { Cookie: cookies } })).text();
     const dscPartida = pickXml(descXml, "dsc_partida") || coPartida || "";
@@ -1168,11 +1175,11 @@ async function confeccionarDINTerrestre(
   const bf = extractFields(bultosHtml);
 
   // Para terrestre: datos de bultos del CRT/MIC
-  const cantidadBultos = Number(crt?.mercancia && (crt.mercancia as Record<string, unknown>)?.cantidad_bultos || mic?.cantidad_bultos || 0);
-  const tipoBultoRaw = String(crt?.mercancia && (crt.mercancia as Record<string, unknown>)?.tipo_bulto || mic?.tipo_bultos || "PALLET").toUpperCase().trim();
-  const marcas = String((crt?.mercancia as Record<string, unknown>)?.marcas || mic?.marcas || "");
+  const cantidadBultos = Number(crt?.cantidad_bultos || mic?.cantidad_bultos || 0);
+  const tipoBultoRaw = String(crt?.tipo_bultos || mic?.tipo_bultos || "PALLET").toUpperCase().trim();
+  const marcas = String(crt?.marcas || mic?.marcas || "");
   // Contenido: bolsas u otro contenido dentro de los pallets
-  const contenidoTotal = String((crt?.mercancia as Record<string, unknown>)?.contenido_total || mic?.descripcion_mercancia || "");
+  const contenidoTotal = String(mic?.marcas_descripcion_mercancia || crt?.descripcion_mercancia || "");
   // Extraer cantidad y tipo del contenido (ej: "1.080 BOLSAS DE POLIETILENO" → 1080, BOLSA)
   const contenidoMatch = contenidoTotal.match(/([\d.,]+)\s+(BOLSA|SACO|TAMBOR|CAJA|BIDON|BULTO|BAG|DRUM)/i);
   const cantidadContenido = contenidoMatch ? parseInt(contenidoMatch[1].replace(/[.,]/g, "")) : 0;
