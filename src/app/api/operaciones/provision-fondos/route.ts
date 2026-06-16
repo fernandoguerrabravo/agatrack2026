@@ -154,18 +154,37 @@ export async function POST(request: Request) {
     const viaje = bl.viaje_corregido || bl.viaje || "";
     const referencia = inv.customer_order_number || inv.internal_document_number || inv.our_reference || inv.numero_factura || "";
     
-    // Fallback: para terrestres la referencia viene del packing list
+    // Fallback: para terrestres la referencia viene del CRT o packing list o notas de la operación
     let refFinal = referencia;
     if (!refFinal || refFinal === inv.numero_factura) {
+      // Buscar en CRT
+      const crtRows = await pgQuery<{ datos_extraidos: string }>(
+        "SELECT datos_extraidos FROM documentos WHERE nro_operacion = $1 AND tipo_documento = 'Carta de Porte Internacional (CRT)' LIMIT 1",
+        [nro_operacion]
+      );
+      if (crtRows.length > 0) {
+        const crtData = typeof crtRows[0].datos_extraidos === "string" ? JSON.parse(crtRows[0].datos_extraidos) : crtRows[0].datos_extraidos;
+        const crtOrden = String((crtData?.crt as Record<string, unknown>)?.orden || crtData?.orden || "");
+        if (crtOrden && crtOrden !== "undefined") refFinal = crtOrden;
+      }
+    }
+    if (!refFinal || refFinal === inv.numero_factura) {
+      // Buscar en packing list
       const plRows = await pgQuery<{ datos_extraidos: string }>(
         "SELECT datos_extraidos FROM documentos WHERE nro_operacion = $1 AND tipo_documento = 'Lista de Empaque (Packing List)' LIMIT 1",
         [nro_operacion]
       );
       if (plRows.length > 0) {
         const pl = typeof plRows[0].datos_extraidos === "string" ? JSON.parse(plRows[0].datos_extraidos) : plRows[0].datos_extraidos;
-        const plRef = String(pl.order_number || "").replace(/\s*\/.*$/, "").trim().substring(0, 10);
+        const plRef = String(pl.order_number || pl.shipment_number || "").replace(/\s*\/.*$/, "").trim().substring(0, 10);
         if (plRef && plRef.length >= 8) refFinal = plRef;
       }
+    }
+    if (!refFinal || refFinal === inv.numero_factura) {
+      // Fallback final: notas de la operación
+      const opNotas = await pgQuery<{ notas: string }>("SELECT notas FROM operaciones WHERE nro_operacion = $1", [nro_operacion]);
+      const refMatch = (opNotas[0]?.notas || "").match(/ref:\s*([^\s|\n]+)/i);
+      if (refMatch) refFinal = refMatch[1];
     }
     const contenedores = bl.contenedores || [];
     const items = inv.items || [];
