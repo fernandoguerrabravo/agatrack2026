@@ -34,7 +34,7 @@ export async function GET() {
         AND dr.dus_tipo_envio NOT IN ('EXPO', 'SALIDA')
         AND dr.operacion NOT ILIKE '%EXPORT%'
         AND dr.operacion NOT ILIKE '%SALIDA%'
-      ORDER BY dr.fecha_aceptacion DESC`,
+      ORDER BY dr.fecha_aceptacion DESC NULLS LAST`,
       []
     );
 
