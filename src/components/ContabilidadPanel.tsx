@@ -25,6 +25,7 @@ type Despacho = {
   url_despacho: string;
   factura_despacho: string;
   estado: string;
+  aduana: string;
   tgr_url?: string;
 };
 
@@ -165,7 +166,7 @@ export default function ContabilidadPanel() {
                   <th className="font-semibold text-xs uppercase tracking-wider text-right">Derechos</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-right">Total CLP</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-center">T/C</th>
-                  <th className="font-semibold text-xs uppercase tracking-wider">Puerto</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Aduana</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-center">Acciones</th>
                 </tr>
               </thead>
@@ -188,7 +189,7 @@ export default function ContabilidadPanel() {
                     <td className="text-right font-mono text-sm">{d.gravamenes_valor_1 ? Number(d.gravamenes_valor_1).toLocaleString("es-CL") : "-"}</td>
                     <td className="text-right font-mono text-sm font-semibold text-success">{d.total_gravamenes_chs ? `$${Number(d.total_gravamenes_chs).toLocaleString("es-CL")}` : "-"}</td>
                     <td className="text-center text-xs text-base-content/60">{d.tipo_cambio || "-"}</td>
-                    <td className="text-sm">{d.puerto_desembarque || "-"}</td>
+                    <td className="text-sm">{d.aduana || "-"}</td>
                     <td>
                       <div className="flex items-center justify-center gap-1">
                         {!d.tgr_url ? (

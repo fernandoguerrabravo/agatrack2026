@@ -24,7 +24,7 @@ export async function GET() {
         dr.cliente, dr.rut_cliente, dr.referencia,
         dr.total_cif, dr.total_fob, dr.valor_flete, dr.valor_seguro,
         dr.iva, dr.gravamenes_valor_1, dr.total_gravamenes_chs, dr.tipo_cambio,
-        dr.puerto_desembarque, dr.via, dr.regimen,
+        dr.puerto_desembarque, dr.aduana, dr.via, dr.regimen,
         dr.url_factura, dr.url_dte, dr.url_despacho, dr.factura_despacho, dr.estado,
         o.notas
       FROM despachos_replica dr
