@@ -49,7 +49,12 @@ export async function GET(request: Request) {
     const dinPdfUrl = `${BASE_URL}/modulos/din/dus_encabezado/din.php?lbac_nid=0&lib_base=1&lib_nid=${nroOperacion}&dus_tipo_envio=2&copias=1&tipo=0&borrador=0&dolar=1&ref=1&pedidor=1&archivo=din.php-1&impresion=windows&pagina_inicial=1&cont_todas=1&rango=2-1`;
     const dinRes = await fetch(dinPdfUrl, { headers: { Cookie: cookies } });
 
-    // 4. Combinar PDFs
+    // 4. Descargar comprobante TGR
+    const tgrRes = await fetch(`${new URL(request.url).origin}/api/operaciones/comprobante-tgr?nro_operacion=${nroOperacion}`, {
+      headers: { Cookie: request.headers.get("cookie") || "" },
+    });
+
+    // 5. Combinar PDFs
     const mergedPdf = await PDFDocument.create();
 
     // Agregar factura
@@ -69,8 +74,20 @@ export async function GET(request: Request) {
         const dinPages = await mergedPdf.copyPages(dinPdf, dinPdf.getPageIndices());
         dinPages.forEach(page => mergedPdf.addPage(page));
       } catch {
-        // Si falla al cargar DIN, devolver solo la factura
-        console.error("[factura] Error cargando DIN PDF, enviando solo factura");
+        // Si falla al cargar DIN, continuar sin ella
+        console.error("[factura] Error cargando DIN PDF");
+      }
+    }
+
+    // Agregar comprobante TGR (si está disponible)
+    if (tgrRes.ok && tgrRes.headers.get("content-type")?.includes("pdf")) {
+      const tgrBuffer = await tgrRes.arrayBuffer();
+      try {
+        const tgrPdf = await PDFDocument.load(tgrBuffer);
+        const tgrPages = await mergedPdf.copyPages(tgrPdf, tgrPdf.getPageIndices());
+        tgrPages.forEach(page => mergedPdf.addPage(page));
+      } catch {
+        console.error("[factura] Error cargando comprobante TGR PDF");
       }
     }
 
