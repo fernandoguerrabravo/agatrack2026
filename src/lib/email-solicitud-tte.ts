@@ -20,6 +20,7 @@ const CONTACTOS_PETROQUIMICA = [
   "cmartinez@lamaignere.com",
   "sales@lamaignere.com",
   "coordinacion@atlogistica.cl",
+  "elizabeth.rojas@atlogistica.cl",
   "alejandro.avalos@atlogistica.cl",
   "ruben.hernandez@atlogistica.cl",
   "camila.quinones@atlogistica.cl",
