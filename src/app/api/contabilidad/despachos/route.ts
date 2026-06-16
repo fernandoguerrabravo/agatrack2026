@@ -30,6 +30,9 @@ export async function GET() {
       FROM despachos_replica dr
       LEFT JOIN operaciones o ON dr.despacho = o.nro_operacion
       WHERE dr.fecha_aceptacion >= '2026-06-15'
+        AND dr.dus_tipo_envio NOT IN ('EXPO', 'SALIDA')
+        AND dr.operacion NOT ILIKE '%EXPORT%'
+        AND dr.operacion NOT ILIKE '%SALIDA%'
       ORDER BY dr.fecha_aceptacion DESC`,
       []
     );
