@@ -197,18 +197,14 @@ export default function ContabilidadPanel() {
                     <td>
                       <div className="flex items-center justify-center gap-1">
                         {!d.tgr_url ? (
-                          d.fecha_pago_gravamenes ? (
-                            <button
-                              className={`btn btn-xs btn-circle btn-outline btn-success ${generandoTGR === d.despacho ? "loading" : ""}`}
-                              onClick={() => handleGenerarTGR(d.despacho)}
-                              disabled={!!generandoTGR}
-                              title="Generar TGR"
-                            >
-                              {generandoTGR !== d.despacho && <span className="text-xs">🏦</span>}
-                            </button>
-                          ) : (
-                            <span className="badge badge-xs badge-warning" title="Impuestos no pagados">⏳</span>
-                          )
+                          <button
+                            className={`btn btn-xs btn-circle btn-outline ${d.fecha_pago_gravamenes ? "btn-success" : "btn-warning"} ${generandoTGR === d.despacho ? "loading" : ""}`}
+                            onClick={() => handleGenerarTGR(d.despacho)}
+                            disabled={!!generandoTGR}
+                            title={d.fecha_pago_gravamenes ? "Generar TGR" : "Intentar TGR (impuestos pendientes)"}
+                          >
+                            {generandoTGR !== d.despacho && <span className="text-xs">{d.fecha_pago_gravamenes ? "🏦" : "⏳"}</span>}
+                          </button>
                         ) : (
                           <a href={`/api/operaciones/imprimir-tgr-din?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-success" title="Imprimir TGR + DIN">
                             🖨 TGR+DIN
