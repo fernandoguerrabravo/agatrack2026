@@ -191,12 +191,16 @@ export async function POST(request: Request) {
       // Obtener ejecutivos asignados al cliente para CC
       const opInfo = await pgQuery<{ rut_cliente: string }>("SELECT rut_cliente FROM operaciones WHERE nro_operacion = $1", [nro_operacion]);
       const ejecutivosCC = opInfo[0]?.rut_cliente ? await emailsEjecutivosCliente(opInfo[0].rut_cliente) : [];
+      
+      // Obtener nombre del cliente
+      const clienteRow = await pgQuery<{ razon: string }>("SELECT razon FROM clientes WHERE rut = $1", [opInfo[0]?.rut_cliente || ""]);
+      const clienteNombre = clienteRow[0]?.razon || "";
 
       await resend.emails.send({
         from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
         to: ["documentos@agenciaguerra.com", "fguerrab@agenciaguerra.com", "fguerra@agenciaguerra.com"],
         cc: ejecutivosCC.length > 0 ? ejecutivosCC : undefined,
-        subject: `Confección Despacho ${nro_operacion} - REF: ${referencia}${eta ? " - ETA: " + eta : ""}`,
+        subject: `Confección Despacho ${nro_operacion} - ${clienteNombre} - REF: ${referencia}${eta ? " - ETA: " + eta : ""}`,
         html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
   <p>Estimados,</p>
   <p>Se instruye la confección del siguiente despacho:</p>
