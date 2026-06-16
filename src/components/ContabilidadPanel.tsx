@@ -179,7 +179,10 @@ export default function ContabilidadPanel() {
                       <span className="font-mono font-bold text-primary">{d.despacho}</span>
                     </td>
                     <td className="text-sm text-base-content/70">
-                      {d.fecha_aceptacion ? new Date(d.fecha_aceptacion).toLocaleDateString("es-CL") : "-"}
+                      {d.fecha_aceptacion ? (() => {
+                        const [y, m, day] = d.fecha_aceptacion.substring(0, 10).split("-");
+                        return `${day}/${m}/${y}`;
+                      })() : "-"}
                     </td>
                     <td>
                       <span className="text-sm max-w-36 block truncate" title={d.cliente}>{d.cliente}</span>
