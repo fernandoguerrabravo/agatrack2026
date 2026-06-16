@@ -208,7 +208,7 @@ export default function ContabilidadPanel() {
                         {d.url_factura && <a href={`/api/operaciones/factura?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline btn-primary" title="Factura + DIN + TGR">
                           <span className="text-xs">📄</span>
                         </a>}
-                        {d.url_factura && <a href={`/api/operaciones/imprimir?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline" title="Imprimir">
+                        {d.tgr_url && <a href={`/api/operaciones/imprimir-tgr-din?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline" title="Imprimir TGR + DIN">
                           <span className="text-xs">🖨</span>
                         </a>}
                         {d.url_factura && <a href={d.url_factura} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="DTE Electrónico">
