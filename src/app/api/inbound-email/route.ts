@@ -236,6 +236,16 @@ async function processInboundEmail(
       referencia = String(d.customer_order_number || d.internal_document_number || d.orden || d.our_reference || d.orden_compra || d.po_number || d.numero_factura || "");
     }
 
+    // Fallback: buscar referencia en CRT (terrestres — campo crt.orden)
+    if (!referencia) {
+      const crtDoc = processedDocs.find(d => d.tipo === "Carta de Porte Internacional (CRT)" || d.tipo === "MIC/DTA");
+      if (crtDoc) {
+        const d = crtDoc.datos;
+        const crtOrden = String((d.crt as Record<string, unknown>)?.orden || d.orden || "");
+        if (crtOrden && crtOrden !== "undefined") referencia = crtOrden;
+      }
+    }
+
     // Fallback: buscar referencia en la Lista de Empaque (terrestres)
     if (!referencia) {
       const plDoc = processedDocs.find(d => d.tipo === "Lista de Empaque (Packing List)");

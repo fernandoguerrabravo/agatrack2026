@@ -102,7 +102,26 @@ export async function POST(request: Request) {
       const blMaster = String(blDatos.numero_bl_master || blDatos.numero_bl || "");
       const nave = String(blDatos.nave_corregida || blDatos.nave || "");
       const viaje = String(blDatos.viaje_corregido || blDatos.viaje || "");
-      const referencia = String(invDatos.customer_order_number || invDatos.internal_document_number || invDatos.numero_factura || "");
+      
+      // Referencia: para terrestres usar CRT orden, para marítimos usar invoice
+      let referencia = String(invDatos.customer_order_number || invDatos.internal_document_number || "");
+      if (!referencia || referencia === "undefined") {
+        // Buscar en CRT (terrestres)
+        const crtDoc = docs.find(d => d.tipo_documento === "Carta de Porte Internacional (CRT)" || d.tipo_documento === "MIC/DTA");
+        if (crtDoc) {
+          const crtDatos = typeof crtDoc.datos_extraidos === "string" ? JSON.parse(crtDoc.datos_extraidos) : crtDoc.datos_extraidos;
+          referencia = String(crtDatos?.crt?.orden || crtDatos?.orden || "");
+        }
+      }
+      if (!referencia || referencia === "undefined") {
+        // Fallback: packing list shipment_number (10 dígitos)
+        const plDoc = docs.find(d => d.tipo_documento === "Lista de Empaque (Packing List)");
+        if (plDoc) {
+          const plDatos = typeof plDoc.datos_extraidos === "string" ? JSON.parse(plDoc.datos_extraidos) : plDoc.datos_extraidos;
+          referencia = String(plDatos?.shipment_number || plDatos?.order_number || "").substring(0, 10);
+        }
+      }
+      if (!referencia || referencia === "undefined") referencia = invDatos.numero_factura || "";
       const sgRoute = (sgDatos as Record<string, unknown>)?.route as Record<string, unknown> | undefined;
       const etaRaw = (sgRoute?.port_of_discharge as Record<string, unknown>)?.date_of_discharge || "";
       let eta = "";
