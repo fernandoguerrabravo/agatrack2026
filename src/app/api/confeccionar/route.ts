@@ -18,8 +18,14 @@ export const maxDuration = 120;
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    // Permitir acceso via inbound_secret (para scripts/crons)
+    const inboundSecret = request.headers.get("x-inbound-secret");
+    if (!inboundSecret || inboundSecret !== process.env.INBOUND_SECRET) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    }
   }
+
+  const skipEmail = request.headers.get("x-skip-email") === "true";
 
   const { nro_operacion } = await request.json();
   if (!nro_operacion) {
@@ -88,6 +94,7 @@ export async function POST(request: Request) {
     );
 
     // Enviar correo de instrucción de confección a documentos@agenciaguerra.com
+    if (!skipEmail) {
     try {
       const { Resend } = await import("resend");
       const resend = new Resend(process.env.RESEND_API_KEY);
@@ -209,6 +216,7 @@ export async function POST(request: Request) {
     } catch (emailErr) {
       console.error("[confeccionar] Error enviando email:", emailErr instanceof Error ? emailErr.message : emailErr);
     }
+    } // end if (!skipEmail)
 
     return NextResponse.json({ ok: true, resultado });
   } catch (err) {

@@ -985,7 +985,7 @@ async function confeccionarDINTerrestre(
   // Consolidar items con mismo código de producto (sumar cantidades y montos)
   const itemMapT = new Map<string, Record<string, unknown>>();
   for (const item of filteredItems) {
-    const code = String(item.codigo_material || item.codigo_producto || item.product_code || "UNKNOWN");
+    const code = String(item.codigo_material || item.codigo_producto || item.product_code || item.codigo_referencia || "UNKNOWN");
     if (itemMapT.has(code)) {
       const existing = itemMapT.get(code)!;
       existing.peso_neto = Number(existing.peso_neto || 0) + Number(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || 0);
@@ -1056,7 +1056,7 @@ async function confeccionarDINTerrestre(
   let itemIndex = 0;
   for (const item of items) {
     // Obtener datos de arancel/descriptor via HTTP
-    const codigoProd = String(item.codigo_material || item.codigo_producto || item.product_code || "");
+    const codigoProd = String(item.codigo_material || item.codigo_producto || item.product_code || item.codigo_referencia || "");
     const cookies = await aduananetLogin();
     const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=2710`, { headers: { Cookie: cookies } })).text();
     const dscPartida = pickXml(descXml, "dsc_partida") || coPartida || "";
