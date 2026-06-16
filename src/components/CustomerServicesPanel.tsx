@@ -380,21 +380,21 @@ export default function CustomerServicesPanel() {
     } catch (err) { await Swal.fire({ title: "Error", text: err instanceof Error ? err.message : "Error", icon: "error" }); }
   }
 
-  async function handleGenerarTGR(nroOp: string) {
-    const Swal = (await import("sweetalert2")).default;
-    const c = await Swal.fire({ title: "¿Generar Comprobante TGR?", html: `Se consultará Tesorería para la operación <b>${nroOp}</b> y se guardará el PDF.`, icon: "question", showCancelButton: true, confirmButtonText: "Generar", confirmButtonColor: "#16a34a" });
-    if (!c.isConfirmed) return;
-    Swal.fire({ title: "Consultando TGR...", html: "Obteniendo comprobante de Tesorería.", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    try {
-      const res = await fetch("/api/operaciones/comprobante-tgr", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nro_operacion: nroOp }) });
-      const data = await res.json();
-      if (res.ok) {
-        await Swal.fire({ title: "✅ Comprobante TGR generado", html: `<b>Op ${nroOp}</b><br>PDF guardado en el bucket.`, icon: "success" });
-        fetchData();
-      } else {
-        await Swal.fire({ title: "Error", text: data.error, icon: "error" });
-      }
-    } catch (err) { await Swal.fire({ title: "Error", text: err instanceof Error ? err.message : "Error", icon: "error" }); }
+  async function handleGenerarTGRTodos() {
+    // Buscar operaciones aprobadas sin TGR generado
+    const sinTGR = operaciones.filter(op => op.estado === "aprobada" && !op.notas?.includes("tgr_url:"));
+    if (sinTGR.length === 0) return;
+    console.log(`[tgr] Generando TGR para ${sinTGR.length} operaciones...`);
+    for (const op of sinTGR) {
+      try {
+        await fetch("/api/operaciones/comprobante-tgr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nro_operacion: op.nro_operacion }),
+        });
+      } catch { /* continuar con la siguiente */ }
+    }
+    fetchData();
   }
 
   async function handleVerificarConsistencia(nroOp: string) {
@@ -474,7 +474,6 @@ export default function CustomerServicesPanel() {
             <a href={`/api/operaciones/${op.nro_operacion}/descargar-todos`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline">📑 Carpeta Despacho</a>
             {op.estado !== "aprobada" && <button className="btn btn-xs btn-outline btn-warning" onClick={() => handleVerificarConsistencia(op.nro_operacion)}>🔍 Verificar</button>}
             {op.estado === "aprobada" && <button className="btn btn-xs btn-secondary" onClick={() => handleProvisionFondos(op.nro_operacion)}>Provisión de Fondos</button>}
-            {op.estado === "aprobada" && <button className="btn btn-xs btn-outline btn-success" onClick={() => handleGenerarTGR(op.nro_operacion)}>🏦 Generar TGR</button>}
             {op.estado === "aprobada" && <a href={`/api/operaciones/factura?nro_operacion=${op.nro_operacion}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-primary">📄 Factura</a>}
             {op.estado === "aprobada" && op.notas?.includes("tgr_url:") && (
               <a href={op.notas.match(/tgr_url:(https?:\/\/[^\s\n]+)/)?.[1] || "#"} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-success">Ver TGR</a>
@@ -634,6 +633,9 @@ export default function CustomerServicesPanel() {
             <div className="flex items-center gap-2">
               <button className={`btn btn-sm btn-ghost ${actualizandoShipsgo ? "loading" : ""}`} onClick={handleActualizarTodos} disabled={actualizandoShipsgo} title="Actualizar ETA de todas las operaciones">
                 {!actualizandoShipsgo && "🔄"} Actualizar ETA
+              </button>
+              <button className="btn btn-sm btn-outline btn-success" onClick={handleGenerarTGRTodos} title="Generar comprobante TGR para todas las aprobadas sin TGR">
+                🏦 Generar TGR
               </button>
               <input type="text" placeholder="Filtrar..." className="input input-bordered input-sm w-48" value={filterOp} onChange={(e) => setFilterOp(e.target.value)} />
             </div>
