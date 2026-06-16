@@ -51,6 +51,7 @@ function getMenuItems(user: SessionPayload): MenuItem[] {
   if (rol === "admin") {
     items.push({ label: "Prealertas", href: "/dashboard/prealertas", icon: DocIcon });
     items.push({ label: "Customer Services", href: "/dashboard/customer-services", icon: DocIcon });
+    items.push({ label: "Contabilidad", href: "/dashboard/contabilidad", icon: DocIcon });
     items.push({ label: "Tracking Contenedores", href: "/dashboard/tracking-contenedores", icon: TrackingIcon });
   }
 
