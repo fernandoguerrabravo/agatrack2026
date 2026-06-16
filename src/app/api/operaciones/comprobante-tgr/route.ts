@@ -229,6 +229,10 @@ async function guardarYResponder(pdfBuffer: Uint8Array, rutCliente: string, nroO
   console.log(`[tgr] ✅ Comprobante guardado: ${storageUrl}`);
 
   await pgQuery(
+    "INSERT INTO operaciones (nro_operacion, rut_cliente, estado) VALUES ($1, $2, 'aprobada') ON CONFLICT (nro_operacion) DO NOTHING",
+    [nroOperacion, rutCliente]
+  );
+  await pgQuery(
     "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
     [`\ntgr_url:${storageUrl}`, nroOperacion]
   );
