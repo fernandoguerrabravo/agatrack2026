@@ -26,6 +26,7 @@ type Despacho = {
   factura_despacho: string;
   estado: string;
   aduana: string;
+  fecha_pago_gravamenes: string;
   tgr_url?: string;
 };
 
@@ -79,7 +80,7 @@ export default function ContabilidadPanel() {
   }
 
   async function handleGenerarTGRTodos() {
-    const sinTGR = filtrados.filter(d => !d.tgr_url);
+    const sinTGR = filtrados.filter(d => !d.tgr_url && d.fecha_pago_gravamenes);
     if (sinTGR.length === 0) return;
     const Swal = (await import("sweetalert2")).default;
     let timerInterval: ReturnType<typeof setInterval>;
@@ -196,14 +197,18 @@ export default function ContabilidadPanel() {
                     <td>
                       <div className="flex items-center justify-center gap-1">
                         {!d.tgr_url ? (
-                          <button
-                            className={`btn btn-xs btn-circle btn-outline btn-success ${generandoTGR === d.despacho ? "loading" : ""}`}
-                            onClick={() => handleGenerarTGR(d.despacho)}
-                            disabled={!!generandoTGR}
-                            title="Generar TGR"
-                          >
-                            {generandoTGR !== d.despacho && <span className="text-xs">🏦</span>}
-                          </button>
+                          d.fecha_pago_gravamenes ? (
+                            <button
+                              className={`btn btn-xs btn-circle btn-outline btn-success ${generandoTGR === d.despacho ? "loading" : ""}`}
+                              onClick={() => handleGenerarTGR(d.despacho)}
+                              disabled={!!generandoTGR}
+                              title="Generar TGR"
+                            >
+                              {generandoTGR !== d.despacho && <span className="text-xs">🏦</span>}
+                            </button>
+                          ) : (
+                            <span className="badge badge-xs badge-warning" title="Impuestos no pagados">⏳</span>
+                          )
                         ) : (
                           <a href={d.tgr_url} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-success" title="Ver TGR">
                             <span className="text-xs">✓</span>
