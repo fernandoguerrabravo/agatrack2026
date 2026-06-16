@@ -1,31 +1,31 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { pgQuery } from "@/lib/postgres";
+import { uploadToSpaces } from "@/lib/spaces";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * GET /api/operaciones/comprobante-tgr?nro_operacion=190420
+ * POST /api/operaciones/comprobante-tgr
+ * Body: { nro_operacion: string }
  * 
- * Descarga el comprobante de pago de Tesorería (TGR) para la operación.
- * Usa Puppeteer para navegar el sitio de TGR y descargar el PDF.
- * 
- * Parámetros:
- * - RUT: sin guión ni dígito verificador (de la operación/cliente)
- * - Formulario: 15
- * - Folio: 3690{nro_operacion}
+ * Genera el comprobante de pago TGR:
+ * 1. Navega con Puppeteer a tgr.cl/tramites-tgr/comprobantes-pagos-sitio/
+ * 2. Llena RUT (sin DV), Formulario 15, Folio 3690{operacion}
+ * 3. Captura el resultado HTML como PDF (page.pdf())
+ * 4. Guarda en el bucket
+ * 5. Retorna la URL del PDF
  */
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const nroOperacion = searchParams.get("nro_operacion");
-  if (!nroOperacion) {
+  const { nro_operacion } = await request.json();
+  if (!nro_operacion) {
     return NextResponse.json({ error: "Número de operación requerido." }, { status: 400 });
   }
 
@@ -33,15 +33,14 @@ export async function GET(request: Request) {
     // Obtener RUT del cliente
     const opRows = await pgQuery<{ rut_cliente: string }>(
       "SELECT rut_cliente FROM operaciones WHERE nro_operacion = $1",
-      [nroOperacion]
+      [nro_operacion]
     );
-    
+
     let rutCliente = opRows[0]?.rut_cliente || "";
     if (!rutCliente) {
-      // Fallback: buscar en despachos_replica
       const drRows = await pgQuery<{ rut_cliente: string }>(
         "SELECT rut_cliente FROM despachos_replica WHERE despacho = $1 LIMIT 1",
-        [nroOperacion]
+        [nro_operacion]
       );
       rutCliente = drRows[0]?.rut_cliente || "";
     }
@@ -52,110 +51,119 @@ export async function GET(request: Request) {
 
     // RUT sin guión ni dígito verificador: "92933000-5" → "92933000"
     const rutSinDv = rutCliente.split("-")[0].replace(/\./g, "");
-    const folio = `3690${nroOperacion}`;
+    const folio = `3690${nro_operacion}`;
     const formulario = "15";
 
-    console.log(`[tgr] Consultando comprobante: RUT=${rutSinDv}, Form=${formulario}, Folio=${folio}`);
+    console.log(`[tgr] Generando comprobante: RUT=${rutSinDv}, Form=${formulario}, Folio=${folio}`);
 
     // Usar Puppeteer para navegar TGR
     const puppeteer = await import("puppeteer");
     const browser = await puppeteer.default.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
     });
 
     try {
       const page = await browser.newPage();
-      
-      // Interceptar descargas de PDF
-      const client = await page.createCDPSession();
-      await client.send("Page.setDownloadBehavior", {
-        behavior: "allow",
-        downloadPath: "/tmp",
-      });
+      await page.setViewport({ width: 1200, height: 900 });
 
       await page.goto("https://tgr.cl/tramites-tgr/comprobantes-pagos-sitio/", {
         waitUntil: "networkidle0",
         timeout: 30000,
       });
 
-      // Esperar que cargue el formulario
-      await page.waitForSelector('input, iframe', { timeout: 15000 }).catch(() => {});
+      // Esperar que cargue el formulario (puede estar en iframe)
+      await new Promise(r => setTimeout(r, 3000));
 
-      // Verificar si hay un iframe (TGR suele cargar contenido en iframe)
+      // Verificar si hay un iframe
       const iframes = await page.$$("iframe");
-      let targetFrame = page;
+      let frame = page.mainFrame();
       if (iframes.length > 0) {
-        const frame = await iframes[0].contentFrame();
-        if (frame) targetFrame = frame as unknown as typeof page;
+        const contentFrame = await iframes[0].contentFrame();
+        if (contentFrame) frame = contentFrame;
       }
 
-      // Buscar campos del formulario
+      // Llenar formulario — buscar campos por diferentes selectores
       // Campo RUT
-      const rutInput = await targetFrame.$('input[name*="rut" i], input[id*="rut" i], input[placeholder*="RUT" i], input[placeholder*="Rut" i]');
-      if (rutInput) {
-        await rutInput.click({ count: 3 });
-        await rutInput.type(rutSinDv);
+      const rutSelectors = ['input[name*="rut" i]', 'input[id*="rut" i]', 'input[placeholder*="RUT" i]', 'input[placeholder*="Rut" i]', '#rut', '[formcontrolname*="rut" i]'];
+      for (const sel of rutSelectors) {
+        const el = await frame.$(sel);
+        if (el) {
+          await el.evaluate(e => (e as HTMLInputElement).value = "");
+          await el.type(rutSinDv);
+          console.log(`[tgr] RUT llenado con selector: ${sel}`);
+          break;
+        }
       }
 
       // Campo Formulario
-      const formInput = await targetFrame.$('input[name*="formulario" i], input[id*="formulario" i], select[name*="formulario" i], input[placeholder*="ormulario" i]');
-      if (formInput) {
-        const tagName = await formInput.evaluate(el => el.tagName.toLowerCase());
-        if (tagName === "select") {
-          await formInput.select(formulario);
-        } else {
-          await formInput.click({ count: 3 });
-          await formInput.type(formulario);
+      const formSelectors = ['input[name*="formulario" i]', 'input[id*="formulario" i]', 'select[name*="formulario" i]', 'select[id*="formulario" i]', '#formulario', '[formcontrolname*="formulario" i]'];
+      for (const sel of formSelectors) {
+        const el = await frame.$(sel);
+        if (el) {
+          const tagName = await el.evaluate(e => e.tagName.toLowerCase());
+          if (tagName === "select") {
+            await el.select(formulario);
+          } else {
+            await el.evaluate(e => (e as HTMLInputElement).value = "");
+            await el.type(formulario);
+          }
+          console.log(`[tgr] Formulario llenado con selector: ${sel}`);
+          break;
         }
       }
 
       // Campo Folio
-      const folioInput = await targetFrame.$('input[name*="folio" i], input[id*="folio" i], input[placeholder*="olio" i]');
-      if (folioInput) {
-        await folioInput.click({ count: 3 });
-        await folioInput.type(folio);
+      const folioSelectors = ['input[name*="folio" i]', 'input[id*="folio" i]', '#folio', '[formcontrolname*="folio" i]', 'input[placeholder*="olio" i]'];
+      for (const sel of folioSelectors) {
+        const el = await frame.$(sel);
+        if (el) {
+          await el.evaluate(e => (e as HTMLInputElement).value = "");
+          await el.type(folio);
+          console.log(`[tgr] Folio llenado con selector: ${sel}`);
+          break;
+        }
       }
 
-      // Submit
-      const submitBtn = await targetFrame.$('button[type="submit"], input[type="submit"], button:has-text("Buscar"), button:has-text("Consultar"), button:has-text("Obtener")');
-      if (submitBtn) {
-        await submitBtn.click();
-        await page.waitForNavigation({ waitUntil: "networkidle0", timeout: 15000 }).catch(() => {});
-      }
-
-      // Esperar resultado y buscar link al PDF
-      await new Promise(r => setTimeout(r, 3000));
-
-      // Intentar capturar el PDF de la respuesta
-      const pdfLink = await targetFrame.$('a[href*=".pdf"], a[href*="PDF"], a:has-text("Descargar"), a:has-text("Comprobante"), a:has-text("Ver")');
-      if (pdfLink) {
-        const href = await pdfLink.evaluate(el => (el as HTMLAnchorElement).href);
-        if (href) {
-          const pdfRes = await fetch(href);
-          if (pdfRes.ok) {
-            const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
-            await browser.close();
-            return new NextResponse(pdfBuffer, {
-              headers: {
-                "Content-Type": "application/pdf",
-                "Content-Disposition": `inline; filename="Comprobante_TGR_${nroOperacion}.pdf"`,
-              },
-            });
+      // Click en buscar/consultar
+      const btnSelectors = ['button[type="submit"]', 'input[type="submit"]', 'button:not([type="reset"])'];
+      for (const sel of btnSelectors) {
+        const btns = await frame.$$(sel);
+        for (const btn of btns) {
+          const text = await btn.evaluate(e => e.textContent?.toLowerCase() || "");
+          if (text.includes("buscar") || text.includes("consultar") || text.includes("obtener") || text.includes("enviar")) {
+            await btn.click();
+            console.log(`[tgr] Botón clickeado: "${text.trim()}"`);
+            break;
           }
         }
       }
 
-      // Si no encontró link, intentar imprimir la página como PDF
-      const pdfBuffer = await page.pdf({ format: "Letter", printBackground: true });
+      // Esperar resultado
+      await new Promise(r => setTimeout(r, 5000));
+      await page.waitForNetworkIdle({ timeout: 10000 }).catch(() => {});
+
+      // Generar PDF del resultado (la página con el comprobante)
+      const pdfBuffer = await page.pdf({
+        format: "Letter",
+        printBackground: true,
+        margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+      });
+
       await browser.close();
 
-      return new NextResponse(Buffer.from(pdfBuffer), {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `inline; filename="Comprobante_TGR_${nroOperacion}.pdf"`,
-        },
-      });
+      // Guardar en bucket
+      const fileKey = `documentos/${rutCliente}/${nro_operacion}/comprobante_tgr_${nro_operacion}.pdf`;
+      const storageUrl = await uploadToSpaces(Buffer.from(pdfBuffer), fileKey, "application/pdf");
+      console.log(`[tgr] Comprobante guardado: ${storageUrl}`);
+
+      // Guardar URL en la operación
+      await pgQuery(
+        "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
+        [`\ntgr_url:${storageUrl}`, nro_operacion]
+      );
+
+      return NextResponse.json({ ok: true, url: storageUrl });
     } finally {
       await browser.close().catch(() => {});
     }

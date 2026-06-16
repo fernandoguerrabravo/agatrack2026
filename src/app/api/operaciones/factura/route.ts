@@ -12,7 +12,7 @@ const BASE_URL = process.env.ADUANANET_URL || "https://fguerragodoy.aduananet2.c
 /**
  * GET /api/operaciones/factura?nro_operacion=190420
  * 
- * Genera un PDF combinado: Factura + DIN Aprobada
+ * Genera un PDF combinado: Factura + DIN Aprobada + Comprobante TGR
  */
 export async function GET(request: Request) {
   const session = await getSession();
@@ -49,10 +49,13 @@ export async function GET(request: Request) {
     const dinPdfUrl = `${BASE_URL}/modulos/din/dus_encabezado/din.php?lbac_nid=0&lib_base=1&lib_nid=${nroOperacion}&dus_tipo_envio=2&copias=1&tipo=0&borrador=0&dolar=1&ref=1&pedidor=1&archivo=din.php-1&impresion=windows&pagina_inicial=1&cont_todas=1&rango=2-1`;
     const dinRes = await fetch(dinPdfUrl, { headers: { Cookie: cookies } });
 
-    // 4. Descargar comprobante TGR
-    const tgrRes = await fetch(`${new URL(request.url).origin}/api/operaciones/comprobante-tgr?nro_operacion=${nroOperacion}`, {
-      headers: { Cookie: request.headers.get("cookie") || "" },
-    });
+    // 4. Obtener comprobante TGR del bucket (si ya fue generado)
+    const opRows = await pgQuery<{ notas: string }>(
+      "SELECT notas FROM operaciones WHERE nro_operacion = $1",
+      [nroOperacion]
+    );
+    const tgrUrlMatch = (opRows[0]?.notas || "").match(/tgr_url:(https?:\/\/[^\s\n]+)/);
+    const tgrUrl = tgrUrlMatch ? tgrUrlMatch[1] : "";
 
     // 5. Combinar PDFs
     const mergedPdf = await PDFDocument.create();
@@ -66,7 +69,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Error procesando PDF de factura" }, { status: 500 });
     }
 
-    // Agregar DIN aprobada (si está disponible)
+    // Agregar DIN aprobada
     if (dinRes.ok) {
       const dinBuffer = await dinRes.arrayBuffer();
       try {
@@ -74,18 +77,20 @@ export async function GET(request: Request) {
         const dinPages = await mergedPdf.copyPages(dinPdf, dinPdf.getPageIndices());
         dinPages.forEach(page => mergedPdf.addPage(page));
       } catch {
-        // Si falla al cargar DIN, continuar sin ella
         console.error("[factura] Error cargando DIN PDF");
       }
     }
 
-    // Agregar comprobante TGR (si está disponible)
-    if (tgrRes.ok && tgrRes.headers.get("content-type")?.includes("pdf")) {
-      const tgrBuffer = await tgrRes.arrayBuffer();
+    // Agregar comprobante TGR (si existe en el bucket)
+    if (tgrUrl) {
       try {
-        const tgrPdf = await PDFDocument.load(tgrBuffer);
-        const tgrPages = await mergedPdf.copyPages(tgrPdf, tgrPdf.getPageIndices());
-        tgrPages.forEach(page => mergedPdf.addPage(page));
+        const tgrRes = await fetch(tgrUrl);
+        if (tgrRes.ok) {
+          const tgrBuffer = await tgrRes.arrayBuffer();
+          const tgrPdf = await PDFDocument.load(tgrBuffer);
+          const tgrPages = await mergedPdf.copyPages(tgrPdf, tgrPdf.getPageIndices());
+          tgrPages.forEach(page => mergedPdf.addPage(page));
+        }
       } catch {
         console.error("[factura] Error cargando comprobante TGR PDF");
       }
@@ -96,7 +101,7 @@ export async function GET(request: Request) {
     return new NextResponse(Buffer.from(mergedBuffer), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="Factura_DIN_${nroOperacion}.pdf"`,
+        "Content-Disposition": `inline; filename="Factura_DIN_TGR_${nroOperacion}.pdf"`,
       },
     });
   } catch (err) {
