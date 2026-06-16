@@ -25,9 +25,10 @@ type Despacho = {
   url_despacho: string;
   factura_despacho: string;
   estado: string;
-  // De operaciones
   tgr_url?: string;
 };
+
+const POR_PAGINA = 20;
 
 export default function ContabilidadPanel() {
   const [despachos, setDespachos] = useState<Despacho[]>([]);
@@ -35,11 +36,8 @@ export default function ContabilidadPanel() {
   const [generandoTGR, setGenerandoTGR] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
-  const POR_PAGINA = 30;
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   async function fetchData() {
     setLoading(true);
@@ -51,7 +49,6 @@ export default function ContabilidadPanel() {
     setLoading(false);
   }
 
-  // Filtrar por búsqueda
   const filtrados = despachos.filter(d => {
     if (!busqueda) return true;
     const q = busqueda.toLowerCase();
@@ -64,7 +61,6 @@ export default function ContabilidadPanel() {
     );
   });
 
-  // Paginación
   const totalPaginas = Math.ceil(filtrados.length / POR_PAGINA);
   const despachosPagina = filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
 
@@ -82,7 +78,7 @@ export default function ContabilidadPanel() {
   }
 
   async function handleGenerarTGRTodos() {
-    const sinTGR = despachos.filter(d => !d.tgr_url);
+    const sinTGR = filtrados.filter(d => !d.tgr_url);
     if (sinTGR.length === 0) return;
     const Swal = (await import("sweetalert2")).default;
     let timerInterval: ReturnType<typeof setInterval>;
@@ -118,86 +114,144 @@ export default function ContabilidadPanel() {
     fetchData();
   }
 
-  if (loading) return <div className="flex items-center justify-center py-10"><span className="loading loading-spinner loading-lg"></span></div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Acciones globales */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <button className="btn btn-sm btn-outline btn-success" onClick={handleGenerarTGRTodos}>
-          🏦 Generar TGR (todos pendientes)
-        </button>
-        <input
-          type="text"
-          placeholder="Buscar despacho, cliente, referencia..."
-          className="input input-bordered input-sm w-72"
-          value={busqueda}
-          onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
-        />
-        <span className="text-sm text-base-content/60">{filtrados.length} despachos</span>
+    <div className="space-y-5">
+      {/* Header con buscador y acciones */}
+      <div className="card bg-base-100 shadow-sm">
+        <div className="card-body p-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <button className="btn btn-sm btn-success gap-1" onClick={handleGenerarTGRTodos}>
+                🏦 Generar TGR pendientes
+              </button>
+              <div className="badge badge-neutral badge-outline">{filtrados.length} registros</div>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="🔍 Buscar despacho, cliente, referencia..."
+                className="input input-bordered input-sm w-80 pl-3"
+                value={busqueda}
+                onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
+              />
+              {busqueda && (
+                <button className="btn btn-ghost btn-xs absolute right-2 top-1/2 -translate-y-1/2" onClick={() => { setBusqueda(""); setPagina(1); }}>✕</button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tabla */}
-      <div className="overflow-x-auto">
-        <table className="table table-xs table-zebra w-full">
-          <thead>
-            <tr className="bg-base-200">
-              <th>Despacho</th>
-              <th>Fecha</th>
-              <th>Cliente</th>
-              <th>Referencia</th>
-              <th>CIF USD</th>
-              <th>IVA</th>
-              <th>Derechos</th>
-              <th>Total Grav. CLP</th>
-              <th>T/C</th>
-              <th>Puerto</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {despachosPagina.map(d => (
-              <tr key={d.nro_aceptacion || d.despacho}>
-                <td className="font-mono font-bold">{d.despacho}</td>
-                <td className="text-xs">{d.fecha_aceptacion ? new Date(d.fecha_aceptacion).toLocaleDateString("es-CL") : "-"}</td>
-                <td className="text-xs max-w-32 truncate" title={d.cliente}>{d.cliente}</td>
-                <td className="text-xs">{d.referencia}</td>
-                <td className="text-right font-mono">{d.total_cif ? Number(d.total_cif).toLocaleString("es-CL") : "-"}</td>
-                <td className="text-right font-mono">{d.iva ? Number(d.iva).toLocaleString("es-CL") : "-"}</td>
-                <td className="text-right font-mono">{d.gravamenes_valor_1 ? Number(d.gravamenes_valor_1).toLocaleString("es-CL") : "-"}</td>
-                <td className="text-right font-mono font-bold">{d.total_gravamenes_chs ? Number(d.total_gravamenes_chs).toLocaleString("es-CL") : "-"}</td>
-                <td className="text-right text-xs">{d.tipo_cambio || "-"}</td>
-                <td className="text-xs">{d.puerto_desembarque}</td>
-                <td>
-                  <div className="flex flex-wrap gap-1">
-                    {!d.tgr_url ? (
-                      <button
-                        className={`btn btn-xs btn-outline btn-success ${generandoTGR === d.despacho ? "loading" : ""}`}
-                        onClick={() => handleGenerarTGR(d.despacho)}
-                        disabled={!!generandoTGR}
-                      >
-                        {generandoTGR !== d.despacho && "🏦"}
-                      </button>
-                    ) : (
-                      <a href={d.tgr_url} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-success btn-outline">TGR</a>
-                    )}
-                    <a href={`/api/operaciones/factura?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-primary">📄 Factura+DIN</a>
-                    <a href={`/api/operaciones/imprimir?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline">🖨️</a>
-                    {d.url_factura && <a href={d.url_factura} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-ghost">DTE</a>}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="card bg-base-100 shadow-sm">
+        <div className="card-body p-0">
+          <div className="overflow-x-auto">
+            <table className="table table-sm w-full">
+              <thead>
+                <tr className="bg-base-200/50 border-b-2 border-base-300">
+                  <th className="font-semibold text-xs uppercase tracking-wider">Despacho</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Fecha</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Cliente</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Referencia</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider text-right">CIF USD</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider text-right">IVA</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider text-right">Derechos</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider text-right">Total CLP</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider text-center">T/C</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Puerto</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {despachosPagina.length === 0 ? (
+                  <tr><td colSpan={11} className="text-center py-8 text-base-content/50">Sin resultados</td></tr>
+                ) : despachosPagina.map((d, i) => (
+                  <tr key={d.nro_aceptacion || d.despacho} className={`hover:bg-base-200/30 transition-colors ${i % 2 === 0 ? "" : "bg-base-200/10"}`}>
+                    <td>
+                      <span className="font-mono font-bold text-primary">{d.despacho}</span>
+                    </td>
+                    <td className="text-sm text-base-content/70">
+                      {d.fecha_aceptacion ? new Date(d.fecha_aceptacion).toLocaleDateString("es-CL") : "-"}
+                    </td>
+                    <td>
+                      <span className="text-sm max-w-36 block truncate" title={d.cliente}>{d.cliente}</span>
+                    </td>
+                    <td className="text-sm font-mono">{d.referencia || "-"}</td>
+                    <td className="text-right font-mono text-sm">{d.total_cif ? Number(d.total_cif).toLocaleString("es-CL") : "-"}</td>
+                    <td className="text-right font-mono text-sm">{d.iva ? Number(d.iva).toLocaleString("es-CL") : "-"}</td>
+                    <td className="text-right font-mono text-sm">{d.gravamenes_valor_1 ? Number(d.gravamenes_valor_1).toLocaleString("es-CL") : "-"}</td>
+                    <td className="text-right font-mono text-sm font-semibold text-success">{d.total_gravamenes_chs ? `$${Number(d.total_gravamenes_chs).toLocaleString("es-CL")}` : "-"}</td>
+                    <td className="text-center text-xs text-base-content/60">{d.tipo_cambio || "-"}</td>
+                    <td className="text-sm">{d.puerto_desembarque || "-"}</td>
+                    <td>
+                      <div className="flex items-center justify-center gap-1">
+                        {!d.tgr_url ? (
+                          <button
+                            className={`btn btn-xs btn-circle btn-outline btn-success ${generandoTGR === d.despacho ? "loading" : ""}`}
+                            onClick={() => handleGenerarTGR(d.despacho)}
+                            disabled={!!generandoTGR}
+                            title="Generar TGR"
+                          >
+                            {generandoTGR !== d.despacho && <span className="text-xs">🏦</span>}
+                          </button>
+                        ) : (
+                          <a href={d.tgr_url} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-success" title="Ver TGR">
+                            <span className="text-xs">✓</span>
+                          </a>
+                        )}
+                        <a href={`/api/operaciones/factura?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline btn-primary" title="Factura + DIN + TGR">
+                          <span className="text-xs">📄</span>
+                        </a>
+                        <a href={`/api/operaciones/imprimir?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline" title="Imprimir">
+                          <span className="text-xs">🖨</span>
+                        </a>
+                        {d.url_factura && (
+                          <a href={d.url_factura} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="DTE Electrónico">
+                            <span className="text-xs">📎</span>
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {/* Paginador */}
       {totalPaginas > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button className="btn btn-sm" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>«</button>
-          <span className="text-sm">Página {pagina} de {totalPaginas}</span>
-          <button className="btn btn-sm" disabled={pagina === totalPaginas} onClick={() => setPagina(p => p + 1)}>»</button>
+        <div className="flex items-center justify-between px-2">
+          <span className="text-sm text-base-content/50">
+            Mostrando {(pagina - 1) * POR_PAGINA + 1}-{Math.min(pagina * POR_PAGINA, filtrados.length)} de {filtrados.length}
+          </span>
+          <div className="join">
+            <button className="join-item btn btn-sm" disabled={pagina === 1} onClick={() => setPagina(1)}>«</button>
+            <button className="join-item btn btn-sm" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>‹</button>
+            {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+              let p: number;
+              if (totalPaginas <= 5) p = i + 1;
+              else if (pagina <= 3) p = i + 1;
+              else if (pagina >= totalPaginas - 2) p = totalPaginas - 4 + i;
+              else p = pagina - 2 + i;
+              return (
+                <button key={p} className={`join-item btn btn-sm ${pagina === p ? "btn-active" : ""}`} onClick={() => setPagina(p)}>
+                  {p}
+                </button>
+              );
+            })}
+            <button className="join-item btn btn-sm" disabled={pagina === totalPaginas} onClick={() => setPagina(p => p + 1)}>›</button>
+            <button className="join-item btn btn-sm" disabled={pagina === totalPaginas} onClick={() => setPagina(totalPaginas)}>»</button>
+          </div>
         </div>
       )}
     </div>
