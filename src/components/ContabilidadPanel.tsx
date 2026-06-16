@@ -33,6 +33,9 @@ export default function ContabilidadPanel() {
   const [despachos, setDespachos] = useState<Despacho[]>([]);
   const [loading, setLoading] = useState(true);
   const [generandoTGR, setGenerandoTGR] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [pagina, setPagina] = useState(1);
+  const POR_PAGINA = 30;
 
   useEffect(() => {
     fetchData();
@@ -47,6 +50,23 @@ export default function ContabilidadPanel() {
     } catch {}
     setLoading(false);
   }
+
+  // Filtrar por búsqueda
+  const filtrados = despachos.filter(d => {
+    if (!busqueda) return true;
+    const q = busqueda.toLowerCase();
+    return (
+      d.despacho?.toLowerCase().includes(q) ||
+      d.cliente?.toLowerCase().includes(q) ||
+      d.referencia?.toLowerCase().includes(q) ||
+      d.nro_aceptacion?.toLowerCase().includes(q) ||
+      d.puerto_desembarque?.toLowerCase().includes(q)
+    );
+  });
+
+  // Paginación
+  const totalPaginas = Math.ceil(filtrados.length / POR_PAGINA);
+  const despachosPagina = filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
 
   async function handleGenerarTGR(despacho: string) {
     setGenerandoTGR(despacho);
@@ -103,11 +123,18 @@ export default function ContabilidadPanel() {
   return (
     <div className="space-y-4">
       {/* Acciones globales */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <button className="btn btn-sm btn-outline btn-success" onClick={handleGenerarTGRTodos}>
           🏦 Generar TGR (todos pendientes)
         </button>
-        <span className="text-sm text-base-content/60">{despachos.length} despachos desde 15/06/2026</span>
+        <input
+          type="text"
+          placeholder="Buscar despacho, cliente, referencia..."
+          className="input input-bordered input-sm w-72"
+          value={busqueda}
+          onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
+        />
+        <span className="text-sm text-base-content/60">{filtrados.length} despachos</span>
       </div>
 
       {/* Tabla */}
@@ -129,7 +156,7 @@ export default function ContabilidadPanel() {
             </tr>
           </thead>
           <tbody>
-            {despachos.map(d => (
+            {despachosPagina.map(d => (
               <tr key={d.nro_aceptacion || d.despacho}>
                 <td className="font-mono font-bold">{d.despacho}</td>
                 <td className="text-xs">{d.fecha_aceptacion ? new Date(d.fecha_aceptacion).toLocaleDateString("es-CL") : "-"}</td>
@@ -164,6 +191,15 @@ export default function ContabilidadPanel() {
           </tbody>
         </table>
       </div>
+
+      {/* Paginador */}
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button className="btn btn-sm" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>«</button>
+          <span className="text-sm">Página {pagina} de {totalPaginas}</span>
+          <button className="btn btn-sm" disabled={pagina === totalPaginas} onClick={() => setPagina(p => p + 1)}>»</button>
+        </div>
+      )}
     </div>
   );
 }
