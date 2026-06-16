@@ -205,17 +205,15 @@ export default function ContabilidadPanel() {
                             <span className="text-xs">✓</span>
                           </a>
                         )}
-                        <a href={`/api/operaciones/factura?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline btn-primary" title="Factura + DIN + TGR">
+                        {d.url_factura && <a href={`/api/operaciones/factura?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline btn-primary" title="Factura + DIN + TGR">
                           <span className="text-xs">📄</span>
-                        </a>
-                        <a href={`/api/operaciones/imprimir?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline" title="Imprimir">
+                        </a>}
+                        {d.url_factura && <a href={`/api/operaciones/imprimir?nro_operacion=${d.despacho}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline" title="Imprimir">
                           <span className="text-xs">🖨</span>
-                        </a>
-                        {d.url_factura && (
-                          <a href={d.url_factura} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="DTE Electrónico">
-                            <span className="text-xs">📎</span>
-                          </a>
-                        )}
+                        </a>}
+                        {d.url_factura && <a href={d.url_factura} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="DTE Electrónico">
+                          <span className="text-xs">📎</span>
+                        </a>}
                       </div>
                     </td>
                   </tr>
