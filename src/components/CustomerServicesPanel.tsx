@@ -457,6 +457,7 @@ export default function CustomerServicesPanel() {
             <a href={`/api/operaciones/${op.nro_operacion}/descargar-todos`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline">📑 Carpeta Despacho</a>
             {op.estado !== "aprobada" && <button className="btn btn-xs btn-outline btn-warning" onClick={() => handleVerificarConsistencia(op.nro_operacion)}>🔍 Verificar</button>}
             {op.estado === "aprobada" && <button className="btn btn-xs btn-secondary" onClick={() => handleProvisionFondos(op.nro_operacion)}>Provisión de Fondos</button>}
+            {op.estado === "aprobada" && <a href={`https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/lista.php`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-primary">📄 Factura</a>}
             {op.estado === "aprobada" && op.notas?.includes("provision_url:") && (
               <a href={op.notas.match(/provision_url:(https?:\/\/[^\s\n]+)/)?.[1] || "#"} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-secondary">Ver Provisión</a>
             )}
