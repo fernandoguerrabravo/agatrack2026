@@ -91,7 +91,13 @@ export default function CustomerServicesPanel() {
   // Obtener lista de clientes asignados
   useEffect(() => {
     fetch("/api/operaciones/clientes").then(r => r.json()).then(data => {
-      if (data.clientes) setClientes(data.clientes);
+      if (data.clientes) {
+        setClientes(data.clientes);
+        // Si solo tiene 1 cliente, seleccionarlo directamente (sin opción "Todos")
+        if (data.clientes.length === 1) {
+          setClienteActivo(data.clientes[0].rut);
+        }
+      }
     }).catch(() => {});
     fetch("/api/tipos-documento").then(r => r.json()).then(data => {
       if (data.tipos) setTiposDocumento(data.tipos);
@@ -614,7 +620,9 @@ export default function CustomerServicesPanel() {
           {/* Tabs por cliente */}
           {clientes.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
-              <button className={`badge badge-lg cursor-pointer ${clienteActivo === "todos" ? "badge-success text-white" : "badge-neutral badge-outline"}`} onClick={() => setClienteActivo("todos")}>Todos</button>
+              {clientes.length > 1 && (
+                <button className={`badge badge-lg cursor-pointer ${clienteActivo === "todos" ? "badge-success text-white" : "badge-neutral badge-outline"}`} onClick={() => setClienteActivo("todos")}>Todos</button>
+              )}
               {clientes.map(c => (
                 <button key={c.rut} className={`badge badge-lg cursor-pointer ${clienteActivo === c.rut ? "badge-success text-white" : "badge-neutral badge-outline"}`} onClick={() => setClienteActivo(c.rut)}>
                   {c.nombre}
