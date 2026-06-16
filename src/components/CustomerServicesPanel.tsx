@@ -495,6 +495,7 @@ export default function CustomerServicesPanel() {
             {op.estado !== "aprobada" && <button className="btn btn-xs btn-outline btn-warning" onClick={() => handleVerificarConsistencia(op.nro_operacion)}>🔍 Verificar</button>}
             {op.estado === "aprobada" && <button className="btn btn-xs btn-secondary" onClick={() => handleProvisionFondos(op.nro_operacion)}>Provisión de Fondos</button>}
             {op.estado === "aprobada" && <a href={`/api/operaciones/factura?nro_operacion=${op.nro_operacion}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-primary">📄 Factura</a>}
+            {op.estado === "aprobada" && <a href={`/api/operaciones/imprimir?nro_operacion=${op.nro_operacion}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline">🖨️ Imprimir</a>}
             {op.estado === "aprobada" && op.notas?.includes("tgr_url:") && (
               <a href={op.notas.match(/tgr_url:(https?:\/\/[^\s\n]+)/)?.[1] || "#"} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-success">Ver TGR</a>
             )}
