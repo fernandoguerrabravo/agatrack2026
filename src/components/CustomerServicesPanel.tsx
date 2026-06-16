@@ -381,10 +381,26 @@ export default function CustomerServicesPanel() {
   }
 
   async function handleGenerarTGRTodos() {
-    // Buscar operaciones aprobadas sin TGR generado
     const sinTGR = operaciones.filter(op => op.estado === "aprobada" && !op.notas?.includes("tgr_url:"));
     if (sinTGR.length === 0) return;
-    console.log(`[tgr] Generando TGR para ${sinTGR.length} operaciones...`);
+    const Swal = (await import("sweetalert2")).default;
+    let timerInterval: ReturnType<typeof setInterval>;
+    let segundos = 0;
+    Swal.fire({
+      title: `🏦 Generando TGR (0/${sinTGR.length})`,
+      html: `Tiempo: <b>0s</b>`,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+        timerInterval = setInterval(() => {
+          segundos++;
+          const timer = Swal.getHtmlContainer()?.querySelector("b");
+          if (timer) timer.textContent = `${segundos}s`;
+        }, 1000);
+      },
+      willClose: () => clearInterval(timerInterval),
+    });
+    let completadas = 0;
     for (const op of sinTGR) {
       try {
         await fetch("/api/operaciones/comprobante-tgr", {
@@ -392,8 +408,12 @@ export default function CustomerServicesPanel() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ nro_operacion: op.nro_operacion }),
         });
-      } catch { /* continuar con la siguiente */ }
+        completadas++;
+        Swal.update({ title: `🏦 Generando TGR (${completadas}/${sinTGR.length})` });
+      } catch { completadas++; }
     }
+    clearInterval(timerInterval!);
+    await Swal.fire({ title: "✅ TGR completado", html: `${completadas} comprobante(s) generados en ${segundos}s`, icon: "success", timer: 3000 });
     fetchData();
   }
 
