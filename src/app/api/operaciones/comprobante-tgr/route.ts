@@ -12,11 +12,11 @@ export const maxDuration = 60;
  * Body: { nro_operacion: string }
  * 
  * Genera el comprobante de pago TGR:
- * 1. Navega con Puppeteer a tgr.cl/tramites-tgr/comprobantes-pagos-sitio/
- * 2. Llena RUT (sin DV), Formulario 15, Folio 3690{operacion}
- * 3. Captura el resultado HTML como PDF (page.pdf())
- * 4. Guarda en el bucket
- * 5. Retorna la URL del PDF
+ * 1. Navega con Puppeteer a https://www.tesoreria.cl/portal/comprobantePago/
+ * 2. Llena los 3 inputs visibles: RUT (sin DV), Formulario 15, Folio 3690{operacion}
+ * 3. Submit → puede abrir en nueva pestaña o misma página
+ * 4. Captura el resultado como PDF (page.pdf())
+ * 5. Guarda en el bucket
  */
 export async function POST(request: Request) {
   const session = await getSession();
@@ -56,114 +56,163 @@ export async function POST(request: Request) {
 
     console.log(`[tgr] Generando comprobante: RUT=${rutSinDv}, Form=${formulario}, Folio=${folio}`);
 
-    // Usar Puppeteer para navegar TGR
     const puppeteer = await import("puppeteer");
     const browser = await puppeteer.default.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
     });
 
     try {
-      const page = await browser.newPage();
+      const context = await browser.createBrowserContext();
+      const page = await context.newPage();
       await page.setViewport({ width: 1200, height: 900 });
 
-      await page.goto("https://tgr.cl/tramites-tgr/comprobantes-pagos-sitio/", {
-        waitUntil: "networkidle0",
-        timeout: 30000,
+      const url = "https://www.tesoreria.cl/portal/comprobantePago/?RUT=0&DV=0&EMAIL=";
+      console.log(`[tgr] Abriendo ${url}`);
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.waitForNetworkIdle({ timeout: 10000 }).catch(() => {});
+      await new Promise(r => setTimeout(r, 2000));
+
+      // Buscar inputs visibles (como el script Python)
+      const visibleInputs = await page.$$eval("input", (inputs) => {
+        return inputs
+          .filter(inp => {
+            const style = window.getComputedStyle(inp);
+            return style.display !== "none" && style.visibility !== "hidden" && inp.offsetParent !== null && inp.type !== "hidden";
+          })
+          .map((_, i) => i);
       });
 
-      // Esperar que cargue el formulario (puede estar en iframe)
-      await new Promise(r => setTimeout(r, 3000));
+      console.log(`[tgr] Inputs visibles encontrados: ${visibleInputs.length}`);
 
-      // Verificar si hay un iframe
-      const iframes = await page.$$("iframe");
-      let frame = page.mainFrame();
-      if (iframes.length > 0) {
-        const contentFrame = await iframes[0].contentFrame();
-        if (contentFrame) frame = contentFrame;
+      if (visibleInputs.length < 3) {
+        await browser.close();
+        return NextResponse.json({ error: `Se esperaban al menos 3 inputs visibles, solo hay ${visibleInputs.length}` }, { status: 500 });
       }
 
-      // Llenar formulario — buscar campos por diferentes selectores
-      // Campo RUT
-      const rutSelectors = ['input[name*="rut" i]', 'input[id*="rut" i]', 'input[placeholder*="RUT" i]', 'input[placeholder*="Rut" i]', '#rut', '[formcontrolname*="rut" i]'];
-      for (const sel of rutSelectors) {
-        const el = await frame.$(sel);
-        if (el) {
-          await el.evaluate(e => (e as HTMLInputElement).value = "");
-          await el.type(rutSinDv);
-          console.log(`[tgr] RUT llenado con selector: ${sel}`);
+      // Llenar los 3 primeros inputs visibles: RUT, Formulario, Folio
+      const allInputs = await page.$$("input");
+      let filled = 0;
+      for (const input of allInputs) {
+        const isVisible = await input.evaluate(el => {
+          const style = window.getComputedStyle(el);
+          return style.display !== "none" && style.visibility !== "hidden" && el.offsetParent !== null && (el as HTMLInputElement).type !== "hidden";
+        });
+        if (!isVisible) continue;
+
+        if (filled === 0) {
+          await input.evaluate(el => (el as HTMLInputElement).value = "");
+          await input.type(rutSinDv);
+          console.log(`[tgr] Input 0 (RUT): ${rutSinDv}`);
+        } else if (filled === 1) {
+          await input.evaluate(el => (el as HTMLInputElement).value = "");
+          await input.type(formulario);
+          console.log(`[tgr] Input 1 (Formulario): ${formulario}`);
+        } else if (filled === 2) {
+          await input.evaluate(el => (el as HTMLInputElement).value = "");
+          await input.type(folio);
+          console.log(`[tgr] Input 2 (Folio): ${folio}`);
           break;
         }
+        filled++;
       }
 
-      // Campo Formulario
-      const formSelectors = ['input[name*="formulario" i]', 'input[id*="formulario" i]', 'select[name*="formulario" i]', 'select[id*="formulario" i]', '#formulario', '[formcontrolname*="formulario" i]'];
-      for (const sel of formSelectors) {
-        const el = await frame.$(sel);
-        if (el) {
-          const tagName = await el.evaluate(e => e.tagName.toLowerCase());
-          if (tagName === "select") {
-            await el.select(formulario);
-          } else {
-            await el.evaluate(e => (e as HTMLInputElement).value = "");
-            await el.type(formulario);
-          }
-          console.log(`[tgr] Formulario llenado con selector: ${sel}`);
-          break;
-        }
-      }
+      await new Promise(r => setTimeout(r, 1000));
 
-      // Campo Folio
-      const folioSelectors = ['input[name*="folio" i]', 'input[id*="folio" i]', '#folio', '[formcontrolname*="folio" i]', 'input[placeholder*="olio" i]'];
-      for (const sel of folioSelectors) {
-        const el = await frame.$(sel);
-        if (el) {
-          await el.evaluate(e => (e as HTMLInputElement).value = "");
-          await el.type(folio);
-          console.log(`[tgr] Folio llenado con selector: ${sel}`);
-          break;
-        }
-      }
+      // Buscar y clickear botón submit
+      const submitBtn = await page.$('button[type="submit"], input[type="submit"]');
+      if (!submitBtn) {
+        // Fallback: buscar cualquier botón visible
+        const buttons = await page.$$("button");
+        let clicked = false;
+        for (const btn of buttons) {
+          const isVisible = await btn.evaluate(el => {
+            const style = window.getComputedStyle(el);
+            return style.display !== "none" && style.visibility !== "hidden" && el.offsetParent !== null;
+          });
+          if (isVisible) {
+            // Detectar si abre nueva pestaña
+            const newPagePromise = new Promise<import("puppeteer").Page | null>(resolve => {
+              const timer = setTimeout(() => resolve(null), 5000);
+              context.once("targetcreated", async (target) => {
+                clearTimeout(timer);
+                const newPage = await target.page();
+                resolve(newPage);
+              });
+            });
 
-      // Click en buscar/consultar
-      const btnSelectors = ['button[type="submit"]', 'input[type="submit"]', 'button:not([type="reset"])'];
-      for (const sel of btnSelectors) {
-        const btns = await frame.$$(sel);
-        for (const btn of btns) {
-          const text = await btn.evaluate(e => e.textContent?.toLowerCase() || "");
-          if (text.includes("buscar") || text.includes("consultar") || text.includes("obtener") || text.includes("enviar")) {
             await btn.click();
-            console.log(`[tgr] Botón clickeado: "${text.trim()}"`);
+            clicked = true;
+            console.log("[tgr] Botón clickeado");
+
+            const newPage = await newPagePromise;
+            if (newPage) {
+              console.log("[tgr] Resultado en nueva pestaña");
+              await newPage.waitForNavigation({ waitUntil: "domcontentloaded" }).catch(() => {});
+              await newPage.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+              await new Promise(r => setTimeout(r, 5000));
+
+              const pdfBuffer = await newPage.pdf({
+                format: "A4",
+                printBackground: true,
+                margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
+              });
+
+              await browser.close();
+              return await guardarYResponder(pdfBuffer, rutCliente, nro_operacion);
+            }
             break;
           }
         }
+        if (!clicked) {
+          await browser.close();
+          return NextResponse.json({ error: "No se encontró botón para enviar formulario" }, { status: 500 });
+        }
+      } else {
+        // Detectar si abre nueva pestaña
+        const newPagePromise = new Promise<import("puppeteer").Page | null>(resolve => {
+          const timer = setTimeout(() => resolve(null), 5000);
+          context.once("targetcreated", async (target) => {
+            clearTimeout(timer);
+            const newPage = await target.page();
+            resolve(newPage);
+          });
+        });
+
+        await submitBtn.click();
+        console.log("[tgr] Submit clickeado");
+
+        const newPage = await newPagePromise;
+        if (newPage) {
+          console.log("[tgr] Resultado en nueva pestaña");
+          await newPage.waitForNavigation({ waitUntil: "domcontentloaded" }).catch(() => {});
+          await newPage.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+          await new Promise(r => setTimeout(r, 5000));
+
+          const pdfBuffer = await newPage.pdf({
+            format: "A4",
+            printBackground: true,
+            margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
+          });
+
+          await browser.close();
+          return await guardarYResponder(pdfBuffer, rutCliente, nro_operacion);
+        }
       }
 
-      // Esperar resultado
-      await new Promise(r => setTimeout(r, 5000));
+      // Resultado en misma página
+      console.log("[tgr] Resultado en misma página");
       await page.waitForNetworkIdle({ timeout: 10000 }).catch(() => {});
+      await new Promise(r => setTimeout(r, 5000));
 
-      // Generar PDF del resultado (la página con el comprobante)
       const pdfBuffer = await page.pdf({
-        format: "Letter",
+        format: "A4",
         printBackground: true,
-        margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+        margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
       });
 
       await browser.close();
-
-      // Guardar en bucket
-      const fileKey = `documentos/${rutCliente}/${nro_operacion}/comprobante_tgr_${nro_operacion}.pdf`;
-      const storageUrl = await uploadToSpaces(Buffer.from(pdfBuffer), fileKey, "application/pdf");
-      console.log(`[tgr] Comprobante guardado: ${storageUrl}`);
-
-      // Guardar URL en la operación
-      await pgQuery(
-        "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
-        [`\ntgr_url:${storageUrl}`, nro_operacion]
-      );
-
-      return NextResponse.json({ ok: true, url: storageUrl });
+      return await guardarYResponder(pdfBuffer, rutCliente, nro_operacion);
     } finally {
       await browser.close().catch(() => {});
     }
@@ -172,4 +221,17 @@ export async function POST(request: Request) {
     console.error("[tgr] Error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
+}
+
+async function guardarYResponder(pdfBuffer: Uint8Array, rutCliente: string, nroOperacion: string) {
+  const fileKey = `documentos/${rutCliente}/${nroOperacion}/comprobante_tgr_${nroOperacion}.pdf`;
+  const storageUrl = await uploadToSpaces(Buffer.from(pdfBuffer), fileKey, "application/pdf");
+  console.log(`[tgr] ✅ Comprobante guardado: ${storageUrl}`);
+
+  await pgQuery(
+    "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
+    [`\ntgr_url:${storageUrl}`, nroOperacion]
+  );
+
+  return NextResponse.json({ ok: true, url: storageUrl });
 }
