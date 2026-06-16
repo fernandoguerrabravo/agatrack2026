@@ -12,7 +12,7 @@ const BASE_URL = process.env.ADUANANET_URL || "https://fguerragodoy.aduananet2.c
 /**
  * GET /api/operaciones/imprimir-tgr-din?nro_operacion=190420
  * 
- * Genera PDF combinado TGR + DIN Aprobada y lo muestra con auto-print.
+ * Genera PDF combinado TGR + DIN Aprobada y lo devuelve inline para visualizar/imprimir.
  */
 export async function GET(request: Request) {
   const session = await getSession();
@@ -74,35 +74,12 @@ export async function GET(request: Request) {
     }
 
     const pdfBytes = await mergedPdf.save();
-    const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
 
-    // 5. Devolver HTML con auto-print
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-  <title>TGR + DIN - Despacho ${nroOperacion}</title>
-  <style>body{margin:0;padding:0;overflow:hidden}iframe{width:100%;height:100vh;border:none}.loading{display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;font-size:18px;color:#333}</style>
-</head>
-<body>
-  <div class="loading" id="loading">Cargando TGR + DIN para impresión...</div>
-  <iframe id="pdf-frame" style="display:none"></iframe>
-  <script>
-    const frame = document.getElementById('pdf-frame');
-    const loading = document.getElementById('loading');
-    frame.src = 'data:application/pdf;base64,${pdfBase64}';
-    frame.onload = function() {
-      loading.style.display = 'none';
-      frame.style.display = 'block';
-      setTimeout(() => {
-        try { frame.contentWindow.print(); } catch(e) { window.print(); }
-      }, 500);
-    };
-  </script>
-</body>
-</html>`;
-
-    return new NextResponse(html, {
-      headers: { "Content-Type": "text/html; charset=utf-8" },
+    return new NextResponse(Buffer.from(pdfBytes), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="TGR_DIN_${nroOperacion}.pdf"`,
+      },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
