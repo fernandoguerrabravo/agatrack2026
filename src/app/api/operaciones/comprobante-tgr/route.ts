@@ -189,6 +189,14 @@ export async function POST(request: Request) {
           await newPage.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
           await new Promise(r => setTimeout(r, 5000));
 
+          // Verificar si el resultado es un error de TGR
+          const pageContent = await newPage.evaluate(() => document.body.innerText || "");
+          if (pageContent.includes("No se encuentran datos") || pageContent.includes("no se ha podido generar")) {
+            console.log(`[tgr] Comprobante no disponible para op ${nro_operacion}: ${pageContent.substring(0, 100)}`);
+            await browser.close();
+            return NextResponse.json({ error: "Comprobante no disponible: impuestos no pagados o datos no encontrados en TGR" }, { status: 404 });
+          }
+
           const pdfBuffer = await newPage.pdf({
             format: "A4",
             printBackground: true,
@@ -204,6 +212,14 @@ export async function POST(request: Request) {
       console.log("[tgr] Resultado en misma página");
       await page.waitForNetworkIdle({ timeout: 10000 }).catch(() => {});
       await new Promise(r => setTimeout(r, 5000));
+
+      // Verificar si el resultado es un error
+      const pageText = await page.evaluate(() => document.body.innerText || "");
+      if (pageText.includes("No se encuentran datos") || pageText.includes("no se ha podido generar")) {
+        console.log(`[tgr] Comprobante no disponible para op ${nro_operacion}: ${pageText.substring(0, 100)}`);
+        await browser.close();
+        return NextResponse.json({ error: "Comprobante no disponible: impuestos no pagados o datos no encontrados en TGR" }, { status: 404 });
+      }
 
       const pdfBuffer = await page.pdf({
         format: "A4",
