@@ -29,6 +29,7 @@ type Despacho = {
   fecha_pago_gravamenes: string;
   tgr_url?: string;
   pago_directo_url?: string;
+  es_pago_directo?: boolean;
 };
 
 const POR_PAGINA = 20;
@@ -224,7 +225,7 @@ export default function ContabilidadPanel() {
                         {d.url_factura && <a href={d.url_factura} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="DTE Electrónico">
                           <span className="text-xs">📎</span>
                         </a>}
-                        {d.tgr_url && !d.pago_directo_url && (
+                        {d.tgr_url && !d.pago_directo_url && d.es_pago_directo && (
                           <button className="btn btn-xs btn-circle btn-outline btn-secondary" onClick={() => handlePagoDirecto(d.despacho)} title="Crear Pago Directo">
                             <span className="text-xs">💰</span>
                           </button>

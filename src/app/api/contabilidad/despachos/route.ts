@@ -38,10 +38,13 @@ export async function GET() {
       []
     );
 
+    const CLIENTES_PAGO_DIRECTO = ["KSB", "WIKA", "MICROGEO", "BROTHER", "SOUTHERN", "PETROQUIMICA", "CONINTER", "GLOBAL PARTNER", "EASY SUPPLY", "ANGLO", "ECOFOS"];
+
     const despachos = rows.map(r => ({
       ...r,
       tgr_url: r.notas?.match(/tgr_url:(https?:\/\/[^\s\n]+)/)?.[1] || null,
       pago_directo_url: r.notas?.match(/pago_directo_url:(https?:\/\/[^\s\n]+)/)?.[1] || null,
+      es_pago_directo: CLIENTES_PAGO_DIRECTO.some(c => (r.cliente || "").toUpperCase().includes(c)),
       notas: undefined,
     }));
 
