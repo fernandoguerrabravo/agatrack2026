@@ -256,5 +256,23 @@ async function guardarYResponder(pdfBuffer: Uint8Array, rutCliente: string, nroO
     [`\ntgr_url:${storageUrl}`, nroOperacion]
   );
 
+  // Auto pago directo para clientes habilitados
+  try {
+    const drRows = await pgQuery<{ cliente: string }>(
+      "SELECT cliente FROM despachos_replica WHERE despacho = $1 LIMIT 1",
+      [nroOperacion]
+    );
+    const clienteNombre = (drRows[0]?.cliente || "").toUpperCase();
+    const CLIENTES_PAGO_DIRECTO = ["KSB", "WIKA", "MICROGEO", "BROTHER", "SOUTHERN TECHNOLOGY", "PETROQUIMICA", "CONINTER", "GLOBAL PARTNER", "EASY SUPPLY", "ANGLO AMERICAN", "ECOFOS"];
+    if (CLIENTES_PAGO_DIRECTO.some(c => clienteNombre.includes(c))) {
+      const port = process.env.PORT || "3000";
+      fetch(`http://localhost:${port}/api/operaciones/pago-directo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-inbound-secret": process.env.INBOUND_SECRET || "" },
+        body: JSON.stringify({ nro_operacion: nroOperacion }),
+      }).catch(err => console.error("[tgr] Error auto pago-directo:", err));
+    }
+  } catch {}
+
   return NextResponse.json({ ok: true, url: storageUrl });
 }
