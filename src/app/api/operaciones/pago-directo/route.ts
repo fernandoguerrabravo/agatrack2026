@@ -60,10 +60,20 @@ export async function POST(request: Request) {
             const pdfParse = require("pdf-parse");
             const pdfData = await pdfParse(pdfBuffer);
             const text = pdfData.text || "";
-            // Buscar fecha en formato dd/mm/yyyy o dd-mm-yyyy
-            const fechaMatch = text.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
-            if (fechaMatch) {
-              fechaPago = `${fechaMatch[1]}/${fechaMatch[2]}/${fechaMatch[3]}`;
+            // Buscar "Fecha Pago" seguido de una fecha dd-mm-yyyy o dd/mm/yyyy
+            const fechaPagoMatch = text.match(/Fecha\s*Pago\s*(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i);
+            if (fechaPagoMatch) {
+              fechaPago = `${fechaPagoMatch[1]}/${fechaPagoMatch[2]}/${fechaPagoMatch[3]}`;
+            } else {
+              // Fallback: segunda fecha (la primera suele ser vencimiento)
+              const allFechas = text.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/g) || [];
+              if (allFechas.length >= 2) {
+                const parts = allFechas[1].match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+                if (parts) fechaPago = `${parts[1]}/${parts[2]}/${parts[3]}`;
+              } else if (allFechas.length === 1) {
+                const parts = allFechas[0].match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+                if (parts) fechaPago = `${parts[1]}/${parts[2]}/${parts[3]}`;
+              }
             }
           }
         } catch (pdfErr) {
