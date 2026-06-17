@@ -21,7 +21,10 @@ export const maxDuration = 60;
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    const inboundSecret = request.headers.get("x-inbound-secret");
+    if (!inboundSecret || inboundSecret !== process.env.INBOUND_SECRET) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    }
   }
 
   const { nro_operacion } = await request.json();
