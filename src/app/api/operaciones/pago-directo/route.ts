@@ -148,52 +148,56 @@ export async function POST(request: Request) {
 
       // 6. Ir a la lista y filtrar por despacho
       await page.goto(`${BASE_URL}/modulos/contabilidad/pago_directo/lista.php`, { waitUntil: "networkidle0" });
-      const filInput = await page.$('input[name="fil_lib_nid"]') || await page.$('input[name="fil_despacho"]');
+      const filInput = await page.$('input[name="fil_lib_nid"]');
       if (filInput) {
         await filInput.evaluate(el => (el as HTMLInputElement).value = "");
         await filInput.type(nro_operacion);
-        const filtrarBtn = await page.$('input[type="submit"]');
-        if (filtrarBtn) {
-          await filtrarBtn.click();
-          await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-        }
+        // Click filtrar via filtrarLista()
+        await page.evaluate(() => {
+          if (typeof (window as unknown as Record<string, () => void>).filtrarLista === "function") {
+            (window as unknown as Record<string, () => void>).filtrarLista();
+          }
+        });
+        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
       }
 
-      // 7. Buscar ID del comprobante
+      // 7. Extraer parámetros del comprobante desde la función ver('año','mes','tipo','correlativo')
       const pageHtml = await page.content();
-      const reporteIds = [...pageHtml.matchAll(/reporte\(\s*['"]?(\d+)['"]?\s*\)/gi)].map(m => Number(m[1]));
-      const pdfIds = [...pageHtml.matchAll(/reporte_pdf[^"']*[?&](?:id|padi_id)=(\d+)/gi)].map(m => Number(m[1]));
-      const allIds = [...reporteIds, ...pdfIds];
-      const comprobanteId = allIds.length > 0 ? Math.max(...allIds) : 0;
-
+      const verMatch = pageHtml.match(/ver\(\s*'(\d+)'\s*,\s*'(\d+)'\s*,\s*'(\w+)'\s*,\s*'(\d+)'\s*\)/);
       let pdfUrl = "";
-      if (comprobanteId) {
-        pdfUrl = `${BASE_URL}/modulos/contabilidad/pago_directo/reporte_pdf.php?id=${comprobanteId}`;
-        console.log(`[pago-directo] ✅ PDF: id=${comprobanteId}`);
+      if (verMatch) {
+        const [, agno, mes, tipo, correlativo] = verMatch;
+        pdfUrl = `${BASE_URL}/modulos/contabilidad/comprobante/imprimir_pdf.php?cmp_agno=${agno}&cmp_mes=${mes}&cmp_tipo_c=${tipo}&cmp_correlativo=${correlativo}`;
+        console.log(`[pago-directo] ✅ PDF: agno=${agno} mes=${mes} tipo=${tipo} corr=${correlativo}`);
       } else {
-        console.log(`[pago-directo] No se encontró ID en lista para op ${nro_operacion}`);
+        console.log(`[pago-directo] No se encontró comprobante en lista para op ${nro_operacion}`);
       }
 
       await browser.close();
 
       // 8. Guardar
-      if (pdfUrl) {
-        const drRows = await pgQuery<{ rut_cliente: string }>(
-          "SELECT rut_cliente FROM despachos_replica WHERE despacho = $1 LIMIT 1",
-          [nro_operacion]
-        );
-        const rutCliente = drRows[0]?.rut_cliente || "";
-        await pgQuery(
-          "INSERT INTO operaciones (nro_operacion, rut_cliente, estado) VALUES ($1, $2, 'aprobada') ON CONFLICT (nro_operacion) DO NOTHING",
-          [nro_operacion, rutCliente]
-        );
+      const drRows = await pgQuery<{ rut_cliente: string }>(
+        "SELECT rut_cliente FROM despachos_replica WHERE despacho = $1 LIMIT 1",
+        [nro_operacion]
+      );
+      const rutCliente = drRows[0]?.rut_cliente || "";
+      await pgQuery(
+        "INSERT INTO operaciones (nro_operacion, rut_cliente, estado) VALUES ($1, $2, 'aprobada') ON CONFLICT (nro_operacion) DO NOTHING",
+        [nro_operacion, rutCliente]
+      );
+
+      // Guardar flag de pago directo creado (con o sin PDF URL)
+      const pago_directo_value = pdfUrl || `${BASE_URL}/modulos/contabilidad/pago_directo/lista.php`;
+      // Solo guardar si no tenía ya pago_directo_url
+      const opCheck = await pgQuery<{ notas: string }>("SELECT notas FROM operaciones WHERE nro_operacion = $1", [nro_operacion]);
+      if (!(opCheck[0]?.notas || "").includes("pago_directo_url:")) {
         await pgQuery(
           "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
-          [`\npago_directo_url:${pdfUrl}`, nro_operacion]
+          [`\npago_directo_url:${pago_directo_value}`, nro_operacion]
         );
       }
 
-      return NextResponse.json({ ok: true, comprobante_id: comprobanteId, pdf_url: pdfUrl, ya_existia: yaExiste });
+      return NextResponse.json({ ok: true, pdf_url: pago_directo_value, ya_existia: yaExiste });
     } finally {
       await browser.close().catch(() => {});
     }
