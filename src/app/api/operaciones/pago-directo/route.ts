@@ -86,39 +86,52 @@ export async function POST(request: Request) {
         fechaPago = `${String(hoy.getDate()).padStart(2, "0")}/${String(hoy.getMonth() + 1).padStart(2, "0")}/${hoy.getFullYear()}`;
       }
 
-      // 4. Ingresar despacho y fecha
-      // Interceptar alerts
+      // 4. Ingresar fecha y despacho con Tab
+      // Interceptar alerts y confirm
       await page.evaluate(() => {
         (window as unknown as Record<string, string>).__lastAlert = "";
         window.alert = (msg: string) => { (window as unknown as Record<string, string>).__lastAlert = msg; };
+        window.confirm = () => true; // Auto-aceptar confirms
       });
-
-      // Campo lib_nid (despacho)
-      const libNidInput = await page.$('input[name="lib_nid"]');
-      if (libNidInput) {
-        await libNidInput.evaluate(el => (el as HTMLInputElement).value = "");
-        await libNidInput.type(nro_operacion);
-      }
 
       // Campo cmp_fecha (fecha de pago)
       const fechaInput = await page.$('input[name="cmp_fecha"]');
       if (fechaInput) {
-        await fechaInput.evaluate((el, fecha) => (el as HTMLInputElement).value = fecha, fechaPago);
+        await fechaInput.click({ count: 3 });
+        await fechaInput.type(fechaPago);
+      }
+
+      // Campo lib_nid (despacho) + Tab
+      const libNidInput = await page.$('input[name="lib_nid"]');
+      if (libNidInput) {
+        await libNidInput.click({ count: 3 });
+        await libNidInput.type(nro_operacion);
+        await page.keyboard.press("Tab");
+        // Esperar que onblur cargue datos
+        await new Promise(r => setTimeout(r, 3000));
       }
 
       console.log(`[pago-directo] Op=${nro_operacion} fecha=${fechaPago}`);
 
-      // 5. Click Ingresar via validaForm
+      // 5. Click Ingresar via validaForm + aceptar dialogs
+      // Override confirm para aceptar el sweet alert
       await page.evaluate(() => {
-        const form = (document as unknown as Record<string, HTMLFormElement>).frmEditar;
-        if (typeof (window as unknown as Record<string, (f: HTMLFormElement) => boolean>).validaForm === "function") {
-          (window as unknown as Record<string, (f: HTMLFormElement) => boolean>).validaForm(form);
-        } else {
-          form.submit();
-        }
+        window.confirm = () => true;
       });
+
+      const ingresarBtn = await page.$('input[name="btnGuardar"]') || await page.$('input[value*="ngresar"]');
+      if (ingresarBtn) {
+        await ingresarBtn.click();
+      } else {
+        await page.evaluate(() => {
+          const form = (document as unknown as Record<string, HTMLFormElement>).frmEditar;
+          if (typeof (window as unknown as Record<string, (f: HTMLFormElement) => boolean>).validaForm === "function") {
+            (window as unknown as Record<string, (f: HTMLFormElement) => boolean>).validaForm(form);
+          }
+        });
+      }
       await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 3000));
 
       // 5. Verificar resultado
       const alertMsg = await page.evaluate(() => (window as unknown as Record<string, string>).__lastAlert || "");
