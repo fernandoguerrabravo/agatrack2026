@@ -28,6 +28,7 @@ type Despacho = {
   aduana: string;
   fecha_pago_gravamenes: string;
   tgr_url?: string;
+  pago_directo_url?: string;
 };
 
 const POR_PAGINA = 20;
@@ -77,6 +78,17 @@ export default function ContabilidadPanel() {
       await fetchData();
     } catch {}
     setGenerandoTGR(null);
+  }
+
+  async function handlePagoDirecto(despacho: string) {
+    try {
+      await fetch("/api/operaciones/pago-directo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nro_operacion: despacho }),
+      });
+      await fetchData();
+    } catch {}
   }
 
   async function handleGenerarTGRTodos() {
@@ -212,6 +224,16 @@ export default function ContabilidadPanel() {
                         {d.url_factura && <a href={d.url_factura} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="DTE Electrónico">
                           <span className="text-xs">📎</span>
                         </a>}
+                        {d.tgr_url && !d.pago_directo_url && (
+                          <button className="btn btn-xs btn-circle btn-outline btn-secondary" onClick={() => handlePagoDirecto(d.despacho)} title="Crear Pago Directo">
+                            <span className="text-xs">💰</span>
+                          </button>
+                        )}
+                        {d.pago_directo_url && (
+                          <a href={d.pago_directo_url} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-secondary" title="Ver Pago Directo">
+                            <span className="text-xs">💰</span>
+                          </a>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -41,6 +41,7 @@ export async function GET() {
     const despachos = rows.map(r => ({
       ...r,
       tgr_url: r.notas?.match(/tgr_url:(https?:\/\/[^\s\n]+)/)?.[1] || null,
+      pago_directo_url: r.notas?.match(/pago_directo_url:(https?:\/\/[^\s\n]+)/)?.[1] || null,
       notas: undefined,
     }));
 
