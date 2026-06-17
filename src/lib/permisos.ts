@@ -3,7 +3,7 @@ import { pgQuery } from "./postgres";
 import type { SessionPayload } from "./types";
 
 /** Determina el rol efectivo (backward compat con tokens sin campo rol) */
-function getRol(session: SessionPayload): "admin" | "ejecutivo" | "cliente" {
+function getRol(session: SessionPayload): "admin" | "ejecutivo" | "cliente" | "contabilidad" {
   return session.rol || (session.rol_prealertas === 1 ? "admin" : "cliente");
 }
 

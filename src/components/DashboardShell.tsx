@@ -29,6 +29,14 @@ function getMenuItems(user: SessionPayload): MenuItem[] {
     ];
   }
 
+  // Contabilidad: solo Dashboard + Contabilidad
+  if (rol === "contabilidad") {
+    return [
+      { label: "Home", href: "/dashboard", icon: HomeIcon },
+      { label: "Contabilidad", href: "/dashboard/contabilidad", icon: DocIcon },
+    ];
+  }
+
   // Cliente: Dashboard + Exportaciones + Importaciones + Rastrea tu Contenedor
   const items: MenuItem[] = [
     { label: "Home", href: "/dashboard", icon: HomeIcon },
