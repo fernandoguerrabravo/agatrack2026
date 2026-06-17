@@ -55,18 +55,21 @@ export async function POST(request: Request) {
     });
     const formHtml = await formRes.text();
 
-    // Verificar si ya existe (AduanaNet muestra alert o mensaje)
-    const yaExiste = formHtml.includes("ya fue") || formHtml.includes("ya existe") || formHtml.includes("alert(");
+    // Verificar si ya existe (AduanaNet muestra alert con mensaje específico)
+    const alertMatch = formHtml.match(/alert\(['"]([^'"]*)['"]\)/);
+    const alertMsg = alertMatch ? alertMatch[1] : "";
+    const yaExiste = alertMsg.toLowerCase().includes("ya fue") || alertMsg.toLowerCase().includes("ya existe") || alertMsg.toLowerCase().includes("ya se encuentra");
     if (yaExiste) {
-      console.log(`[pago-directo] Comprobante ya existe para op ${nro_operacion}`);
+      console.log(`[pago-directo] Comprobante ya existe para op ${nro_operacion}: "${alertMsg}"`);
     } else {
-      console.log(`[pago-directo] Comprobante creado para op ${nro_operacion}`);
+      console.log(`[pago-directo] Comprobante creado para op ${nro_operacion}${alertMsg ? " (alert: " + alertMsg + ")" : ""}`);
     }
 
-    // 2. Buscar el comprobante en la lista filtrando por lib_nid
+    // 2. Buscar el comprobante en la lista filtrando por despacho
     const filterBody = new URLSearchParams();
     filterBody.set("accion", "F");
     filterBody.set("fil_lib_nid", nro_operacion);
+    filterBody.set("fil_despacho", nro_operacion);
 
     const listaRes = await fetch(`${BASE_URL}/modulos/contabilidad/pago_directo/lista.php`, {
       method: "POST",
@@ -75,10 +78,17 @@ export async function POST(request: Request) {
     });
     const listaHtml = await listaRes.text();
 
-    // 3. Extraer ID del comprobante (buscar patrón reporte(ID) o similar)
+    // Log para debug
+    const funcMatches = [...listaHtml.matchAll(/(\w+)\(\s*['"]?(\d+)['"]?/g)].map(m => `${m[1]}(${m[2]})`);
+    if (funcMatches.length > 0) console.log(`[pago-directo] Funciones en lista: ${funcMatches.slice(0, 5).join(", ")}`);
+
+    // 3. Extraer ID del comprobante (buscar cualquier patrón con ID numérico)
     const reporteIds = [...listaHtml.matchAll(/reporte\(\s*['"]?(\d+)['"]?\s*\)/gi)].map(m => Number(m[1]));
     const verIds = [...listaHtml.matchAll(/ver\(\s*['"]?(\d+)['"]?\s*\)/gi)].map(m => Number(m[1]));
-    const allIds = [...reporteIds, ...verIds];
+    const imprimirIds = [...listaHtml.matchAll(/imprimir\(\s*['"]?(\d+)['"]?\s*\)/gi)].map(m => Number(m[1]));
+    const pdfIds = [...listaHtml.matchAll(/reporte_pdf[^"]*[?&](?:id|padi_id|sofo_id)=(\d+)/gi)].map(m => Number(m[1]));
+    const agregar = [...listaHtml.matchAll(/agregar\(\s*['"]?(\d+)['"]?\s*\)/gi)].map(m => Number(m[1]));
+    const allIds = [...reporteIds, ...verIds, ...imprimirIds, ...pdfIds, ...agregar];
     const comprobanteId = allIds.length > 0 ? Math.max(...allIds) : 0;
 
     let pdfUrl = "";
