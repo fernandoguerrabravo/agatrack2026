@@ -39,8 +39,9 @@ export async function POST(request: Request) {
       // 1. Ir a la lista de pago directo
       await page.goto(`${BASE_URL}/modulos/contabilidad/pago_directo/lista.php`, { waitUntil: "networkidle0" });
 
-      // 2. Click en "Nuevo" — navegar directo al formulario manteniendo la sesión
-      await page.goto(`${BASE_URL}/modulos/contabilidad/pago_directo/formulario.php`, { waitUntil: "networkidle0" });
+      // 2. Click en "Nuevo" — ejecutar función nuevo() de la página
+      await page.evaluate(() => { (window as unknown as Record<string, () => void>).nuevo(); });
+      await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
 
       // 3. Ingresar despacho
       // Interceptar alerts
