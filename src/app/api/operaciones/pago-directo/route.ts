@@ -43,23 +43,31 @@ export async function POST(request: Request) {
       await page.evaluate(() => { (window as unknown as Record<string, () => void>).nuevo(); });
       await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
 
-      // 3. Obtener fecha de pago desde despachos_replica
-      const fechaRows = await pgQuery<{ fecha_pago_gravamenes: string }>(
-        "SELECT fecha_pago_gravamenes FROM despachos_replica WHERE despacho = $1 LIMIT 1",
+      // 3. Obtener fecha de pago del PDF TGR
+      const opRows = await pgQuery<{ notas: string }>(
+        "SELECT notas FROM operaciones WHERE nro_operacion = $1",
         [nro_operacion]
       );
-      const fechaPagoRaw = fechaRows[0]?.fecha_pago_gravamenes || "";
-      // Formatear a dd/mm/yyyy
+      const tgrUrlMatch = (opRows[0]?.notas || "").match(/tgr_url:(https?:\/\/[^\s\n]+)/);
+      const tgrUrl = tgrUrlMatch ? tgrUrlMatch[1] : "";
+
       let fechaPago = "";
-      if (fechaPagoRaw) {
-        // Puede venir como "2026-06-15", "15/06/2026", "15-06-2026", etc
-        const isoMatch = fechaPagoRaw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (isoMatch) {
-          fechaPago = `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
-        } else {
-          const dmyMatch = fechaPagoRaw.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
-          if (dmyMatch) fechaPago = `${dmyMatch[1]}/${dmyMatch[2]}/${dmyMatch[3]}`;
-          else fechaPago = fechaPagoRaw;
+      if (tgrUrl) {
+        try {
+          const pdfRes = await fetch(tgrUrl);
+          if (pdfRes.ok) {
+            const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
+            const pdfParse = require("pdf-parse");
+            const pdfData = await pdfParse(pdfBuffer);
+            const text = pdfData.text || "";
+            // Buscar fecha en formato dd/mm/yyyy o dd-mm-yyyy
+            const fechaMatch = text.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+            if (fechaMatch) {
+              fechaPago = `${fechaMatch[1]}/${fechaMatch[2]}/${fechaMatch[3]}`;
+            }
+          }
+        } catch (pdfErr) {
+          console.error("[pago-directo] Error leyendo PDF TGR:", pdfErr instanceof Error ? pdfErr.message : pdfErr);
         }
       }
       if (!fechaPago) {
