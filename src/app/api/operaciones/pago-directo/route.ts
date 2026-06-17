@@ -43,46 +43,62 @@ export async function POST(request: Request) {
       await page.evaluate(() => { (window as unknown as Record<string, () => void>).nuevo(); });
       await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
 
-      // 3. Ingresar despacho
+      // 3. Obtener fecha de pago desde despachos_replica
+      const fechaRows = await pgQuery<{ fecha_pago_gravamenes: string }>(
+        "SELECT fecha_pago_gravamenes FROM despachos_replica WHERE despacho = $1 LIMIT 1",
+        [nro_operacion]
+      );
+      const fechaPagoRaw = fechaRows[0]?.fecha_pago_gravamenes || "";
+      // Formatear a dd/mm/yyyy
+      let fechaPago = "";
+      if (fechaPagoRaw) {
+        // Puede venir como "2026-06-15", "15/06/2026", "15-06-2026", etc
+        const isoMatch = fechaPagoRaw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+          fechaPago = `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+        } else {
+          const dmyMatch = fechaPagoRaw.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+          if (dmyMatch) fechaPago = `${dmyMatch[1]}/${dmyMatch[2]}/${dmyMatch[3]}`;
+          else fechaPago = fechaPagoRaw;
+        }
+      }
+      if (!fechaPago) {
+        // Fallback: fecha de hoy
+        const hoy = new Date();
+        fechaPago = `${String(hoy.getDate()).padStart(2, "0")}/${String(hoy.getMonth() + 1).padStart(2, "0")}/${hoy.getFullYear()}`;
+      }
+
+      // 4. Ingresar despacho y fecha
       // Interceptar alerts
       await page.evaluate(() => {
         (window as unknown as Record<string, string>).__lastAlert = "";
         window.alert = (msg: string) => { (window as unknown as Record<string, string>).__lastAlert = msg; };
       });
 
-      const inputSelectors = ['input[name="lib_nid"]', 'input[name="despacho"]', 'input[name="nro_despacho"]'];
-      let inputFound = false;
-      for (const sel of inputSelectors) {
-        const input = await page.$(sel);
-        if (input) {
-          await input.evaluate(el => (el as HTMLInputElement).value = "");
-          await input.type(nro_operacion);
-          inputFound = true;
-          console.log(`[pago-directo] Campo encontrado: ${sel}`);
-          break;
-        }
-      }
-      if (!inputFound) {
-        const inputs = await page.$$('input[type="text"]');
-        for (const inp of inputs) {
-          const visible = await inp.evaluate(el => el.offsetParent !== null);
-          if (visible) {
-            await inp.evaluate(el => (el as HTMLInputElement).value = "");
-            await inp.type(nro_operacion);
-            inputFound = true;
-            console.log(`[pago-directo] Usando primer input visible`);
-            break;
-          }
-        }
+      // Campo lib_nid (despacho)
+      const libNidInput = await page.$('input[name="lib_nid"]');
+      if (libNidInput) {
+        await libNidInput.evaluate(el => (el as HTMLInputElement).value = "");
+        await libNidInput.type(nro_operacion);
       }
 
-      // 4. Click Ingresar
-      const submitBtn = await page.$('input[value*="ngresar"], input[type="submit"], button[type="submit"]');
-      if (submitBtn) {
-        await submitBtn.click();
-      } else {
-        await page.evaluate(() => { const f = document.querySelector("form") as HTMLFormElement; if (f) f.submit(); });
+      // Campo cmp_fecha (fecha de pago)
+      const fechaInput = await page.$('input[name="cmp_fecha"]');
+      if (fechaInput) {
+        await fechaInput.evaluate((el, fecha) => (el as HTMLInputElement).value = fecha, fechaPago);
       }
+
+      console.log(`[pago-directo] Op=${nro_operacion} fecha=${fechaPago}`);
+
+      // 5. Click Ingresar via validaForm
+      await page.evaluate(() => {
+        const form = (document as unknown as Record<string, HTMLFormElement>).frmEditar;
+        if (typeof (window as unknown as Record<string, (f: HTMLFormElement) => boolean>).validaForm === "function") {
+          (window as unknown as Record<string, (f: HTMLFormElement) => boolean>).validaForm(form);
+        } else {
+          form.submit();
+        }
+      });
       await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
       await new Promise(r => setTimeout(r, 2000));
 
