@@ -39,14 +39,8 @@ export async function POST(request: Request) {
       // 1. Ir a la lista de pago directo
       await page.goto(`${BASE_URL}/modulos/contabilidad/pago_directo/lista.php`, { waitUntil: "networkidle0" });
 
-      // 2. Click en "Nuevo"
-      const nuevoLink = await page.$('a[href*="formulario"]');
-      if (nuevoLink) {
-        await nuevoLink.click();
-        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-      } else {
-        await page.goto(`${BASE_URL}/modulos/contabilidad/pago_directo/formulario.php`, { waitUntil: "networkidle0" });
-      }
+      // 2. Click en "Nuevo" — navegar directo al formulario manteniendo la sesión
+      await page.goto(`${BASE_URL}/modulos/contabilidad/pago_directo/formulario.php`, { waitUntil: "networkidle0" });
 
       // 3. Ingresar despacho
       // Interceptar alerts
