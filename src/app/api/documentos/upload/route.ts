@@ -3,9 +3,8 @@ import { getSession } from "@/lib/session";
 import { pgQuery } from "@/lib/postgres";
 import { uploadToSpaces } from "@/lib/spaces";
 import { guardarEjemploBL, obtenerEjemplosBL } from "@/lib/bl-ejemplos";
-import { openai } from "@ai-sdk/openai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateText, embed } from "ai";
+import { generateText } from "ai";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require("pdf-parse");
 
@@ -13,11 +12,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Modelos de visión avanzados para análisis de BL (máxima precisión OCR)
-const GPT_VISION_MODEL = "gpt-5.5";          // GPT-5.5: segundo modelo (backup)
+// Modelo de visión para análisis de documentos (solo Claude por ahora)
 const CLAUDE_VISION_MODEL = "claude-opus-4-7"; // Claude Opus 4.7: modelo principal
-const TEXT_FALLBACK_MODEL = "gpt-4o-mini";   // Fallback de texto (sin imagen) — más barato
-const PRIMARY_MODEL = "claude"; // Usar Claude como modelo principal para clasificación
 
 const TIPOS_DOCUMENTO = [
   "Bill of Lading (BL)",
@@ -96,10 +92,9 @@ export async function POST(request: Request) {
       console.log("[docs] Extracted text preview:", documentText.substring(0, 200));
     }
 
-    // Usar siempre los modelos avanzados para máxima precisión en todos los documentos
-    const gptModel = GPT_VISION_MODEL;
+    // Modelo Claude para análisis de documentos
     const claudeModel = CLAUDE_VISION_MODEL;
-    console.log("[docs] Usando modelos avanzados:", gptModel, "+", claudeModel);
+    console.log("[docs] Usando modelo:", claudeModel);
 
     const prompt = `Eres un experto en documentos de comercio exterior. Analiza TODAS las páginas del siguiente documento y extrae TODOS los datos relevantes con el máximo detalle posible.
 
@@ -270,13 +265,12 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
     const finalPrompt = prompt + blExamples;
 
     if (isImage) {
-      // Para imágenes: usar modelo de visión avanzado
+      // Para imágenes: usar Claude vision
       const dataUrl = `data:${mimeType};base64,${base64}`;
-      console.log("[docs] Analyzing image with vision model:", gptModel);
+      console.log("[docs] Analyzing image with Claude:", claudeModel);
       const result = await generateText({
-        model: openai(gptModel),
+        model: anthropic(claudeModel),
         maxOutputTokens: 32000,
-        providerOptions: { openai: { reasoningEffort: "low" } },
         messages: [
           { role: "user" as const, content: [{ type: "text" as const, text: finalPrompt }, { type: "image" as const, image: dataUrl }] },
         ],
@@ -314,11 +308,10 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
             return { type: "image" as const, image: `data:image/jpeg;base64,${pngBuf.toString("base64")}` };
           });
 
-          console.log("[docs] Sending", imageContents.length, "page(s) to vision model (text+visual):", gptModel);
+          console.log("[docs] Sending", imageContents.length, "page(s) to Claude (text+visual):", claudeModel);
           const result = await generateText({
-            model: openai(gptModel),
+            model: anthropic(claudeModel),
             maxOutputTokens: 32000,
-            providerOptions: { openai: { reasoningEffort: "low" } },
             system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
             messages: [
               { role: "user" as const, content: [{ type: "text" as const, text: finalPrompt }, ...imageContents] },
@@ -339,9 +332,9 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
 
       if (!usedVision) {
         // Fallback a texto si no se pudo convertir a imagen
-        console.log("[docs] Fallback: analyzing PDF text with", TEXT_FALLBACK_MODEL);
+        console.log("[docs] Fallback: analyzing PDF text with Claude:", claudeModel);
         const result = await generateText({
-          model: openai(TEXT_FALLBACK_MODEL),
+          model: anthropic(claudeModel),
           maxOutputTokens: 16000,
           messages: [
             { role: "user" as const, content: `${finalPrompt}\n\n--- TEXTO DEL DOCUMENTO (${file.name}) ---\n\n${documentText.substring(0, 15000)}` },
@@ -385,12 +378,11 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
             return { type: "image" as const, image: `data:image/jpeg;base64,${pngBuf.toString("base64")}` };
           });
 
-          console.log("[docs] Sending", imageContents.length, "page(s) to vision model:", gptModel);
+          console.log("[docs] Sending", imageContents.length, "page(s) to Claude:", claudeModel);
 
           const result = await generateText({
-            model: openai(gptModel),
+            model: anthropic(claudeModel),
             maxOutputTokens: 32000,
-            providerOptions: { openai: { reasoningEffort: "low" } },
             system: "You are a document analysis assistant for a licensed customs broker (Agencia de Aduanas). Your job is to extract structured data from trade documents (Bills of Lading, invoices, certificates). This is a legitimate business operation. Always respond with the requested JSON.",
             messages: [
               { role: "user" as const, content: [{ type: "text" as const, text: finalPrompt }, ...imageContents] },
@@ -414,7 +406,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       if (!converted) {
         console.log("[docs] Fallback: classify by filename only");
         const result = await generateText({
-          model: openai(TEXT_FALLBACK_MODEL),
+          model: anthropic(claudeModel),
           maxOutputTokens: 16000,
           messages: [
             { role: "user" as const, content: `${finalPrompt}\n\nEl archivo es un PDF escaneado llamado "${file.name}". No se pudo procesar. Clasifica el tipo de documento por el nombre.` },
@@ -424,7 +416,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       }
     } else {
       const result = await generateText({
-        model: openai(TEXT_FALLBACK_MODEL),
+        model: anthropic(claudeModel),
         maxOutputTokens: 16000,
         messages: [
           { role: "user" as const, content: `${finalPrompt}\n\n[Archivo: ${file.name}]` },
@@ -1557,13 +1549,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       // Continuar sin URL de storage
     }
 
-    // Generar embedding del texto para búsqueda semántica
-    const textoParaEmbedding = `${analysis.tipo_documento} ${analysis.resumen} ${analysis.texto_completo ?? ""}`.substring(0, 8000);
-
-    const { embedding } = await embed({
-      model: openai.embedding("text-embedding-3-small"),
-      value: textoParaEmbedding,
-    });
+    // Embedding deshabilitado (no se usaba para búsqueda semántica) — columna se inserta vacía
 
     // Agregar prefijo (H) para hijo o (N) para nieto al inicio del número de BL house
     const addHousePrefix = (datos: Record<string, unknown>) => {
@@ -1636,8 +1622,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
     let shipsgoId: number | null = null;
     const shipsgoData: Record<string, unknown> = {};
 
-    // Guardar en PostgreSQL
-    const embeddingStr = `[${embedding.join(",")}]`;
+    // Guardar en PostgreSQL (embedding deshabilitado)
 
     // DEBUG: Log valores finales de BL antes de guardar
     console.log("[docs] VALORES FINALES antes de guardar:");
@@ -1672,8 +1657,8 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
     }
 
     const rows = await pgQuery(
-      `INSERT INTO documentos (rut_cliente, rut_usuario, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, shipsgo_id, texto_completo, embedding, storage_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::vector, $12)
+      `INSERT INTO documentos (rut_cliente, rut_usuario, nro_operacion, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, shipsgo_id, texto_completo, storage_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, storage_url, created_at`,      [
         finalRutCliente,
         session?.rut || "inbound",
@@ -1686,7 +1671,6 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
         JSON.stringify(shipsgoData),
         shipsgoId,
         analysis.texto_completo ?? "",
-        embeddingStr,
         storageUrl,
       ]
     );
