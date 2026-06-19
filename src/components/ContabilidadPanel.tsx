@@ -147,6 +147,9 @@ export default function ContabilidadPanel() {
               <button className="btn btn-sm btn-success gap-1" onClick={handleGenerarTGRTodos}>
                 🏦 Generar TGR pendientes
               </button>
+              <a href="/api/contabilidad/reporte-cliente?cliente=ANGLO AMERICAN" className="btn btn-sm btn-outline gap-1">
+                📊 Reporte Anglo American
+              </a>
               <div className="badge badge-neutral badge-outline">{filtrados.length} registros</div>
             </div>
             <div className="relative">
