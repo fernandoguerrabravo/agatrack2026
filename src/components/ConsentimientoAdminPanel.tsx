@@ -125,7 +125,7 @@ export default function ConsentimientoAdminPanel() {
                           <td className="text-xs">{c.otorgadoEn ? new Date(c.otorgadoEn).toLocaleDateString("es-CL") : ""}</td>
                           <td className="font-mono text-xs">{c.contenidoHash?.substring(0, 12)}...</td>
                       <td>
-                        <a href={`/api/consentimiento/admin?tipo=evidencia_json&folio=${c.folio}`} className="btn btn-xs btn-outline btn-info" title="Descargar paquete de evidencia judicial">📥 JSON</a>
+                        <a href={`/dashboard/consentimiento/evidencia?folio=${c.folio}`} className="btn btn-xs btn-outline btn-info" title="Auditoría judicial">🔍 Auditar</a>
                       </td>
                         </tr>
                       ))}
