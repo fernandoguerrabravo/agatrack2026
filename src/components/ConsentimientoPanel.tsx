@@ -238,9 +238,11 @@ export default function ConsentimientoPanel() {
                           </td>
                           <td className="text-xs">{s.creadoEn ? new Date(s.creadoEn).toLocaleDateString("es-CL") : ""}</td>
                           <td className="text-xs">
-                            {s.estado === "recibida" && s.diasRestantes != null && (
-                              <span className={s.diasRestantes <= 5 ? "text-error font-bold" : ""}>{s.diasRestantes} días</span>
-                            )}
+                            {s.estado === "recibida" && s.diasRestantes != null && (() => {
+                              const deadline = new Date(new Date(s.creadoEn).getTime() + 42 * 86400000);
+                              const fechaLimite = `${String(deadline.getDate()).padStart(2,"0")}/${String(deadline.getMonth()+1).padStart(2,"0")}/${deadline.getFullYear()}`;
+                              return <span className={s.diasRestantes <= 5 ? "text-error font-bold" : ""}>{fechaLimite} ({s.diasRestantes}d)</span>;
+                            })()}
                             {s.estado === "respondida" && "✓"}
                           </td>
                           <td className="text-xs max-w-48 truncate">{s.respuesta || "-"}</td>
