@@ -61,6 +61,11 @@ const API_PASS = "Uj7UarxZafsTL9G";
 
     if (!factura) {
       console.log(`  ⏳ ${r.despacho}: sin factura código 33`);
+      let fechaAceptFb = "";
+      if (r.fecha_aceptacion) {
+        const d = new Date(r.fecha_aceptacion);
+        fechaAceptFb = `${String(d.getUTCDate()).padStart(2,"0")}/${String(d.getUTCMonth()+1).padStart(2,"0")}/${d.getUTCFullYear()}`;
+      }
       excelData.push({
         "Referencia": r.referencia || "",
         "Tipo": "",
@@ -74,7 +79,7 @@ const API_PASS = "Uj7UarxZafsTL9G";
         "Total Factura": "",
         "Peso (KG)": r.total_peso_bruto || "",
         "Despacho": r.despacho,
-        "Fecha Aceptación": r.fecha_aceptacion ? String(r.fecha_aceptacion).substring(0, 10) : "",
+        "Fecha Aceptación": fechaAceptFb,
         "Total a Nuestro Favor": "",
       });
       continue;
@@ -135,6 +140,21 @@ const API_PASS = "Uj7UarxZafsTL9G";
     // Total a nuestro favor (saldo agencia)
     const saldoAgencia = parseFloat(totales.SALDO || totales.ABS_SALDO || "0");
 
+    // Formatear fecha aceptación dd/mm/yyyy
+    let fechaAcept = "";
+    if (r.fecha_aceptacion) {
+      const d = new Date(r.fecha_aceptacion);
+      fechaAcept = `${String(d.getUTCDate()).padStart(2,"0")}/${String(d.getUTCMonth()+1).padStart(2,"0")}/${d.getUTCFullYear()}`;
+    }
+
+    // Formatear fecha pago dd/mm/yyyy
+    let fechaPagoFmt = "";
+    if (fechaPago) {
+      const parts = fechaPago.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if (parts) fechaPagoFmt = `${parts[3]}/${parts[2]}/${parts[1]}`;
+      else fechaPagoFmt = fechaPago;
+    }
+
     excelData.push({
       "Referencia": despachoInfo.REFERENCIA || r.referencia || "",
       "Tipo": tipo,
@@ -144,11 +164,11 @@ const API_PASS = "Uj7UarxZafsTL9G";
       "Desembolso Almacén": almacen,
       "Otros Desembolsos": otrosDesembolsos,
       "Pago Directo": pagoDirecto,
-      "Fecha Pago TGR": fechaPago,
+      "Fecha Pago TGR": fechaPagoFmt,
       "Total Factura": totalFactura,
       "Peso (KG)": peso,
       "Despacho": r.despacho,
-      "Fecha Aceptación": r.fecha_aceptacion ? String(r.fecha_aceptacion).substring(0, 10) : "",
+      "Fecha Aceptación": fechaAcept,
       "Total a Nuestro Favor": saldoAgencia,
     });
 
@@ -157,6 +177,19 @@ const API_PASS = "Uj7UarxZafsTL9G";
 
   // Generar Excel
   const ws = XLSX.utils.json_to_sheet(excelData);
+
+  // Aplicar formato moneda ($#,##0) a columnas numéricas
+  const moneyFmt = "$#,##0";
+  const numRows = excelData.length + 1; // +1 por header
+  const moneyCols = [3, 4, 5, 6, 7, 9, 13]; // D,E,F,G,H,J,N (0-indexed: Honorarios, Transporte, Almacén, Otros, PagoDirecto, TotalFactura, Saldo)
+  for (let row = 1; row < numRows; row++) {
+    for (const col of moneyCols) {
+      const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+      if (ws[cellRef] && typeof ws[cellRef].v === "number") {
+        ws[cellRef].z = moneyFmt;
+      }
+    }
+  }
   ws["!cols"] = [
     { wch: 25 }, // Referencia
     { wch: 10 }, // Tipo
