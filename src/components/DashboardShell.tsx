@@ -63,6 +63,9 @@ function getMenuItems(user: SessionPayload): MenuItem[] {
     items.push({ label: "Tracking Contenedores", href: "/dashboard/tracking-contenedores", icon: TrackingIcon });
   }
 
+  // Privacidad para todos los roles
+  items.push({ label: "Privacidad", href: "/dashboard/consentimiento", icon: DocIcon });
+
   return items;
 }
 
