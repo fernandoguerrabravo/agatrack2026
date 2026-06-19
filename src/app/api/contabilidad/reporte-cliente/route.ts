@@ -38,11 +38,12 @@ export async function GET(request: Request) {
         dr.nro_aceptacion,
         dr.fecha_pago_gravamenes,
         dr.total_cif,
+        dr.total_fob,
         dr.gravamenes_valor_1,
         dr.iva,
         dr.total_gravamenes_chs,
+        dr.total_gravamenes_uss,
         dr.tipo_cambio,
-        dr.total_fob,
         dr.pais_origen_mercancias,
         dr.descripcion_item_1
       FROM despachos_replica dr
@@ -61,32 +62,30 @@ export async function GET(request: Request) {
     // Construir datos del Excel
     const data = rows.map(r => {
       const cif = parseFloat(r.total_cif || "0");
-      const derechosCLP = parseFloat(r.gravamenes_valor_1 || "0");
-      const iva = parseFloat(r.iva || "0");
-      const totalGravCLP = parseFloat(r.total_gravamenes_chs || "0");
-      const tc = parseFloat(r.tipo_cambio || "1");
       const fob = parseFloat(r.total_fob || "0");
+      const ivaUSD = parseFloat(r.iva || "0");
+      const derechosUSD = parseFloat(r.gravamenes_valor_1 || "0");
+      const totalGravCLP = parseFloat(r.total_gravamenes_chs || "0");
+      const totalGravUSD = parseFloat(r.total_gravamenes_uss || "0");
+      const tc = parseFloat(r.tipo_cambio || "0");
 
-      // Calcular valores USD
-      const cifDerechosCLP = cif * tc + derechosCLP;
-      const derechosUSD = tc > 0 ? derechosCLP / tc : 0;
-      const ivaUSD = tc > 0 ? iva / tc : 0;
+      // CIF + Derechos en USD y CLP
       const cifDerechosUSD = cif + derechosUSD;
-      const totalImpuestosUSD = ivaUSD + derechosUSD;
+      const cifDerechosCLP = Math.round(cifDerechosUSD * tc);
 
       return {
         "Referencia": r.referencia || "",
         "Proveedor": r.consignante || "",
         "Nro Aceptación": r.nro_aceptacion || "",
         "Fecha Pago TGR": r.fecha_pago_gravamenes || "",
-        "CIF + Derechos CLP": Math.round(cifDerechosCLP),
-        "Derechos CLP": Math.round(derechosCLP),
-        "Total Pagado CLP": Math.round(totalGravCLP),
+        "CIF + Derechos CLP": cifDerechosCLP,
+        "Derechos CLP": Math.round(derechosUSD * tc),
+        "Total Pagado CLP": totalGravCLP,
         "Tipo Cambio": tc,
         "CIF + Derechos USD": Math.round(cifDerechosUSD * 100) / 100,
-        "IVA USD": Math.round(ivaUSD * 100) / 100,
-        "Derechos USD": Math.round(derechosUSD * 100) / 100,
-        "Total Impuestos USD": Math.round(totalImpuestosUSD * 100) / 100,
+        "IVA USD": ivaUSD,
+        "Derechos USD": derechosUSD,
+        "Total Impuestos USD": totalGravUSD,
         "Valor FOB": fob,
         "País Origen": r.pais_origen_mercancias || "",
         "Mercadería": r.descripcion_item_1 || "",
