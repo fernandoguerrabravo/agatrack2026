@@ -252,14 +252,13 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
 
   const result = await resend.emails.send({
     from: RESEND_FROM,
-    to: ["fguerrab@agenciaguerra.com"],
+    to: ["fguerrab@agenciaguerra.com", "oscar@agenciaguerra.com", "garqueros@agenciaguerra.com"],
     subject: `Libro Importaciones ${mesNombre} ${anio} Anglo American Sur S.A.`,
     html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
       <p>Estimado,</p>
       <p>Adjunto Libro de Importaciones de <b>Anglo American Sur S.A.</b> correspondiente a <b>${mesNombre} ${anio}</b>.</p>
       <ul>
         <li><b>${rows.length}</b> operaciones</li>
-        <li><b>2</b> reportes Excel (Impuestos + Facturas)</li>
         <li><b>${pdfAttachments.length}</b> comprobantes TGR+DIN</li>
       </ul>
       <p style="color:#666;font-size:12px;">Generado automáticamente por AgaTrack.</p>
