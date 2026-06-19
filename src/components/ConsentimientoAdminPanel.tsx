@@ -59,6 +59,30 @@ export default function ConsentimientoAdminPanel() {
     fetchTab();
   }
 
+  async function handleSellar() {
+    const res = await fetch("/api/consentimiento/admin", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accion: "sellar_cadena" }),
+    });
+    const data = await res.json();
+    if (data.ok) alert(`✅ Sellado iniciado - Bloque #${data.cabezaIndice}`);
+    else alert(`❌ ${data.error}`);
+    fetchTab();
+  }
+
+  async function handleActualizarOts() {
+    const res = await fetch("/api/consentimiento/admin", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accion: "actualizar_ots" }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const confirmados = (data.resultados || []).filter((r: Record<string, string>) => r.estado === "confirmado").length;
+      alert(`✅ OTS actualizado: ${confirmados} confirmados de ${(data.resultados || []).length}`);
+    }
+    fetchTab();
+  }
+
   return (
     <div className="space-y-4">
       {/* Tabs */}
@@ -88,7 +112,7 @@ export default function ConsentimientoAdminPanel() {
                 <div className="overflow-x-auto">
                   <table className="table table-sm">
                     <thead>
-                      <tr><th>Folio</th><th>Titular</th><th>RUT</th><th>Estado</th><th>Finalidades</th><th>Fecha</th><th>Hash</th></tr>
+                      <tr><th>Folio</th><th>Titular</th><th>RUT</th><th>Estado</th><th>Finalidades</th><th>Fecha</th><th>Hash</th><th>Evidencia</th></tr>
                     </thead>
                     <tbody>
                       {consentimientos.map(c => (
@@ -100,9 +124,12 @@ export default function ConsentimientoAdminPanel() {
                           <td className="text-xs">{c.finalidades?.join(", ")}</td>
                           <td className="text-xs">{c.otorgadoEn ? new Date(c.otorgadoEn).toLocaleDateString("es-CL") : ""}</td>
                           <td className="font-mono text-xs">{c.contenidoHash?.substring(0, 12)}...</td>
+                      <td>
+                        <a href={`/api/consentimiento/admin?tipo=evidencia_json&folio=${c.folio}`} className="btn btn-xs btn-outline btn-info" title="Descargar paquete de evidencia judicial">📥 JSON</a>
+                      </td>
                         </tr>
                       ))}
-                      {consentimientos.length === 0 && <tr><td colSpan={7} className="text-center py-6 text-base-content/50">Sin consentimientos registrados</td></tr>}
+                      {consentimientos.length === 0 && <tr><td colSpan={8} className="text-center py-6 text-base-content/50">Sin consentimientos registrados</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -166,6 +193,8 @@ export default function ConsentimientoAdminPanel() {
                     {cadenaValida === false && <div className="badge badge-error badge-lg gap-2">❌ Cadena comprometida</div>}
                     <span className="text-sm text-base-content/60">{cadenaLongitud} bloques</span>
                     <button className="btn btn-xs btn-outline" onClick={fetchTab}>Verificar</button>
+                    <button className="btn btn-xs btn-primary" onClick={handleSellar}>🔏 Sellar en Bitcoin</button>
+                    <button className="btn btn-xs btn-outline btn-secondary" onClick={handleActualizarOts}>🔄 Actualizar OTS</button>
                   </div>
                 </div>
               </div>
