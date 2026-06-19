@@ -196,6 +196,10 @@ export default function ConsentimientoAdminPanel() {
                     <button className="btn btn-xs btn-primary" onClick={handleSellar}>🔏 Sellar en Bitcoin</button>
                     <button className="btn btn-xs btn-outline btn-secondary" onClick={handleActualizarOts}>🔄 Actualizar OTS</button>
                   </div>
+                  <div className="flex items-center gap-3 mt-3">
+                    <a href="/consentimiento/verificar-evidencia.js" download className="btn btn-xs btn-outline">📜 Script Verificador</a>
+                    <a href="/consentimiento/instructivo-verificacion-judicial.html" target="_blank" className="btn btn-xs btn-outline">📖 Instructivo Judicial</a>
+                  </div>
                 </div>
               </div>
 

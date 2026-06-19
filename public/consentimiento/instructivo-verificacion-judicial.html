@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instructivo de Verificación Independiente · Consentimiento Ley N° 21.719</title>
+<style>
+  :root { --azul:#1d4ed8; --osc:#0f172a; --gris:#64748b; --verde:#16a34a; --rojo:#dc2626; --bg:#f8fafc; --bord:#e2e8f0; }
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, "Times New Roman", serif; color:#1e293b; line-height:1.6; margin:0; background:#e2e8f0; }
+  .page { max-width: 820px; margin: 24px auto; background:#fff; padding: 56px 64px; box-shadow:0 2px 20px rgba(0,0,0,.1); }
+  h1 { font-size: 1.8rem; color:var(--osc); margin:0 0 4px; line-height:1.2; }
+  .sub { color:var(--gris); font-size:1rem; margin-bottom: 28px; font-style: italic; }
+  h2 { font-size:1.25rem; color:var(--azul); border-bottom:2px solid var(--bord); padding-bottom:6px; margin-top:34px; }
+  h3 { font-size:1.05rem; color:var(--osc); margin-bottom:6px; }
+  p, li { font-size: 1rem; }
+  code, .mono { font-family: "SF Mono", Consolas, monospace; font-size:.92rem; }
+  .cmd { background:var(--osc); color:#e2e8f0; padding:12px 16px; border-radius:6px; display:block; margin:10px 0; white-space:pre-wrap; word-break:break-word; font-family:"SF Mono",Consolas,monospace; font-size:.9rem; }
+  .box { background:var(--bg); border:1px solid var(--bord); border-radius:8px; padding:16px 20px; margin:16px 0; }
+  .box-verde { background:#ecfdf5; border-color:#a7f3d0; }
+  .box-amarillo { background:#fffbeb; border-color:#fde68a; }
+  .paso { display:flex; gap:16px; margin:18px 0; }
+  .paso-num { flex:none; width:38px; height:38px; border-radius:50%; background:var(--azul); color:#fff; font-weight:bold; display:flex; align-items:center; justify-content:center; font-family:sans-serif; }
+  ol, ul { padding-left: 22px; }
+  table { width:100%; border-collapse:collapse; margin:14px 0; font-size:.95rem; }
+  th, td { border:1px solid var(--bord); padding:8px 12px; text-align:left; }
+  th { background:var(--bg); }
+  .foot { margin-top:40px; padding-top:16px; border-top:1px solid var(--bord); color:var(--gris); font-size:.85rem; }
+  .check { color:var(--verde); font-weight:bold; }
+  .cross { color:var(--rojo); font-weight:bold; }
+  @media print {
+    body { background:#fff; }
+    .page { box-shadow:none; margin:0; max-width:none; padding:0 12mm; }
+    .cmd { background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1; }
+    h2 { break-after: avoid; }
+    .paso, .box { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Instructivo de Verificación Independiente</h1>
+<p class="sub">Prueba de existencia e integridad de un consentimiento de datos personales · Ley N° 21.719 (Chile)</p>
+
+<div class="box">
+  <strong>Propósito de este documento.</strong> Permitir que un tribunal, perito o
+  auditor compruebe, <strong>por sus propios medios y sin acceder al sistema de la
+  empresa</strong>, que un consentimiento existió en una fecha determinada y que no
+  ha sido alterado desde entonces. La verificación se apoya en matemática pública
+  y en la red Bitcoin, que ninguna parte del juicio controla.
+</div>
+
+<h2>1. Qué se le entrega (el "sobre de evidencia")</h2>
+<table>
+  <tr><th>Archivo</th><th>Qué es</th></tr>
+  <tr><td class="mono">evidencia-CONS-AAAA-XXXX.json</td><td>Paquete con el consentimiento, los hashes y los datos del sellado.</td></tr>
+  <tr><td class="mono">CONS-AAAA-XXXX.ots</td><td>Prueba criptográfica de OpenTimestamps (el "sello" anclado a Bitcoin).</td></tr>
+  <tr><td class="mono">verificar-evidencia.js</td><td>Programa verificador (~80 líneas, legible). Solo usa Node.js estándar.</td></tr>
+</table>
+<p class="box-amarillo box">Ninguno de estos archivos requiere conexión con la empresa.
+La prueba es autónoma: viaja completa dentro del sobre.</p>
+
+<h2>2. Concepto en una frase</h2>
+<p>Los datos personales <strong>permanecen cifrados en la empresa</strong> y nunca
+salen de ella. A la red pública solo se envió una <strong>huella matemática</strong>
+(un "hash"), imposible de revertir a datos reales. Esa huella quedó <strong>sellada
+en Bitcoin con fecha cierta</strong>. Si el documento se altera, la huella deja de
+coincidir y el fraude queda en evidencia.</p>
+
+<h2>3. Requisitos previos (software gratuito y público)</h2>
+<ul>
+  <li><strong>Node.js</strong> (para ejecutar el verificador): <span class="mono">https://nodejs.org</span></li>
+  <li><strong>Cliente oficial OpenTimestamps</strong> (para comprobar contra Bitcoin):
+  se instala con <span class="mono">pip install opentimestamps-client</span></li>
+</ul>
+<p class="box">Ambas son herramientas de código abierto, mantenidas por terceros
+independientes de la empresa. Se recomienda obtenerlas de sus fuentes oficiales,
+no de la empresa.</p>
+
+<h2>4. Procedimiento de verificación</h2>
+
+<div class="paso">
+  <div class="paso-num">1</div>
+  <div>
+    <h3>Comprobar la consistencia interna</h3>
+    <p>Abra una terminal en la carpeta del sobre y ejecute:</p>
+    <span class="cmd">node verificar-evidencia.js evidencia-CONS-AAAA-XXXX.json</span>
+    <p>El programa recalcula los hashes por su cuenta y verifica que: (a) el contenido
+    del consentimiento no fue alterado tras otorgarse; (b) la cadena de registros
+    reproduce sus hashes y está correctamente encadenada; (c) el último eslabón
+    coincide con lo sellado en Bitcoin.</p>
+    <p>Resultado esperado si todo es auténtico:</p>
+    <span class="cmd">RESULTADO
+  ✅ EVIDENCIA CONSISTENTE.</span>
+    <p>Si algún dato hubiera sido modificado, el programa lo indica con
+    <span class="cross">⛔</span> y finaliza con error.</p>
+  </div>
+</div>
+
+<div class="paso">
+  <div class="paso-num">2</div>
+  <div>
+    <h3>Comprobar la fecha contra la red Bitcoin</h3>
+    <p>Este es el paso que <strong>no depende de la empresa ni de los archivos
+    entregados</strong>. Ejecute el cliente oficial:</p>
+    <span class="cmd">ots verify CONS-AAAA-XXXX.ots</span>
+    <p>Respuesta típica:</p>
+    <span class="cmd">Success! Bitcoin block 860123 attests existence as of 2026-05-30</span>
+    <p>Esto certifica que la huella de la cadena <strong>existía en esa fecha</strong>,
+    según la red Bitcoin. La empresa no puede influir en este resultado.</p>
+    <p class="box-amarillo box"><strong>Nota:</strong> el sellado puede tardar algunas
+    horas en confirmarse en Bitcoin tras otorgado el consentimiento. Si la prueba
+    aparece como "pendiente", significa que aún no fue incluida en un bloque; una vez
+    confirmada, la fecha queda fija para siempre.</p>
+  </div>
+</div>
+
+<div class="paso">
+  <div class="paso-num">3</div>
+  <div>
+    <h3>Confirmar en un explorador público (opcional)</h3>
+    <p>Para máxima independencia, tome el número de bloque del paso anterior y
+    búsquelo en cualquier explorador público de Bitcoin, por ejemplo:</p>
+    <span class="cmd">https://blockstream.info/block-height/860123</span>
+    <p>Allí podrá ver la fecha y hora de ese bloque de forma totalmente
+    independiente de las herramientas anteriores.</p>
+  </div>
+</div>
+
+<h2>5. Cómo interpretar el resultado</h2>
+<table>
+  <tr><th>Si...</th><th>Entonces...</th></tr>
+  <tr><td>Paso 1 ✅ y Paso 2 ✅</td><td>El consentimiento existía tal cual en la fecha del bloque Bitcoin y <strong>no ha sido alterado</strong>. Prueba sólida.</td></tr>
+  <tr><td>Paso 1 ⛔</td><td>El documento entregado fue modificado respecto del original sellado. La evidencia <strong>no es íntegra</strong>.</td></tr>
+  <tr><td>Paso 2 sin confirmar</td><td>El sello aún no fue incluido en Bitcoin (o el archivo .ots no corresponde). Solicitar la prueba actualizada.</td></tr>
+</table>
+
+<div class="box-verde box">
+  <strong>Conclusión que puede afirmarse.</strong> Si los pasos 1 y 2 son exitosos,
+  queda probado, sin necesidad de confiar en la empresa, que el consentimiento del
+  titular indicado, para las finalidades indicadas, existía en la fecha certificada
+  por Bitcoin y permanece inalterado.
+</div>
+
+<h2>6. Alcance y límites de la prueba</h2>
+<ul>
+  <li>Bitcoin prueba <strong>fecha de existencia e integridad</strong> del registro.</li>
+  <li><strong>No</strong> prueba, por sí solo, la voluntad del titular. Esa voluntad
+  se respalda con los demás elementos del expediente (registro del acto de aceptación,
+  marca temporal, dirección IP protegida y versión del texto aceptado, todos incluidos
+  en el paquete JSON).</li>
+  <li>Los datos personales de terceros no se exponen: solo se incluye el titular del
+  consentimiento verificado, conforme al principio de minimización de la Ley N° 21.719.</li>
+</ul>
+
+<div class="foot">
+  Documento técnico de apoyo a la verificación. La huella enviada a la red pública no
+  contiene datos personales y es irreversible. Generado por el sistema de gestión de
+  consentimientos conforme a la Ley N° 21.719 de la República de Chile.
+</div>
+
+</div>
+</body>
+</html>
