@@ -66,12 +66,11 @@ const RESEND_FROM = get("RESEND_FROM") || "AgaTrack <reportes@agatrack.agenciagu
     let apiMercancia = "";
 
     try {
-      const apiRes = await fetch(`${API_URL}?endpoint=listaDTEs`, {
-        method: "GET",
-        headers: { "Authorization": API_AUTH, "Content-Type": "application/json" },
-        body: JSON.stringify({ despacho: parseInt(r.despacho) }),
-      });
-      const apiData = await apiRes.json();
+      // Usar curl internamente para la API (Node.js no permite body en GET)
+      const { execSync } = await import("child_process");
+      const curlCmd = `curl -sk -u ${API_USER}:${API_PASS} -X GET "${API_URL}?endpoint=listaDTEs" -H "Content-Type: application/json" -d '{"despacho":${r.despacho}}'`;
+      const apiRaw = execSync(curlCmd, { timeout: 10000 }).toString();
+      const apiData = JSON.parse(apiRaw);
       if (apiData.data && apiData.data.length > 0) {
         // Buscar la factura electrónica (código 33)
         const factura = apiData.data.find(d => d.codigo_tipo_dte === "33");
