@@ -38,6 +38,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ bloques });
   }
 
+  if (tipo === "audit") {
+    const { pgQuery } = await import("@/lib/postgres");
+    const items = await pgQuery("SELECT * FROM audit_log ORDER BY id DESC LIMIT 100");
+    return NextResponse.json({ items });
+  }
+
   return NextResponse.json({ error: "Tipo no reconocido" }, { status: 400 });
 }
 

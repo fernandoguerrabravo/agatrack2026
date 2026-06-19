@@ -60,6 +60,7 @@ function getMenuItems(user: SessionPayload): MenuItem[] {
     items.push({ label: "Prealertas", href: "/dashboard/prealertas", icon: DocIcon });
     items.push({ label: "Customer Services", href: "/dashboard/customer-services", icon: DocIcon });
     items.push({ label: "Contabilidad", href: "/dashboard/contabilidad", icon: DocIcon });
+    items.push({ label: "Consentimientos (Admin)", href: "/dashboard/consentimiento/admin", icon: DocIcon });
     items.push({ label: "Tracking Contenedores", href: "/dashboard/tracking-contenedores", icon: TrackingIcon });
   }
 
