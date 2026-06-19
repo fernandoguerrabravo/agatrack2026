@@ -380,21 +380,31 @@ export async function POST(request: Request) {
     const { messages } = await request.json();
     const rut = session.rut;
 
-    // Obtener la última pregunta del usuario
+    // Obtener la última pregunta del usuario (compatible con v6 parts y legacy content)
     const lastMsg = messages[messages.length - 1];
-    const lastUserMessage = typeof lastMsg?.content === "string"
-      ? lastMsg.content
-      : lastMsg?.parts?.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("") ?? "";
+    let lastUserMessage = "";
+    if (typeof lastMsg?.content === "string") {
+      lastUserMessage = lastMsg.content;
+    } else if (Array.isArray(lastMsg?.content)) {
+      lastUserMessage = lastMsg.content.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("");
+    } else if (lastMsg?.parts) {
+      lastUserMessage = lastMsg.parts.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("");
+    }
 
     // Detectar intención y obtener datos relevantes
     const intents = extractQueryIntent(lastUserMessage);
     const dbContext = await getDbContext(rut, intents, lastUserMessage);
 
-    // Convertir mensajes del formato UI (parts) al formato que espera el modelo
-    const convertedMessages = messages.map((msg: { role: string; content?: string; parts?: Array<{ type: string; text?: string }> }) => {
+    // Convertir mensajes del formato UI (parts/content) al formato que espera el modelo
+    const convertedMessages = messages.map((msg: { role: string; content?: string | Array<{ type: string; text?: string }>; parts?: Array<{ type: string; text?: string }> }) => {
       let content = "";
       if (typeof msg.content === "string") {
         content = msg.content;
+      } else if (Array.isArray(msg.content)) {
+        content = msg.content
+          .filter((p) => p.type === "text")
+          .map((p) => p.text ?? "")
+          .join("");
       } else if (msg.parts && Array.isArray(msg.parts)) {
         content = msg.parts
           .filter((p) => p.type === "text")

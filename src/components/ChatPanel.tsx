@@ -173,10 +173,11 @@ function AssistantMessage({ text, isStreaming }: { text: string; isStreaming: bo
 }
 
 export default function ChatPanel() {
-  const { messages, sendMessage, status, setMessages } = useChat({
+  const { messages, sendMessage, status, setMessages, error } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
   const [input, setInput] = useState("");
+  const [chatError, setChatError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isLoading = status === "streaming" || status === "submitted";
 
@@ -184,15 +185,34 @@ export default function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    if (error) {
+      setChatError(error.message || "Error en el chat. Intenta nuevamente.");
+      // Clear error after 5 seconds
+      const timeout = setTimeout(() => setChatError(null), 5000);
+      return () => clearTimeout(timeout);
+    }
+  }, [error]);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    sendMessage({ text: input });
+    setChatError(null);
+    try {
+      await sendMessage(input);
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : "Error al enviar mensaje.");
+    }
     setInput("");
   }
 
-  function handleSuggestion(text: string) {
-    sendMessage({ text });
+  async function handleSuggestion(text: string) {
+    setChatError(null);
+    try {
+      await sendMessage(text);
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : "Error al enviar mensaje.");
+    }
   }
 
   function handleReset() {
@@ -254,15 +274,15 @@ export default function ChatPanel() {
         )}
 
         {messages.map((msg) => {
-          const text = msg.parts
-            ?.filter((p) => p.type === "text")
+          const textContent = msg.parts
+            ?.filter((p): p is { type: "text"; text: string } => p.type === "text" && "text" in p)
             .map((p, i) => <span key={i}>{p.text}</span>);
 
           if (msg.role === "user") {
             return (
               <div key={msg.id} className="flex justify-end">
                 <div className="bg-[#1a2b4a] text-white rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[75%] text-[13px] leading-relaxed">
-                  {text}
+                  {textContent}
                 </div>
               </div>
             );
@@ -274,7 +294,7 @@ export default function ChatPanel() {
                 <span className="text-[10px] font-bold text-[#e8a838]">AI</span>
               </div>
               <div className="bg-[#f8f9fb] rounded-2xl rounded-tl-sm px-4 py-2.5 max-w-[85%] text-[13px] leading-relaxed text-[#1a2b4a]/80">
-                <AssistantMessage text={msg.parts?.filter((p) => p.type === "text").map((p) => p.text).join("") || ""} isStreaming={isLoading && msg.id === messages[messages.length - 1]?.id} />
+                <AssistantMessage text={msg.parts?.filter((p): p is { type: "text"; text: string } => p.type === "text" && "text" in p).map((p) => p.text).join("") || ""} isStreaming={isLoading && msg.id === messages[messages.length - 1]?.id} />
               </div>
             </div>
           );
@@ -300,6 +320,11 @@ export default function ChatPanel() {
 
       {/* Input */}
       <div className="px-4 py-3 bg-white border-t border-[#1a2b4a]/5">
+        {chatError && (
+          <div className="mb-2 px-3 py-2 bg-red-50 text-red-600 text-xs rounded-lg">
+            {chatError}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <input
             type="text"

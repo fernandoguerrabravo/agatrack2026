@@ -403,3 +403,392 @@ export async function crearTransportista(
   if (matches.length === 0) return null;
   return { codigo: matches[0][1], nombre: matches[0][2] };
 }
+
+
+
+// ============================================================
+// MÓDULO: ANTECEDENTES FINANCIEROS (dus_antecedentes)
+// ============================================================
+
+/**
+ * Datos de entrada para grabar Antecedentes Financieros.
+ * Se obtienen de los documentos de la operación (Invoice, BL, CO).
+ */
+export type AntecedentesInput = {
+  /** Número de operación (lib_nid) en AduanaNet */
+  nroOperacion: string;
+
+  // --- Del Certificado de Origen (si existe) ---
+  /** Texto del tratado o país para resolver el régimen (ej: "UNITED STATES", "CHINA") */
+  tratadoOPais?: string;
+  /** Número del certificado de origen */
+  numeroCertOrigen?: string;
+  /** Fecha del certificado (DD/MM/YYYY) */
+  fechaCertOrigen?: string;
+
+  // --- De la Invoice ---
+  /** Código de moneda de la factura. Default "USD". Se mapea a código AduanaNet. */
+  moneda?: string;
+  /** Incoterm de la operación (CIF, CFR, FOB, EXW, etc.) */
+  incoterm?: string;
+  /** Condiciones de pago / plazo en días (ej: "60", "30", "NET 60 DAYS") */
+  condicionesPago?: string;
+
+  // --- Calculados ---
+  /** Valor ex-fábrica en USD (solo para EXW). Default 0. */
+  valorExFabrica?: number;
+  /** Gastos hasta FOB en USD (para EXW/FOB). Default 0. */
+  gastosHastaFob?: number;
+
+  // --- Defaults / Manual ---
+  /** Código banco comercial (default: no tocar el que viene). 41 opciones. */
+  bancoComercial?: string;
+  /** Forma de pago (default "1" = COB1) */
+  formaPago?: string;
+  /** Tipo de divisas (default "1" = MERC.CAMB.FORMAL) */
+  tipoDivisas?: string;
+  /** Forma de pago gravámenes (default "4" = Sp/IVA C) */
+  formaPagoGravamenes?: string;
+};
+
+export type AntecedentesResult = {
+  ok: boolean;
+  campos: Record<string, string>;
+  verificacion?: Record<string, string>;
+  error?: string;
+};
+
+/**
+ * Mapeo de moneda texto → código AduanaNet (mda_id).
+ * Las más comunes. Si no se encuentra, default 13 (USD).
+ */
+const MONEDA_A_CODIGO: Record<string, string> = {
+  USD: "13", "US DOLLAR": "13", "US DOLLARS": "13", DOLLAR: "13", DOLAR: "13",
+  EUR: "22", EURO: "22", EUROS: "22",
+  GBP: "24", "LIBRA ESTERLINA": "24", POUND: "24",
+  JPY: "19", YEN: "19",
+  CNY: "133", YUAN: "133", RMB: "133", RENMINBI: "133",
+  KRW: "93", WON: "93",
+  BRL: "5", REAL: "5",
+  ARS: "138", "PESO ARGENTINO": "138",
+  MXN: "75", "PESO MEXICANO": "75",
+  CLP: "1", "PESO CHILENO": "1",
+  CAD: "6", "DOLAR CANADIENSE": "6",
+  AUD: "144", "DOLAR AUSTRALIANO": "144",
+  CHF: "18", "FRANCO SUIZO": "18",
+  SEK: "43", "CORONA SUECIA": "43",
+  NOK: "96", "CORONA NORUEGA": "96",
+  DKK: "51", "CORONA DINAMARCA": "51",
+  INR: "97", RUPIA: "97",
+  TWD: "70", "DOLAR TAIWAN": "70",
+  NZD: "145", "DOLAR NUEVA ZELANDA": "145",
+};
+
+/**
+ * Mapeo de incoterm texto → código AduanaNet (cvt_id) para Antecedentes.
+ * Nota: cvt_id en Antecedentes es diferente de term_compra en Valores Generales.
+ */
+const INCOTERM_A_CVT: Record<string, string> = {
+  CIF: "1", CFR: "2", "C&F": "2", "CNF": "2",
+  EXW: "3", FAS: "4", FOB: "5",
+  "S/CL": "6", FCA: "7", OTRA: "8", DDP: "9",
+  CPT: "2", CIP: "1", DAP: "9", DPU: "9", DAT: "9",
+};
+
+/**
+ * Resuelve el código de moneda AduanaNet (mda_id) desde un texto.
+ * @param monedaTexto ej: "USD", "EUR", "US DOLLAR"
+ * @returns código AduanaNet (default "13" = USD)
+ */
+function resolverMoneda(monedaTexto?: string): string {
+  if (!monedaTexto) return "13";
+  const norm = monedaTexto.toUpperCase().trim();
+  if (MONEDA_A_CODIGO[norm]) return MONEDA_A_CODIGO[norm];
+  // Buscar por inclusión
+  for (const [key, val] of Object.entries(MONEDA_A_CODIGO)) {
+    if (norm.includes(key) || key.includes(norm)) return val;
+  }
+  return "13"; // default USD
+}
+
+/**
+ * Resuelve el código de cláusula de venta (cvt_id) desde un incoterm.
+ * @param incoterm ej: "CFR", "CIF", "FOB"
+ * @returns código AduanaNet (default "5" = FOB)
+ */
+function resolverCvt(incoterm?: string): string {
+  if (!incoterm) return "5";
+  const norm = incoterm.toUpperCase().trim();
+  if (INCOTERM_A_CVT[norm]) return INCOTERM_A_CVT[norm];
+  // Buscar por inclusión parcial
+  for (const [key, val] of Object.entries(INCOTERM_A_CVT)) {
+    if (norm.includes(key)) return val;
+  }
+  return "5"; // default FOB
+}
+
+/**
+ * Extrae el número de días del campo condiciones_pago.
+ * Soporta formatos: "60", "NET 60 DAYS", "60 DAYS NET", "PAYMENT: 30 DAYS", etc.
+ * @returns string con número de días, o "60" por defecto
+ */
+function resolverDiasPago(condiciones?: string): string {
+  if (!condiciones) return "60";
+  const norm = condiciones.toUpperCase().trim();
+  // Si es puro número
+  if (/^\d+$/.test(norm)) return norm;
+  // Buscar patrón con número
+  const match = norm.match(/(\d+)\s*(DAYS?|DIAS?|D[IÍ]AS?)/i)
+    || norm.match(/NET\s*(\d+)/i)
+    || norm.match(/(\d+)\s*D/i)
+    || norm.match(/(\d+)/);
+  if (match) return match[1];
+  // Casos especiales
+  if (/CONTADO|CASH|SIGHT|INMEDIATO/i.test(norm)) return "0";
+  if (/ANTICIPADO|ADVANCE|PREPAID/i.test(norm)) return "0";
+  return "60"; // default
+}
+
+/**
+ * Extrae todos los campos del form HTML y devuelve como Record<string, string>.
+ */
+function extractFormFields(html: string): Record<string, string> {
+  const f: Record<string, string> = {};
+  // Inputs
+  for (const m of html.matchAll(/<input\b[^>]*>/gi)) {
+    const tag = m[0];
+    const name = (tag.match(/name\s*=\s*["']?([^"'\s>]+)/i) || [])[1];
+    if (!name || name === "modulo_seleccion[]") continue;
+    const type = ((tag.match(/type\s*=\s*["']?([^"'\s>]+)/i) || [])[1] || "text").toLowerCase();
+    const value = (tag.match(/value\s*=\s*["']([^"']*?)["']/i) || [])[1] || "";
+    if (type === "checkbox" || type === "radio") {
+      if (/checked/i.test(tag)) f[name] = value || "1";
+    } else {
+      f[name] = value;
+    }
+  }
+  // Selects (valor seleccionado)
+  for (const m of html.matchAll(/<select\b([^>]*)>([\s\S]*?)<\/select>/gi)) {
+    const name = (m[1].match(/name\s*=\s*["']?([^"'\s>]+)/i) || [])[1];
+    if (!name || name === "modulo_seleccion[]") continue;
+    f[name] = (m[2].match(/<option\s+value\s*=\s*["']?([^"'>]*?)["']?[^>]*selected/i) || [])[1] || "";
+  }
+  return f;
+}
+
+/**
+ * Graba el módulo ANTECEDENTES FINANCIEROS de una operación en AduanaNet.
+ *
+ * Flujo:
+ * 1. GET del formulario (obtener campos actuales + cookies de sesión del form)
+ * 2. Resolver valores desde los documentos
+ * 3. Inyectar valores en los campos del form
+ * 4. POST con comando=U (Aceptar)
+ * 5. Verificar que se guardó correctamente
+ *
+ * @param input datos extraídos de documentos + configuración
+ * @returns resultado con campos enviados y verificación
+ */
+export async function grabarAntecedentes(input: AntecedentesInput): Promise<AntecedentesResult> {
+  const { nroOperacion } = input;
+  if (!nroOperacion) {
+    return { ok: false, campos: {}, error: "Falta nroOperacion" };
+  }
+
+  const url = `/modulos/din/dus_encabezado/dus_antecedentes.php?lib_base=1&lib_nid=${nroOperacion}&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0`;
+
+  try {
+    // 1) GET del formulario actual
+    const html = await aduananetGet(url);
+    const campos = extractFormFields(html);
+    console.log(`[antecedentes] Op ${nroOperacion}: ${Object.keys(campos).length} campos extraídos`);
+
+    // 2) Resolver valores desde documentos
+
+    // --- Régimen (del CO) ---
+    if (input.tratadoOPais) {
+      const { resolverRegimen } = await import("./din-estructura");
+      const regimen = resolverRegimen(input.tratadoOPais);
+      campos.reg_id = regimen.regId;
+      if (campos.lreg_id !== undefined) campos.lreg_id = regimen.regId;
+      console.log(`[antecedentes] Régimen: ${regimen.nombre} (${regimen.regId}) ← tratado: "${input.tratadoOPais}"`);
+    }
+
+    // --- Forma de Pago (default COB1) ---
+    campos.fpa_id = input.formaPago || "1";
+    if (campos.lfpa_id !== undefined) campos.lfpa_id = input.formaPago || "1";
+
+    // --- Días de plazo ---
+    campos.din_dias = resolverDiasPago(input.condicionesPago);
+    console.log(`[antecedentes] Días plazo: ${campos.din_dias} ← condiciones: "${input.condicionesPago || "(default 60)"}"`);
+
+    // --- Moneda de divisas (de la Invoice) ---
+    const codigoMoneda = resolverMoneda(input.moneda);
+    campos.mda_id = codigoMoneda;
+    if (campos.lmda_id !== undefined) campos.lmda_id = codigoMoneda;
+    console.log(`[antecedentes] Moneda: ${codigoMoneda} ← "${input.moneda || "USD (default)"}"`);
+
+    // --- Tipo de divisas ---
+    // Solo setear si se indica explícitamente o si ya tenía valor.
+    // En muchas operaciones viene vacío y AduanaNet no lo exige.
+    if (input.tipoDivisas) {
+      campos.div_id = input.tipoDivisas;
+      if (campos.ldiv_id !== undefined) campos.ldiv_id = input.tipoDivisas;
+    } else if (campos.div_id === "" || campos.div_id === undefined) {
+      // Dejar vacío — no forzar valor
+    } else {
+      // Ya tiene valor, no tocar
+    }
+
+    // --- Cláusula de Venta / Incoterm ---
+    const codigoCvt = resolverCvt(input.incoterm);
+    campos.cvt_id = codigoCvt;
+    if (campos.lcvt_id !== undefined) campos.lcvt_id = codigoCvt;
+    console.log(`[antecedentes] Cláusula venta: ${codigoCvt} ← incoterm: "${input.incoterm || "(default FOB)"}"`);
+
+    // --- Valor Ex-Fábrica (solo EXW) ---
+    const exFab = input.valorExFabrica || 0;
+    campos.din_valor_ex_fabrica = exFab.toFixed(2);
+
+    // --- Forma de Pago Gravámenes ---
+    campos.fpg_id = input.formaPagoGravamenes || "4"; // Sp/IVA C (más común)
+    if (campos.lfpg_id !== undefined) campos.lfpg_id = input.formaPagoGravamenes || "4";
+
+    // --- Gastos hasta FOB ---
+    const ghf = input.gastosHastaFob || 0;
+    campos.din_gastos_hasta_fob = ghf.toFixed(2);
+
+    // --- Banco Comercial (solo si se especifica) ---
+    if (input.bancoComercial) {
+      campos.bcc_id = input.bancoComercial;
+      if (campos.lbcc_id !== undefined) campos.lbcc_id = input.bancoComercial;
+    }
+
+    // --- Certificado de Origen (si existe) ---
+    if (input.numeroCertOrigen) {
+      if (campos.cert_numero !== undefined) campos.cert_numero = input.numeroCertOrigen;
+    }
+    if (input.fechaCertOrigen) {
+      if (campos.cert_fecha !== undefined) campos.cert_fecha = input.fechaCertOrigen;
+    }
+
+    // 3) Setear comando de guardado
+    campos.comando = "U";
+
+    // 4) POST para guardar
+    const body = new URLSearchParams();
+    for (const [k, v] of Object.entries(campos)) {
+      body.set(k, v ?? "");
+    }
+
+    const saveRes = await aduananetFetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+    console.log(`[antecedentes] POST comando=U: status ${saveRes.status}`);
+
+    // 5) Verificación: re-leer el formulario y comparar valores clave
+    const htmlVerif = await aduananetGet(url);
+    const camposVerif = extractFormFields(htmlVerif);
+
+    const verificacion: Record<string, string> = {
+      reg_id: camposVerif.reg_id || "",
+      fpa_id: camposVerif.fpa_id || "",
+      din_dias: camposVerif.din_dias || "",
+      mda_id: camposVerif.mda_id || "",
+      div_id: camposVerif.div_id || "",
+      cvt_id: camposVerif.cvt_id || "",
+      fpg_id: camposVerif.fpg_id || "",
+      din_valor_ex_fabrica: camposVerif.din_valor_ex_fabrica || "",
+      din_gastos_hasta_fob: camposVerif.din_gastos_hasta_fob || "",
+    };
+
+    // Validar campos clave
+    const errores: string[] = [];
+    if (input.tratadoOPais && verificacion.reg_id !== campos.reg_id) {
+      errores.push(`reg_id: esperado=${campos.reg_id}, actual=${verificacion.reg_id}`);
+    }
+    if (verificacion.cvt_id !== campos.cvt_id) {
+      errores.push(`cvt_id: esperado=${campos.cvt_id}, actual=${verificacion.cvt_id}`);
+    }
+    if (verificacion.mda_id !== campos.mda_id) {
+      errores.push(`mda_id: esperado=${campos.mda_id}, actual=${verificacion.mda_id}`);
+    }
+
+    if (errores.length > 0) {
+      console.warn(`[antecedentes] ⚠️ Verificación con diferencias:`, errores);
+      return { ok: false, campos, verificacion, error: `Verificación fallida: ${errores.join("; ")}` };
+    }
+
+    console.log(`[antecedentes] ✅ Guardado OK — reg_id=${verificacion.reg_id}, cvt_id=${verificacion.cvt_id}, mda_id=${verificacion.mda_id}, dias=${verificacion.din_dias}`);
+    return { ok: true, campos, verificacion };
+
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`[antecedentes] ERROR:`, msg);
+    return { ok: false, campos: {}, error: msg };
+  }
+}
+
+/**
+ * Prepara los datos de Antecedentes desde los documentos de una operación.
+ * Recibe los datos extraídos (JSON) de cada documento y arma el input para grabarAntecedentes().
+ *
+ * @param docs objeto con los datos extraídos de cada tipo de documento
+ * @param nroOperacion número de operación en AduanaNet
+ * @returns AntecedentesInput listo para pasar a grabarAntecedentes()
+ */
+export function prepararAntecedentes(
+  docs: {
+    invoice?: Record<string, unknown>;
+    certificadoOrigen?: Record<string, unknown>;
+    bl?: Record<string, unknown>;
+  },
+  nroOperacion: string
+): AntecedentesInput {
+  const { invoice, certificadoOrigen, bl } = docs;
+
+  // --- Régimen (del CO) ---
+  let tratadoOPais = "";
+  let numeroCertOrigen = "";
+  let fechaCertOrigen = "";
+  if (certificadoOrigen) {
+    tratadoOPais = String(certificadoOrigen.tratado_aplicable || certificadoOrigen.pais_origen || "");
+    numeroCertOrigen = String(certificadoOrigen.numero_certificado || "");
+    fechaCertOrigen = String(certificadoOrigen.fecha_emision || "");
+  }
+
+  // --- Moneda e Incoterm (de la Invoice, con fallback al BL) ---
+  const moneda = String(invoice?.moneda || "USD");
+  const incoterm = String(invoice?.incoterm || bl?.incoterm || "FOB");
+  const condicionesPago = String(invoice?.condiciones_pago || "60");
+
+  // --- Gastos hasta FOB (del BL, si incoterm EXW/FOB) ---
+  let gastosHastaFob = 0;
+  if (bl?.gastos_fob_total) {
+    gastosHastaFob = Number(bl.gastos_fob_total) || 0;
+  }
+
+  // --- Valor ex-fábrica (solo EXW) ---
+  let valorExFabrica = 0;
+  if (/EXW/i.test(incoterm) && invoice?.monto_total) {
+    valorExFabrica = Number(invoice.monto_total) || 0;
+  }
+
+  return {
+    nroOperacion,
+    tratadoOPais,
+    numeroCertOrigen,
+    fechaCertOrigen,
+    moneda,
+    incoterm,
+    condicionesPago,
+    valorExFabrica,
+    gastosHastaFob,
+    // Defaults que se pueden sobreescribir
+    formaPago: "1",        // COB1
+    tipoDivisas: undefined, // No forzar si viene vacío en el form
+    formaPagoGravamenes: "4", // Sp/IVA C
+  };
+}
