@@ -32,8 +32,10 @@ const API_PASS = "Uj7UarxZafsTL9G";
   // 1. Obtener operaciones Anglo American junio 2026
   const { rows } = await pool.query(`
     SELECT dr.despacho, dr.referencia, dr.fecha_aceptacion, dr.via,
-           dr.total_peso_bruto, dr.puerto_desembarque
+           dr.total_peso_bruto, dr.puerto_desembarque,
+           o.notas
     FROM despachos_replica dr
+    LEFT JOIN operaciones o ON dr.despacho = o.nro_operacion
     WHERE UPPER(dr.cliente) LIKE '%ANGLO%'
       AND dr.fecha_aceptacion >= '2026-06-01'
       AND dr.fecha_aceptacion < '2026-07-01'
@@ -46,6 +48,10 @@ const API_PASS = "Uj7UarxZafsTL9G";
   const excelData = [];
 
   for (const r of rows) {
+    // Obtener TGR URL de las notas
+    const tgrMatch = (r.notas || "").match(/tgr_url:(https?:\/\/[^\s\n]+)/);
+    const tgrUrl = tgrMatch ? tgrMatch[1] : "";
+
     // Consultar API DTEs
     let factura = null;
     try {
@@ -128,8 +134,22 @@ const API_PASS = "Uj7UarxZafsTL9G";
     // Pago directo
     const pagoDirecto = parseFloat(totales.PAGO_DIRECTO || "0");
 
-    // Fecha pago TGR
-    const fechaPago = aduanas.FECHA_PAGO_DE_DERECHOS || "";
+    // Fecha pago TGR — de API o extraer del PDF TGR
+    let fechaPago = aduanas.FECHA_PAGO_DE_DERECHOS || "";
+    if (!fechaPago && tgrUrl) {
+      try {
+        const { createRequire } = await import("module");
+        const require2 = createRequire(import.meta.url);
+        const pdfParse = require2("pdf-parse");
+        const tgrRes = await fetch(tgrUrl);
+        if (tgrRes.ok) {
+          const tgrBuf = Buffer.from(await tgrRes.arrayBuffer());
+          const pdfData = await pdfParse(tgrBuf);
+          const fMatch = pdfData.text.match(/Fecha\s*Pago\s*(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i);
+          if (fMatch) fechaPago = `${fMatch[3]}-${fMatch[2]}-${fMatch[1]}`; // yyyy-mm-dd para formato uniforme
+        }
+      } catch {}
+    }
 
     // Total factura
     const totalFactura = parseFloat(totales.TOTAL || "0");
