@@ -179,14 +179,15 @@ export default function ConsentimientoPanel() {
           )}
         </div>
 
-        <input type="radio" name="consent_tabs" role="tab" className="tab" aria-label="⚖️ Mis Derechos" />
+        <input type="radio" name="consent_tabs" role="tab" className="tab" aria-label="⚖️ Solicitar Derechos" />
         <div role="tabpanel" className="tab-content pt-6">
           {/* Ejercer derechos ARSOP */}
           <div className="card bg-base-100 shadow">
             <div className="card-body">
-              <h2 className="card-title">Ejercer tus Derechos (Ley 21.719)</h2>
+              <h2 className="card-title">Solicitar Derechos (Ley 21.719)</h2>
               <p className="text-sm text-base-content/70 mb-3">
-                Puedes ejercer tus derechos de Acceso, Rectificación, Supresión, Oposición o Portabilidad de tus datos personales.
+                La Ley 21.719 de Protección de Datos Personales te garantiza el ejercicio de los siguientes derechos sobre tus datos. 
+                Selecciona el derecho que deseas ejercer y describe brevemente tu solicitud. Tenemos un plazo legal de 30 días hábiles para responder.
               </p>
               <div className="flex flex-col gap-3">
                 <div className="space-y-2">
