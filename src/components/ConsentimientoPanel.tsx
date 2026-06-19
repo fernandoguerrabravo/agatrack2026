@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 
 type Finalidad = { codigo: string; nombre: string; descripcion: string };
+type Solicitud = { folio: string; tipo: string; tipoLabel: string; estado: string; detalle?: string; respuesta?: string; creadoEn: string; respondidoEn?: string; diasRestantes?: number | null };
+
 type Consentimiento = { folio: string; finalidades: string[]; estado: string; otorgadoEn: string; revocadoEn?: string; contenidoHash: string };
 
 const TIPOS_ARSOP: Record<string, string> = {
@@ -16,6 +18,7 @@ const TIPOS_ARSOP: Record<string, string> = {
 export default function ConsentimientoPanel() {
   const [finalidades, setFinalidades] = useState<Finalidad[]>([]);
   const [consentimientos, setConsentimientos] = useState<Consentimiento[]>([]);
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [vigente, setVigente] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
@@ -35,6 +38,7 @@ export default function ConsentimientoPanel() {
     const cData = await cRes.json();
     setFinalidades(fData.finalidades || []);
     setConsentimientos(cData.consentimientos || []);
+    setSolicitudes(cData.solicitudes || []);
     setVigente(cData.vigente || false);
     setLoading(false);
   }
@@ -210,6 +214,44 @@ export default function ConsentimientoPanel() {
               </div>
             </div>
           </div>
+
+          {/* Mis solicitudes */}
+          {solicitudes.length > 0 && (
+            <div className="card bg-base-100 shadow mt-6">
+              <div className="card-body">
+                <h2 className="card-title">Mis Solicitudes</h2>
+                <p className="text-xs text-base-content/60 mb-3">La ley establece un plazo máximo de 30 días hábiles para responder.</p>
+                <div className="overflow-x-auto">
+                  <table className="table table-sm">
+                    <thead>
+                      <tr><th>Folio</th><th>Derecho</th><th>Estado</th><th>Fecha</th><th>Plazo</th><th>Respuesta</th></tr>
+                    </thead>
+                    <tbody>
+                      {solicitudes.map(s => (
+                        <tr key={s.folio}>
+                          <td className="font-mono text-xs">{s.folio}</td>
+                          <td className="text-sm">{s.tipoLabel}</td>
+                          <td>
+                            <span className={`badge badge-sm ${s.estado === "recibida" ? "badge-warning" : s.estado === "respondida" ? "badge-success" : "badge-error"}`}>
+                              {s.estado}
+                            </span>
+                          </td>
+                          <td className="text-xs">{s.creadoEn ? new Date(s.creadoEn).toLocaleDateString("es-CL") : ""}</td>
+                          <td className="text-xs">
+                            {s.estado === "recibida" && s.diasRestantes != null && (
+                              <span className={s.diasRestantes <= 5 ? "text-error font-bold" : ""}>{s.diasRestantes} días</span>
+                            )}
+                            {s.estado === "respondida" && "✓"}
+                          </td>
+                          <td className="text-xs max-w-48 truncate">{s.respuesta || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

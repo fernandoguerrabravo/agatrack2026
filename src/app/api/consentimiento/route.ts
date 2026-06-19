@@ -32,7 +32,22 @@ export async function GET(request: Request) {
   // Estado del consentimiento del usuario
   const vigente = await consentimientoVigente(session.rut);
   const consentimientos = await listarConsentimientosPorRut(session.rut);
-  return NextResponse.json({ vigente, consentimientos });
+  
+  // Solicitudes ARSOP del usuario
+  const { blindIndex } = await import("@/lib/consentimiento/crypto");
+  const arsopRows = await pgQuery<Record<string, string>>(
+    "SELECT folio, tipo, estado, detalle, respuesta, created_at, respondido_en FROM arsop WHERE titular_rut_idx = $1 ORDER BY id DESC",
+    [blindIndex(session.rut)]
+  );
+  const solicitudes = arsopRows.map(r => ({
+    folio: r.folio, tipo: r.tipo, tipoLabel: TIPOS_ARSOP[r.tipo] || r.tipo,
+    estado: r.estado, detalle: r.detalle, respuesta: r.respuesta,
+    creadoEn: r.created_at, respondidoEn: r.respondido_en,
+    // Calcular días restantes (30 hábiles ≈ 42 calendario)
+    diasRestantes: r.estado === "recibida" ? Math.max(0, 42 - Math.floor((Date.now() - new Date(r.created_at).getTime()) / 86400000)) : null,
+  }));
+  
+  return NextResponse.json({ vigente, consentimientos, solicitudes });
 }
 
 /**
