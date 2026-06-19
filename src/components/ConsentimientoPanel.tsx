@@ -7,12 +7,12 @@ type Solicitud = { folio: string; tipo: string; tipoLabel: string; estado: strin
 
 type Consentimiento = { folio: string; finalidades: string[]; estado: string; otorgadoEn: string; revocadoEn?: string; contenidoHash: string };
 
-const TIPOS_ARSOP: Record<string, string> = {
-  acceso: "Derecho de Acceso",
-  rectificacion: "Derecho de Rectificación",
-  supresion: "Derecho de Supresión",
-  oposicion: "Derecho de Oposición",
-  portabilidad: "Derecho de Portabilidad",
+const TIPOS_ARSOP: Record<string, { nombre: string; descripcion: string }> = {
+  acceso: { nombre: "Derecho de Acceso", descripcion: "Solicitar qué datos personales tuyos tenemos almacenados y cómo los tratamos." },
+  rectificacion: { nombre: "Derecho de Rectificación", descripcion: "Corregir datos personales inexactos o incompletos." },
+  supresion: { nombre: "Derecho de Supresión", descripcion: "Eliminar tus datos personales cuando ya no sean necesarios para la finalidad." },
+  oposicion: { nombre: "Derecho de Oposición", descripcion: "Oponerte al tratamiento de tus datos para una finalidad específica." },
+  portabilidad: { nombre: "Derecho de Portabilidad", descripcion: "Recibir tus datos en formato estructurado para transferirlos a otro responsable." },
 };
 
 export default function ConsentimientoPanel() {
@@ -191,15 +191,18 @@ export default function ConsentimientoPanel() {
               <div className="flex flex-col gap-3">
                 <div className="space-y-2">
                   {Object.entries(TIPOS_ARSOP).map(([k, v]) => (
-                    <label key={k} className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-base-200/50">
+                    <label key={k} className="flex items-start gap-3 cursor-pointer p-3 rounded-lg hover:bg-base-200/50">
                       <input
                         type="radio"
                         name="arsop_tipo"
-                        className="radio radio-sm radio-primary"
+                        className="radio radio-sm radio-primary mt-1"
                         checked={arsopTipo === k}
                         onChange={() => setArsopTipo(k)}
                       />
-                      <span className="text-sm">{v}</span>
+                      <div>
+                        <div className="font-semibold text-sm">{v.nombre}</div>
+                        <div className="text-xs text-base-content/60">{v.descripcion}</div>
+                      </div>
                     </label>
                   ))}
                 </div>
