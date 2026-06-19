@@ -21,7 +21,9 @@ const RESEND_FROM = get("RESEND_FROM") || "AgaTrack <reportes@agatrack.agenciagu
 (async () => {
   const XLSX = (await import("xlsx")).default;
   const { PDFDocument } = await import("pdf-lib");
-  const pdfParse = (await import("pdf-parse")).default;
+  const { createRequire } = await import("module");
+  const require2 = createRequire(import.meta.url);
+  const pdfParse = require2("pdf-parse");
 
   // 1. Obtener operaciones Anglo American junio 2026
   const { rows } = await pool.query(`
