@@ -22,7 +22,7 @@ export default function ConsentimientoPanel() {
   const [vigente, setVigente] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
-  const [arsopTipos, setArsopTipos] = useState<string[]>([]);
+  const [arsopTipo, setArsopTipo] = useState("");
   const [arsopDetalle, setArsopDetalle] = useState("");
   const [mensaje, setMensaje] = useState("");
 
@@ -70,22 +70,18 @@ export default function ConsentimientoPanel() {
   }
 
   async function handleArsop() {
-    if (arsopTipos.length === 0) { setMensaje("Selecciona al menos un derecho."); return; }
-    // Enviar una solicitud por cada tipo seleccionado
-    const folios: string[] = [];
-    for (const tipo of arsopTipos) {
-      const res = await fetch("/api/consentimiento", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accion: "arsop", tipo, detalle: arsopDetalle }),
-      });
-      const data = await res.json();
-      if (data.ok) folios.push(data.folio);
-    }
-    if (folios.length > 0) {
-      setMensaje(`✅ ${folios.length} solicitud(es) registrada(s). Folios: ${folios.join(", ")}`);
-      setArsopTipos([]); setArsopDetalle("");
+    if (!arsopTipo) { setMensaje("Selecciona un derecho."); return; }
+    const res = await fetch("/api/consentimiento", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accion: "arsop", tipo: arsopTipo, detalle: arsopDetalle }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      setMensaje(`✅ Solicitud registrada. Folio: ${data.folio}`);
+      setArsopTipo(""); setArsopDetalle("");
+      fetchData();
     } else {
-      setMensaje("❌ Error al enviar solicitudes.");
+      setMensaje(`❌ ${data.error}`);
     }
   }
 
@@ -197,18 +193,18 @@ export default function ConsentimientoPanel() {
                   {Object.entries(TIPOS_ARSOP).map(([k, v]) => (
                     <label key={k} className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-base-200/50">
                       <input
-                        type="checkbox"
-                        className="checkbox checkbox-sm checkbox-primary"
-                        checked={arsopTipos.includes(k)}
-                        onChange={(e) => setArsopTipos(e.target.checked ? [...arsopTipos, k] : arsopTipos.filter(t => t !== k))}
+                        type="radio"
+                        name="arsop_tipo"
+                        className="radio radio-sm radio-primary"
+                        checked={arsopTipo === k}
+                        onChange={() => setArsopTipo(k)}
                       />
                       <span className="text-sm">{v}</span>
                     </label>
                   ))}
-                  <button className="btn btn-xs btn-ghost" onClick={() => setArsopTipos(Object.keys(TIPOS_ARSOP))}>Seleccionar todos</button>
                 </div>
                 <textarea className="textarea textarea-bordered" placeholder="Describe tu solicitud (opcional)" value={arsopDetalle} onChange={(e) => setArsopDetalle(e.target.value)} rows={3} />
-                <button className="btn btn-outline btn-primary w-fit" onClick={handleArsop} disabled={arsopTipos.length === 0}>
+                <button className="btn btn-outline btn-primary w-fit" onClick={handleArsop} disabled={!arsopTipo}>
                   Enviar Solicitud
                 </button>
               </div>
