@@ -157,7 +157,7 @@ const RESEND_FROM = get("RESEND_FROM") || "AgaTrack <reportes@agatrack.agenciagu
     const totalGravCLP = parseFloat(r.total_gravamenes_chs || "0");
     const totalGravUSD = parseFloat(r.total_gravamenes_uss || "0");
     const tc = parseFloat(apiTc || r.tipo_cambio || "0");
-    const mercancia = apiMercancia || r.descripcion_item_1 || "";
+    const mercancia = r.descripcion_item_1 || "";
 
     excelData.push({
       "Referencia": r.referencia || "",
