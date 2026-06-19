@@ -35,11 +35,15 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
   const { PDFDocument } = await import("pdf-lib");
 
   const now = new Date();
-  const mes = now.getMonth(); // 0-indexed
-  const anio = now.getFullYear();
+  // Reportar mes anterior (se ejecuta el 7 del mes siguiente)
+  const mesReporte = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const mes = mesReporte.getMonth();
+  const anio = mesReporte.getFullYear();
   const mesNombre = MESES[mes];
   const mesInicio = `${anio}-${String(mes + 1).padStart(2, "0")}-01`;
-  const mesFin = `${anio}-${String(mes + 2).padStart(2, "0")}-01`;
+  const mesFin = `${anio}-${String(mes + 2 > 12 ? 1 : mes + 2).padStart(2, "0")}-01`;
+  const mesFinalAnio = mes + 2 > 12 ? anio + 1 : anio;
+  const mesFinalStr = `${mesFinalAnio}-${String((mes + 2) > 12 ? 1 : mes + 2).padStart(2, "0")}-01`;
 
   // 1. Obtener operaciones
   const { rows } = await pool.query(`
@@ -56,7 +60,7 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
       AND dr.fecha_aceptacion < $2
       AND dr.dus_tipo_envio NOT IN ('EXPO', 'SALIDA')
     ORDER BY dr.fecha_aceptacion
-  `, [mesInicio, mesFin]);
+  `, [mesInicio, mesFinalStr]);
 
   console.log(`[libro] ${rows.length} operaciones Anglo American ${mesNombre} ${anio}`);
 
@@ -252,7 +256,7 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
 
   const result = await resend.emails.send({
     from: RESEND_FROM,
-    to: ["fguerrab@agenciaguerra.com", "oscar@agenciaguerra.com", "garqueros@agenciaguerra.com"],
+    to: ["cagonzalezm@deloitte.com", "michelle.penailillo@angloamerican.com", "nicole.pino@angloamerican.com", "sergio.llanos@angloamerican.com", "oscar@agenciaguerra.com"],
     subject: `Libro Importaciones ${mesNombre} ${anio} Anglo American Sur S.A.`,
     html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
       <p>Estimado,</p>
