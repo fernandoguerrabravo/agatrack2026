@@ -74,7 +74,7 @@ const API_PASS = "Uj7UarxZafsTL9G";
         "Total Factura": "",
         "Peso (KG)": r.total_peso_bruto || "",
         "Despacho": r.despacho,
-        "Fecha Aceptación": r.fecha_aceptacion ? r.fecha_aceptacion.substring(0, 10) : "",
+        "Fecha Aceptación": r.fecha_aceptacion ? String(r.fecha_aceptacion).substring(0, 10) : "",
         "Total a Nuestro Favor": "",
       });
       continue;
@@ -148,7 +148,7 @@ const API_PASS = "Uj7UarxZafsTL9G";
       "Total Factura": totalFactura,
       "Peso (KG)": peso,
       "Despacho": r.despacho,
-      "Fecha Aceptación": r.fecha_aceptacion ? r.fecha_aceptacion.substring(0, 10) : "",
+      "Fecha Aceptación": r.fecha_aceptacion ? String(r.fecha_aceptacion).substring(0, 10) : "",
       "Total a Nuestro Favor": saldoAgencia,
     });
 
