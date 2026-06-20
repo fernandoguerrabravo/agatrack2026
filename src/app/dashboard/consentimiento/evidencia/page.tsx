@@ -41,9 +41,6 @@ export default function EvidenciaPage() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">📋 Evidencia Judicial</h1>
-        <a href={`/api/consentimiento/admin?tipo=evidencia_json&folio=${folio}`} className="btn btn-primary btn-sm gap-1">
-          📥 Descargar JSON
-        </a>
       </div>
 
       {/* Meta */}
@@ -129,8 +126,8 @@ export default function EvidenciaPage() {
               <div className="col-span-2 font-mono text-xs break-all"><span className="font-semibold">Hash cabeza:</span> {String(btc.cabeza_hash || "")}</div>
             </div>
           )}
-          <div className="mt-3">
-            <a href={`/api/consentimiento/admin?tipo=ots_file&folio=${folio}`} className="btn btn-xs btn-outline">📥 Descargar .ots</a>
+          <div className="mt-3 text-xs text-base-content/50">
+            La prueba .ots se descarga junto con los demás archivos al final de esta página.
           </div>
         </div>
       </div>
@@ -169,9 +166,13 @@ export default function EvidenciaPage() {
             <li>{data.instrucciones_verificacion.paso3}</li>
             <li>{data.instrucciones_verificacion.paso4}</li>
           </ol>
-          <div className="flex gap-2 mt-4">
-            <a href="/consentimiento/verificar-evidencia.js" download className="btn btn-xs btn-outline">📜 Descargar Verificador</a>
-            <a href="/consentimiento/instructivo-verificacion-judicial.html" target="_blank" className="btn btn-xs btn-outline">📖 Instructivo Completo</a>
+          <div className="divider"></div>
+          <h3 className="font-semibold text-sm">Descargar Sobre de Evidencia</h3>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <a href={`/api/consentimiento/admin?tipo=evidencia_json&folio=${folio}`} className="btn btn-sm btn-primary gap-1">📥 Paquete JSON</a>
+            <a href={`/api/consentimiento/admin?tipo=ots_file&folio=${folio}`} className="btn btn-sm btn-outline gap-1">📥 Prueba .ots</a>
+            <a href="/consentimiento/verificar-evidencia.js" download className="btn btn-sm btn-outline gap-1">📜 Script Verificador</a>
+            <a href="/consentimiento/instructivo-verificacion-judicial.html" target="_blank" className="btn btn-sm btn-outline gap-1">📖 Instructivo Judicial</a>
           </div>
         </div>
       </div>
