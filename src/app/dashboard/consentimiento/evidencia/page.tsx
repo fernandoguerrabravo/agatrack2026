@@ -129,6 +129,9 @@ export default function EvidenciaPage() {
               <div className="col-span-2 font-mono text-xs break-all"><span className="font-semibold">Hash cabeza:</span> {String(btc.cabeza_hash || "")}</div>
             </div>
           )}
+          <div className="mt-3">
+            <a href={`/api/consentimiento/admin?tipo=ots_file&folio=${folio}`} className="btn btn-xs btn-outline">📥 Descargar .ots</a>
+          </div>
         </div>
       </div>
 

@@ -72,6 +72,21 @@ export async function GET(request: Request) {
     });
   }
 
+  if (tipo === "ots_file") {
+    const folio = searchParams.get("folio");
+    if (!folio) return NextResponse.json({ error: "Folio requerido" }, { status: 400 });
+    const { pgQuery: pg } = await import("@/lib/postgres");
+    const rows = await pg<{ ots_proof: string }>("SELECT ots_proof FROM consentimientos WHERE folio = $1", [folio]);
+    if (!rows[0]?.ots_proof) return NextResponse.json({ error: "Sin prueba OTS" }, { status: 404 });
+    const buf = Buffer.from(rows[0].ots_proof, "base64");
+    return new NextResponse(buf, {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": `attachment; filename="${folio}.ots"`,
+      },
+    });
+  }
+
   if (tipo === "detalle") {
     const folio = searchParams.get("folio");
     if (!folio) return NextResponse.json({ error: "Folio requerido" }, { status: 400 });
