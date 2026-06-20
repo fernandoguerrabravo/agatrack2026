@@ -96,7 +96,7 @@ export default function ConsentimientoPanel() {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* Tabs - solo mostrar derechos si tiene consentimiento vigente */}
       <div role="tablist" className="tabs tabs-boxed">
         <input type="radio" name="consent_tabs" role="tab" className="tab" aria-label="📋 Mi Consentimiento" defaultChecked />
         <div role="tabpanel" className="tab-content pt-6 space-y-6">
@@ -179,7 +179,7 @@ export default function ConsentimientoPanel() {
           )}
         </div>
 
-        <input type="radio" name="consent_tabs" role="tab" className="tab" aria-label="⚖️ Solicitar Derechos" />
+        <input type="radio" name="consent_tabs" role="tab" className={`tab ${!vigente ? "hidden" : ""}`} aria-label="⚖️ Solicitar Derechos" />
         <div role="tabpanel" className="tab-content pt-6">
           {/* Ejercer derechos ARSOP */}
           <div className="card bg-base-100 shadow">
