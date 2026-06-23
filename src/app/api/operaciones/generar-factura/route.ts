@@ -154,10 +154,82 @@ export async function POST(request: Request) {
       await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
       await new Promise(r => setTimeout(r, 2000));
 
-      console.log(`[factura] ✅ Factura generada para op ${nro_operacion}`);
+      // 11. Volver a lista y buscar la factura recién creada para enviar al SII
+      await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
+      
+      // Filtrar por nro operación
+      const filInput = await page.$('input[name="fil_lib_nid"]');
+      if (filInput) {
+        await filInput.type(nro_operacion);
+        await page.evaluate(() => {
+          if (typeof (window as unknown as Record<string, () => void>).filtrarLista === "function") {
+            (window as unknown as Record<string, () => void>).filtrarLista();
+          } else {
+            const btn = document.querySelector('input[type="submit"]') as HTMLInputElement;
+            if (btn) btn.click();
+          }
+        });
+        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      // 12. Extraer ID de imprimir('ID') y ejecutar
+      const imprimirId = await page.evaluate(() => {
+        const html = document.body.innerHTML;
+        const match = html.match(/imprimir\(\s*'(\d+)'\s*\)/);
+        return match ? match[1] : null;
+      });
+
+      if (imprimirId) {
+        await page.evaluate((id: string) => { (window as unknown as Record<string, (id: string) => void>).imprimir(id); }, imprimirId);
+        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+        await new Promise(r => setTimeout(r, 2000));
+
+        // 13. Click "Imprimir" para enviar al SII
+        await page.evaluate(() => {
+          const inputs = document.querySelectorAll("input[type='button'], input[type='submit']");
+          for (const inp of inputs) {
+            if ((inp as HTMLInputElement).value && (inp as HTMLInputElement).value.toLowerCase().includes("imprimir")) {
+              (inp as HTMLInputElement).click(); return;
+            }
+          }
+        });
+        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+        await new Promise(r => setTimeout(r, 3000));
+        console.log(`[factura] ✅ Factura enviada al SII para op ${nro_operacion}`);
+      }
+
+      // 14. Volver a lista y obtener URL del DTE
+      await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
+      const filInput2 = await page.$('input[name="fil_lib_nid"]');
+      if (filInput2) {
+        await filInput2.type(nro_operacion);
+        await page.evaluate(() => {
+          if (typeof (window as unknown as Record<string, () => void>).filtrarLista === "function") {
+            (window as unknown as Record<string, () => void>).filtrarLista();
+          }
+        });
+        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      // Extraer ID del getUrl(true, ID) para construir la URL del DTE
+      const dteId = await page.evaluate(() => {
+        const html = document.body.innerHTML;
+        const match = html.match(/getUrl\(\s*true\s*,\s*(\d+)\s*\)/);
+        return match ? match[1] : null;
+      });
+
+      let dteUrl = "";
+      if (dteId) {
+        dteUrl = `${BASE_URL}/modulos/facturacion_electronica/documentos_emitidos/ver_dte.php?dte_id=${dteId}`;
+        console.log(`[factura] DTE URL: ${dteUrl}`);
+      }
+
+      console.log(`[factura] ✅ Factura generada y enviada al SII para op ${nro_operacion}`);
       await browser.close();
 
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, dte_url: dteUrl });
     } finally {
       await browser.close().catch(() => {});
     }
