@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const env = fs.readFileSync(path.join(__dirname, "..", ".env"), "utf-8");
 const get = (k) => { const m = env.match(new RegExp("^" + k + "=(.*)$", "m")); let v = m ? m[1].trim() : ""; if (v.startsWith('"')) v = v.slice(1, -1); if (v.startsWith("'")) v = v.slice(1, -1); return v; };
 
-const BASE_URL = get("NEXT_PUBLIC_URL") || "https://agatrack.com";
+const BASE_URL = get("NEXT_PUBLIC_URL") || "http://localhost:3000";
 const INBOUND_SECRET = get("INBOUND_SECRET");
 
 async function main() {

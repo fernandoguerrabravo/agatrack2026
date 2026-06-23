@@ -86,7 +86,9 @@ export async function POST(request: Request) {
 
       // 5.5. DATOS CLIENTE → Agregar Orden de Compra (solo para clientes que lo requieren)
       if (necesitaOrdenCompra && despachoData?.referencia) {
-        console.log(`[factura] Agregando Orden de Compra: ${despachoData.referencia}`);
+        // Limpiar referencia: eliminar sufijo _X (ej: "EM 260384_2" → "EM 260384")
+        const referenciaLimpia = despachoData.referencia.replace(/_\d+$/, "").trim();
+        console.log(`[factura] Agregando Orden de Compra: ${referenciaLimpia}`);
         // Click en addRef('') para agregar fila
         await page.evaluate(() => {
           const link = document.querySelector('a[href*="addRef"]') as HTMLAnchorElement;
@@ -100,10 +102,10 @@ export async function POST(request: Request) {
           if (sel) sel.value = "801";
         });
 
-        // Ingresar folio (referencia)
+        // Ingresar folio (referencia limpia)
         const folioInput = await page.$('input[name="fare_folio_doc0"]');
         if (folioInput) {
-          await folioInput.type(despachoData.referencia);
+          await folioInput.type(referenciaLimpia);
         }
 
         // Ingresar fecha (fecha_aceptacion en formato dd/mm/yyyy)
@@ -114,7 +116,7 @@ export async function POST(request: Request) {
           await fechaInput.type(`${d}/${m}/${y}`);
         }
         await new Promise(r => setTimeout(r, 1000));
-        console.log(`[factura] ✅ Orden de Compra agregada: folio=${despachoData.referencia}`);
+        console.log(`[factura] ✅ Orden de Compra agregada: folio=${referenciaLimpia}`);
       }
 
       // 6. Pestaña DATOS DESPACHO → Actualizar Dolar
