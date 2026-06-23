@@ -3,10 +3,11 @@
  * Test: Crear factura para operación 190428 en AduanaNet
  * Flujo: lista → nuevo → NID → Aceptar → Aceptar → Gastos/Honorarios → Traer Honorarios → Resumen → Traer Pagos → Grabar
  */
-import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createRequire } from "module";
+const require2 = createRequire(import.meta.url);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const env = fs.readFileSync(path.join(__dirname, "..", ".env"), "utf-8");
@@ -18,7 +19,8 @@ const CLAVE = get("ADUANANET_CLAVE");
 const NRO_OP = "190428";
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+  const puppeteer = require2("puppeteer");
+  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"], executablePath: "/usr/bin/google-chrome-stable" });
   const page = await browser.newPage();
   await page.setViewport({ width: 1200, height: 900 });
 
