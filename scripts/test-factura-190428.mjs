@@ -20,7 +20,7 @@ const NRO_OP = "190428";
 
 (async () => {
   const puppeteer = require2("puppeteer");
-  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"], executablePath: "/usr/bin/google-chrome-stable" });
+  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"], executablePath: "/usr/bin/chromium-browser" });
   const page = await browser.newPage();
   await page.setViewport({ width: 1200, height: 900 });
 
