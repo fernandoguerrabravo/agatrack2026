@@ -29,6 +29,7 @@ type Despacho = {
   fecha_pago_gravamenes: string;
   tgr_url?: string;
   pago_directo_url?: string;
+  url_factura_final?: string;
   es_pago_directo?: boolean;
 };
 
@@ -243,10 +244,12 @@ export default function ContabilidadPanel() {
                         <a href={`https://fguerragodoy.aduananet2.cl/modulos/din/dus_encabezado/din.php?lbac_nid=0&lib_base=1&lib_nid=${d.despacho}&dus_tipo_envio=2&copias=1&tipo=0&borrador=0&dolar=1&ref=1&pedidor=1&archivo=din.php-1&impresion=windows&pagina_inicial=1&cont_todas=1&rango=2-1`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline btn-info" title="DIN Aprobada">
                           <span className="text-xs">📋</span>
                         </a>
-                        {d.url_factura && <a href={d.url_factura} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="DTE Electrónico">
-                          <span className="text-xs">📎</span>
-                        </a>}
-                        {!d.url_factura && d.tgr_url && d.rut_cliente === "92933000-5" && (
+                        {(d.url_factura || d.url_factura_final) && (
+                          <a href={d.url_factura || d.url_factura_final || ""} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="DTE Electrónico">
+                            <span className="text-xs">📎</span>
+                          </a>
+                        )}
+                        {!d.url_factura && !d.url_factura_final && d.tgr_url && d.rut_cliente === "92933000-5" && (
                           <button className="btn btn-xs btn-outline btn-secondary" onClick={() => handleGenerarFactura(d.despacho)} title="Generar Factura">
                             Factura
                           </button>

@@ -224,6 +224,17 @@ export async function POST(request: Request) {
       if (dteId) {
         dteUrl = `${BASE_URL}/modulos/facturacion_electronica/documentos_emitidos/ver_dte.php?dte_id=${dteId}`;
         console.log(`[factura] DTE URL: ${dteUrl}`);
+        
+        // Guardar URL DTE en operaciones
+        const { pgQuery } = await import("@/lib/postgres");
+        await pgQuery(
+          "INSERT INTO operaciones (nro_operacion, rut_cliente, estado) VALUES ($1, '92933000-5', 'aprobada') ON CONFLICT (nro_operacion) DO NOTHING",
+          [nro_operacion]
+        );
+        await pgQuery(
+          "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
+          [`\ndte_url:${dteUrl}`, nro_operacion]
+        );
       }
 
       console.log(`[factura] ✅ Factura generada y enviada al SII para op ${nro_operacion}`);

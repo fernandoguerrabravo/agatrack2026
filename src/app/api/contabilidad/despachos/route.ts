@@ -44,6 +44,9 @@ export async function GET() {
       ...r,
       tgr_url: r.notas?.match(/tgr_url:(https?:\/\/[^\s\n]+)/)?.[1] || null,
       pago_directo_url: r.notas?.match(/pago_directo_url:(https?:\/\/[^\s\n]+)/)?.[1] || null,
+      dte_url_notas: r.notas?.match(/dte_url:(https?:\/\/[^\s\n]+)/)?.[1] || null,
+      // url_factura: primero de despachos_replica, si no de notas
+      url_factura_final: r.url_factura || r.notas?.match(/dte_url:(https?:\/\/[^\s\n]+)/)?.[1] || null,
       es_pago_directo: CLIENTES_PAGO_DIRECTO.some(c => (r.cliente || "").toUpperCase().includes(c)),
       notas: undefined,
     }));
