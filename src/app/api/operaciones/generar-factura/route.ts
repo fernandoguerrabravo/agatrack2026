@@ -38,6 +38,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Número de operación requerido." }, { status: 400 });
   }
 
+  // Verificar si ya tiene DTE (no crear duplicada)
+  const opRows = await pgQuery<{ notas: string; url_dte: string }>(
+    `SELECT o.notas, dr.url_dte FROM operaciones o
+     LEFT JOIN despachos_replica dr ON dr.despacho = o.nro_operacion
+     WHERE o.nro_operacion = $1`,
+    [nro_operacion]
+  );
+  const yaExiste = opRows[0]?.url_dte || (opRows[0]?.notas && opRows[0].notas.includes("dte_url:"));
+  if (yaExiste) {
+    console.log(`[factura] ⏭️ Op ${nro_operacion} ya tiene DTE, saltando confección`);
+    return NextResponse.json({ ok: true, dte_url: "ya_existe", skip: true });
+  }
+
   // Obtener datos del despacho (referencia, fecha_aceptacion, cliente)
   const drRows = await pgQuery<{ referencia: string; fecha_aceptacion: string; cliente: string; rut_cliente: string }>(
     "SELECT referencia, fecha_aceptacion, cliente, rut_cliente FROM despachos_replica WHERE despacho = $1 LIMIT 1",
