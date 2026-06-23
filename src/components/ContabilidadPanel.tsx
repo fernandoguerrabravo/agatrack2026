@@ -250,6 +250,18 @@ export default function ContabilidadPanel() {
                           </a>
                         )}
                         {/* Botón Factura oculto por ahora — facturación automática para Petroquímica */}
+                        {/* Botón Terminar Factura para KSB: lleva a AduanaNet para finalizar */}
+                        {d.tgr_url && !d.url_factura && !d.url_factura_final && (d.cliente || "").toUpperCase().includes("KSB") && (
+                          <a
+                            href={`https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/lista.php`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-xs btn-outline btn-warning"
+                            title="Terminar Factura en AduanaNet"
+                          >
+                            <span className="text-xs">✏️</span>
+                          </a>
+                        )}
                         {d.tgr_url && !d.pago_directo_url && d.es_pago_directo && (
                           <button className="btn btn-xs btn-circle btn-outline btn-secondary" onClick={() => handlePagoDirecto(d.despacho)} title="Crear Pago Directo">
                             <span className="text-xs">💰</span>

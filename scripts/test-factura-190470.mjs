@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Test: Crear factura para operación 190470 en AduanaNet
+ * Test: Crear factura para operación 190470 (KSB) en AduanaNet
  * SOLO CONFECCIÓN (sin enviar a SII)
- * Flujo: lista → nuevo → NID → Aceptar → Aceptar → DATOS DESPACHO → Actualizar Dolar → GASTOS Y HONORARIOS → Traer Honorarios → RESUMEN → Traer Pago Directo → Grabar
+ * Incluye: Orden de Compra en DATOS CLIENTE
+ * Flujo: lista → nuevo → NID → Aceptar → Aceptar → DATOS CLIENTE (OC) → DATOS DESPACHO → Actualizar Dolar → GASTOS Y HONORARIOS → Traer Honorarios → RESUMEN → Traer Pago Directo → Grabar
  */
 import fs from "fs";
 import path from "path";
@@ -17,7 +18,9 @@ const get = (k) => { const m = env.match(new RegExp("^" + k + "=(.*)$", "m")); l
 const BASE = get("ADUANANET_URL") || "https://fguerragodoy.aduananet2.cl";
 const LOGIN = get("ADUANANET_LOGIN");
 const CLAVE = get("ADUANANET_CLAVE");
-const NRO_OP = "190470";
+const NRO_OP = "190470"; // KSB
+const REFERENCIA = "EM 260565"; // Orden de compra KSB (referencia del despacho)
+const FECHA_ACEPTACION = "19/06/2026"; // dd/mm/yyyy
 
 (async () => {
   const puppeteer = require2("puppeteer");
@@ -30,7 +33,6 @@ const NRO_OP = "190470";
   const page = await browser.newPage();
   await page.setViewport({ width: 1200, height: 900 });
 
-  // Auto-accept dialogs
   page.on("dialog", async dialog => {
     console.log(`   [dialog] ${dialog.type()}: ${dialog.message()}`);
     await dialog.accept();
@@ -51,14 +53,12 @@ const NRO_OP = "190470";
     // 1. Lista facturación
     console.log("1. Lista facturación...");
     await page.goto(`${BASE}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
-    console.log("   URL:", page.url());
 
     // 2. Click nuevo()
     console.log("2. Click nuevo()...");
     await page.evaluate(() => { window.nuevo(); });
     await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
     await new Promise(r => setTimeout(r, 2000));
-    console.log("   URL:", page.url());
 
     // 3. Input NID
     console.log(`3. Input NID = ${NRO_OP}`);
@@ -78,7 +78,6 @@ const NRO_OP = "190470";
     await page.click('input[value="Aceptar"]');
     await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
     await new Promise(r => setTimeout(r, 2000));
-    console.log("   URL:", page.url());
 
     // 5. Click Aceptar 2
     console.log("5. Click Aceptar 2...");
@@ -88,21 +87,49 @@ const NRO_OP = "190470";
       await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
       await new Promise(r => setTimeout(r, 2000));
     }
-    console.log("   URL:", page.url());
+
+    // 5.5. DATOS CLIENTE → Agregar Orden de Compra
+    console.log("5.5. Agregando Orden de Compra...");
+    // Click addRef('') para agregar nueva fila
+    await page.evaluate(() => {
+      const link = document.querySelector('a[href*="addRef"]');
+      if (link) link.click();
+    });
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Select tipo documento = "Orden de Compra" (801)
+    await page.evaluate(() => {
+      const sel = document.querySelector('select[name="fare_tipo_doc0"]');
+      if (sel) sel.value = "801";
+    });
+
+    // Input folio = referencia
+    const folioInput = await page.$('input[name="fare_folio_doc0"]');
+    if (folioInput) {
+      await folioInput.type(REFERENCIA);
+      console.log(`   Folio: ${REFERENCIA}`);
+    }
+
+    // Input fecha = fecha_aceptacion
+    const fechaInput = await page.$('input[name="fare_fecha_doc0"]');
+    if (fechaInput) {
+      await fechaInput.type(FECHA_ACEPTACION);
+      console.log(`   Fecha: ${FECHA_ACEPTACION}`);
+    }
+    await new Promise(r => setTimeout(r, 1000));
+    console.log("   ✅ Orden de Compra agregada");
 
     // 6. Pestaña DATOS DESPACHOS → Actualizar Dolar
     console.log("6. Pestaña DATOS DESPACHOS...");
-    const tabClicked = await page.evaluate(() => {
+    await page.evaluate(() => {
       const links = document.querySelectorAll("a");
       for (const a of links) {
         const txt = (a.textContent || "").trim().toUpperCase();
         if (txt.includes("DATOS") && txt.includes("DESPACHO")) {
-          a.click(); return a.textContent.trim();
+          a.click(); return;
         }
       }
-      return null;
     });
-    console.log(`   Tab clickeada: ${tabClicked}`);
     await new Promise(r => setTimeout(r, 2000));
 
     console.log("   Clickeando 'Actualizar Dolar'...");
@@ -110,21 +137,12 @@ const NRO_OP = "190470";
       const inputs = document.querySelectorAll("input[type='button'], input[type='submit']");
       for (const inp of inputs) {
         const val = (inp.value || "").toLowerCase();
-        if (val.includes("actualizar") && val.includes("dolar")) {
+        if (val.includes("actualizar") && (val.includes("dolar") || val.includes("dólar"))) {
           inp.click();
           return inp.value;
         }
       }
-      // Fallback: buscar por "actualizar dólar" con acento
-      for (const inp of inputs) {
-        const val = (inp.value || "").toLowerCase();
-        if (val.includes("actualizar") && val.includes("dólar")) {
-          inp.click();
-          return inp.value;
-        }
-      }
-      // Listar todos los botones disponibles para debug
-      return "NOT FOUND - buttons: " + Array.from(inputs).map(i => i.value).join(" | ");
+      return "NOT FOUND";
     });
     console.log(`   Resultado: ${actualizarResult}`);
     await new Promise(r => setTimeout(r, 3000));
@@ -166,17 +184,7 @@ const NRO_OP = "190470";
 
       const popup = await popupPromise;
       if (popup) {
-        console.log("   Popup abierto, esperando contenido...");
         await new Promise(r => setTimeout(r, 3000));
-        
-        // Obtener HTML del popup para debug
-        const popupContent = await popup.evaluate(() => {
-          const rows = document.querySelectorAll("tr");
-          return `Filas encontradas: ${rows.length}`;
-        });
-        console.log(`   ${popupContent}`);
-
-        // Click en la primera fila con datos
         await popup.evaluate(() => {
           const rows = document.querySelectorAll("tr");
           for (const row of rows) {
@@ -196,9 +204,6 @@ const NRO_OP = "190470";
       } else {
         console.log("   ⚠️ No se abrió popup");
       }
-    } else {
-      const allBtns = await page.$$eval("input[type='button']", els => els.map(e => e.value));
-      console.log("   ⚠️ Botones disponibles:", allBtns.join(" | "));
     }
     await new Promise(r => setTimeout(r, 2000));
 
@@ -228,7 +233,7 @@ const NRO_OP = "190470";
           inp.click(); return inp.value;
         }
       }
-      return "NOT FOUND - buttons: " + Array.from(inputs).map(i => i.value).join(" | ");
+      return "NOT FOUND";
     });
     console.log(`   Resultado: ${pagoResult}`);
     await new Promise(r => setTimeout(r, 3000));
@@ -242,7 +247,7 @@ const NRO_OP = "190470";
           inp.click(); return inp.value;
         }
       }
-      return "NOT FOUND - buttons: " + Array.from(inputs).map(i => i.value).join(" | ");
+      return "NOT FOUND";
     });
     console.log(`   Resultado: ${grabarResult}`);
     await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
@@ -251,7 +256,7 @@ const NRO_OP = "190470";
     console.log("\n✅ FACTURA CONFECCIONADA (sin enviar a SII)");
     console.log("   URL final:", page.url());
 
-    // Verificar: volver a lista y buscar factura creada
+    // Verificación en lista
     console.log("\n12. Verificación en lista...");
     await page.goto(`${BASE}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
     const filInput = await page.$('input[name="fil_lib_nid"]');
@@ -259,41 +264,31 @@ const NRO_OP = "190470";
       await filInput.type(NRO_OP);
       await page.evaluate(() => {
         if (typeof window.filtrarLista === "function") window.filtrarLista();
-        else {
-          const btn = document.querySelector('input[type="submit"]');
-          if (btn) btn.click();
-        }
+        else { const btn = document.querySelector('input[type="submit"]'); if (btn) btn.click(); }
       });
       await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
       await new Promise(r => setTimeout(r, 2000));
     }
 
-    // Verificar si aparece imprimir('ID') (indica que se creó)
     const facturaInfo = await page.evaluate(() => {
       const html = document.body.innerHTML;
-      const matchImprimir = html.match(/imprimir\(\s*'(\d+)'\s*\)/);
-      const matchGetUrl = html.match(/getUrl\(\s*true\s*,\s*(\d+)\s*\)/);
       return {
-        imprimirId: matchImprimir ? matchImprimir[1] : null,
-        getUrlId: matchGetUrl ? matchGetUrl[1] : null,
+        imprimirId: html.match(/imprimir\(\s*'(\d+)'\s*\)/)?.[1] || null,
+        getUrlId: html.match(/getUrl\(\s*true\s*,\s*(\d+)\s*\)/)?.[1] || null,
       };
     });
-    
+
     if (facturaInfo.imprimirId) {
-      console.log(`   ✅ Factura encontrada en lista. imprimir ID: ${facturaInfo.imprimirId}`);
+      console.log(`   ✅ Factura encontrada. imprimir ID: ${facturaInfo.imprimirId}`);
     } else {
       console.log("   ⚠️ No se encontró factura en la lista");
-    }
-    if (facturaInfo.getUrlId) {
-      console.log(`   getUrl ID: ${facturaInfo.getUrlId}`);
     }
 
   } catch (e) {
     console.error("❌ ERROR:", e.message);
-    // Screenshot para debug
     try {
       await page.screenshot({ path: `/tmp/factura-190470-error.png`, fullPage: true });
-      console.log("   Screenshot guardado en /tmp/factura-190470-error.png");
+      console.log("   Screenshot: /tmp/factura-190470-error.png");
     } catch {}
   } finally {
     await browser.close();

@@ -273,9 +273,8 @@ async function guardarYResponder(pdfBuffer: Uint8Array, rutCliente: string, nroO
         body: JSON.stringify({ nro_operacion: nroOperacion }),
       }).catch(err => console.error("[tgr] Error auto pago-directo:", err));
 
-      // Auto factura para Petroquímica
+      // Auto factura para Petroquímica (completa con SII)
       if (clienteRut === "92933000-5") {
-        // Esperar un poco para que el pago directo se complete antes de facturar
         setTimeout(() => {
           fetch(`http://localhost:${port}/api/operaciones/generar-factura`, {
             method: "POST",
@@ -283,7 +282,19 @@ async function guardarYResponder(pdfBuffer: Uint8Array, rutCliente: string, nroO
             body: JSON.stringify({ nro_operacion: nroOperacion }),
           }).then(() => console.log(`[tgr] ✅ Auto-factura generada para op ${nroOperacion}`))
             .catch(err => console.error("[tgr] Error auto-factura:", err));
-        }, 30000); // 30s después del pago directo
+        }, 30000);
+      }
+
+      // Auto factura para KSB (solo confección, sin SII)
+      if (clienteNombre.includes("KSB")) {
+        setTimeout(() => {
+          fetch(`http://localhost:${port}/api/operaciones/generar-factura`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-inbound-secret": process.env.INBOUND_SECRET || "" },
+            body: JSON.stringify({ nro_operacion: nroOperacion, skip_sii: true }),
+          }).then(() => console.log(`[tgr] ✅ Auto-factura KSB confeccionada (sin SII) para op ${nroOperacion}`))
+            .catch(err => console.error("[tgr] Error auto-factura KSB:", err));
+        }, 30000);
       }
     }
   } catch {}

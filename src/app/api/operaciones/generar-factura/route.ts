@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { aduananetBrowserLogin } from "@/lib/aduananet-browser";
+import { pgQuery } from "@/lib/postgres";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,14 +9,20 @@ export const maxDuration = 120;
 
 const BASE_URL = process.env.ADUANANET_URL || "https://fguerragodoy.aduananet2.cl";
 
+// Clientes que requieren orden de compra en la factura
+const CLIENTES_ORDEN_COMPRA = ["KSB"];
+
 /**
  * POST /api/operaciones/generar-factura
- * Body: { nro_operacion: string }
+ * Body: { nro_operacion: string, skip_sii?: boolean }
  * 
- * Genera factura DIN en AduanaNet para Petroquímica:
+ * Genera factura DIN en AduanaNet:
  * 1. Lista → Nuevo → NID → Aceptar → Aceptar
- * 2. Pestaña Gastos y Honorarios → Traer Honorarios (popup → click grilla)
- * 3. Pestaña Resumen → Traer Pago Directo → Grabar
+ * 1.5. (KSB) DATOS CLIENTE → addRef → Orden de Compra + Folio + Fecha
+ * 2. DATOS DESPACHOS → Actualizar Dolar
+ * 3. GASTOS Y HONORARIOS → Traer Honorarios (popup → click grilla)
+ * 4. RESUMEN → Traer Pago Directo → Grabar
+ * 5. (si no skip_sii) Enviar a SII → Obtener DTE URL
  */
 export async function POST(request: Request) {
   const session = await getSession();
@@ -26,10 +33,19 @@ export async function POST(request: Request) {
     }
   }
 
-  const { nro_operacion } = await request.json();
+  const { nro_operacion, skip_sii } = await request.json();
   if (!nro_operacion) {
     return NextResponse.json({ error: "Número de operación requerido." }, { status: 400 });
   }
+
+  // Obtener datos del despacho (referencia, fecha_aceptacion, cliente)
+  const drRows = await pgQuery<{ referencia: string; fecha_aceptacion: string; cliente: string; rut_cliente: string }>(
+    "SELECT referencia, fecha_aceptacion, cliente, rut_cliente FROM despachos_replica WHERE despacho = $1 LIMIT 1",
+    [nro_operacion]
+  );
+  const despachoData = drRows[0];
+  const clienteNombre = (despachoData?.cliente || "").toUpperCase();
+  const necesitaOrdenCompra = CLIENTES_ORDEN_COMPRA.some(c => clienteNombre.includes(c));
 
   try {
     const { browser, page } = await aduananetBrowserLogin();
@@ -66,6 +82,39 @@ export async function POST(request: Request) {
         await btn2.click();
         await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
         await new Promise(r => setTimeout(r, 2000));
+      }
+
+      // 5.5. DATOS CLIENTE → Agregar Orden de Compra (solo para clientes que lo requieren)
+      if (necesitaOrdenCompra && despachoData?.referencia) {
+        console.log(`[factura] Agregando Orden de Compra: ${despachoData.referencia}`);
+        // Click en addRef('') para agregar fila
+        await page.evaluate(() => {
+          const link = document.querySelector('a[href*="addRef"]') as HTMLAnchorElement;
+          if (link) link.click();
+        });
+        await new Promise(r => setTimeout(r, 2000));
+
+        // Seleccionar "Orden de Compra" (valor 801)
+        await page.evaluate(() => {
+          const sel = document.querySelector('select[name="fare_tipo_doc0"]') as HTMLSelectElement;
+          if (sel) sel.value = "801";
+        });
+
+        // Ingresar folio (referencia)
+        const folioInput = await page.$('input[name="fare_folio_doc0"]');
+        if (folioInput) {
+          await folioInput.type(despachoData.referencia);
+        }
+
+        // Ingresar fecha (fecha_aceptacion en formato dd/mm/yyyy)
+        const fechaInput = await page.$('input[name="fare_fecha_doc0"]');
+        if (fechaInput && despachoData.fecha_aceptacion) {
+          const fecha = despachoData.fecha_aceptacion.substring(0, 10); // YYYY-MM-DD
+          const [y, m, d] = fecha.split("-");
+          await fechaInput.type(`${d}/${m}/${y}`);
+        }
+        await new Promise(r => setTimeout(r, 1000));
+        console.log(`[factura] ✅ Orden de Compra agregada: folio=${despachoData.referencia}`);
       }
 
       // 6. Pestaña DATOS DESPACHO → Actualizar Dolar
@@ -174,6 +223,12 @@ export async function POST(request: Request) {
       await new Promise(r => setTimeout(r, 2000));
 
       // 11. Volver a lista y buscar la factura recién creada para enviar al SII
+      if (skip_sii) {
+        console.log(`[factura] ✅ Factura confeccionada (sin enviar a SII) para op ${nro_operacion}`);
+        await browser.close();
+        return NextResponse.json({ ok: true, dte_url: "", skip_sii: true });
+      }
+
       await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
       
       // Filtrar por nro operación
@@ -261,10 +316,10 @@ export async function POST(request: Request) {
           console.log(`[factura] DTE URL: ${dteUrl.substring(0, 80)}...`);
           
           // Guardar URL DTE en operaciones
-          const { pgQuery } = await import("@/lib/postgres");
+          const rutCliente = despachoData?.rut_cliente || "92933000-5";
           await pgQuery(
-            "INSERT INTO operaciones (nro_operacion, rut_cliente, estado) VALUES ($1, '92933000-5', 'aprobada') ON CONFLICT (nro_operacion) DO NOTHING",
-            [nro_operacion]
+            "INSERT INTO operaciones (nro_operacion, rut_cliente, estado) VALUES ($1, $2, 'aprobada') ON CONFLICT (nro_operacion) DO NOTHING",
+            [nro_operacion, rutCliente]
           );
           await pgQuery(
             "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
