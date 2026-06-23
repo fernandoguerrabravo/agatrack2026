@@ -53,47 +53,23 @@ const CLAVE = get("ADUANANET_CLAVE");
       await new Promise(r => setTimeout(r, 2000));
     }
 
-    // 3. Buscar botón Imprimir en la fila
-    console.log("3. Buscando botón Imprimir en fila...");
-    const imprimirFn = await page.evaluate(() => {
-      // Buscar funciones tipo imprimir(id), impresion(id), etc.
-      const links = document.querySelectorAll("a");
-      for (const a of links) {
-        const onclick = a.getAttribute("href") || "";
-        if (onclick.toLowerCase().includes("imprimir") || onclick.toLowerCase().includes("impresion")) {
-          return onclick;
-        }
-        const img = a.querySelector("img");
-        if (img && (img.alt?.toLowerCase().includes("imprimir") || img.src?.includes("print"))) {
-          return a.getAttribute("href") || a.getAttribute("onclick") || "";
-        }
-      }
-      // Buscar en onclicks
-      const allEls = document.querySelectorAll("[onclick]");
-      for (const el of allEls) {
-        const oc = el.getAttribute("onclick") || "";
-        if (oc.toLowerCase().includes("imprimir") || oc.toLowerCase().includes("impresion")) {
-          return oc;
-        }
-      }
-      return null;
+    // 3. Buscar y ejecutar imprimir(ID) en la fila
+    console.log("3. Buscando imprimir(ID)...");
+    const imprimirId = await page.evaluate(() => {
+      const html = document.body.innerHTML;
+      const match = html.match(/imprimir\(\s*'(\d+)'\s*\)/);
+      return match ? match[1] : null;
     });
-    console.log("   Función imprimir:", imprimirFn);
+    console.log("   ID factura:", imprimirId);
 
-    // Click en el link/botón de imprimir
-    await page.evaluate(() => {
-      const links = document.querySelectorAll("a");
-      for (const a of links) {
-        const href = a.getAttribute("href") || "";
-        if (href.toLowerCase().includes("imprimir") || href.toLowerCase().includes("impresion")) {
-          a.click(); return;
-        }
-        const img = a.querySelector("img");
-        if (img && (img.alt?.toLowerCase().includes("imprimir") || img.src?.includes("print"))) {
-          a.click(); return;
-        }
-      }
-    });
+    if (!imprimirId) {
+      console.error("   ❌ No se encontró ID de factura para imprimir");
+      await browser.close();
+      return;
+    }
+
+    // Ejecutar imprimir(ID)
+    await page.evaluate((id) => { window.imprimir(id); }, imprimirId);
     await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
     await new Promise(r => setTimeout(r, 2000));
     console.log("   URL:", page.url());
