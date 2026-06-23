@@ -222,19 +222,36 @@ export async function POST(request: Request) {
 
       let dteUrl = "";
       if (dteId) {
-        dteUrl = `${BASE_URL}/modulos/facturacion_electronica/documentos_emitidos/ver_dte.php?dte_id=${dteId}`;
-        console.log(`[factura] DTE URL: ${dteUrl}`);
-        
-        // Guardar URL DTE en operaciones
-        const { pgQuery } = await import("@/lib/postgres");
-        await pgQuery(
-          "INSERT INTO operaciones (nro_operacion, rut_cliente, estado) VALUES ($1, '92933000-5', 'aprobada') ON CONFLICT (nro_operacion) DO NOTHING",
-          [nro_operacion]
-        );
-        await pgQuery(
-          "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
-          [`\ndte_url:${dteUrl}`, nro_operacion]
-        );
+        // Construir URL del PDF del DTE: usar folio de la factura
+        // Primero obtener el folio de la API
+        try {
+          const { execSync } = await import("child_process");
+          const curlCmd = `curl -sk -u fguerragodoy:Uj7UarxZafsTL9G -X GET "${BASE_URL}/modulos/endpoints/api.php?endpoint=listaDTEs" -H "Content-Type: application/json" -d '{"despacho":${nro_operacion}}'`;
+          const apiRaw = execSync(curlCmd, { timeout: 10000 }).toString();
+          const apiData = JSON.parse(apiRaw);
+          const factura33 = apiData.data?.find((d: Record<string, string>) => d.codigo_tipo_dte === "33");
+          if (factura33) {
+            const folio = factura33.dte_folio;
+            const folioB64 = Buffer.from(folio).toString("base64");
+            const params = Buffer.from(`tipoDTE=MzM=&folio=${folioB64}&cedible=MA==&fact_id=&ticket=&outPut=`).toString("base64");
+            dteUrl = `${BASE_URL}/modulos/facturacion_electronica/otros/mostrar_dte_pdf.php?params=${params}`;
+          }
+        } catch {}
+
+        if (dteUrl) {
+          console.log(`[factura] DTE URL: ${dteUrl.substring(0, 80)}...`);
+          
+          // Guardar URL DTE en operaciones
+          const { pgQuery } = await import("@/lib/postgres");
+          await pgQuery(
+            "INSERT INTO operaciones (nro_operacion, rut_cliente, estado) VALUES ($1, '92933000-5', 'aprobada') ON CONFLICT (nro_operacion) DO NOTHING",
+            [nro_operacion]
+          );
+          await pgQuery(
+            "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
+            [`\ndte_url:${dteUrl}`, nro_operacion]
+          );
+        }
       }
 
       console.log(`[factura] ✅ Factura generada y enviada al SII para op ${nro_operacion}`);
