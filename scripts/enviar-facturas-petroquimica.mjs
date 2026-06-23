@@ -172,7 +172,8 @@ const BASE_URL = "https://fguerragodoy.aduananet2.cl";
 
   const result = await resend.emails.send({
     from: RESEND_FROM,
-    to: ["fguerrab@agenciaguerra.com", "garqueros@agenciaguerra.com"],
+    to: ["controlfactura@agenciaguerra.com", "Sara.Arcos@psabdp.com", "monica.arancibia@psabdp.com", "bdpcl.dow@bdpint.com", "felipe.salas@psabdp.com"],
+    cc: ["oscar@agenciaguerra.com", "rodrigo@agenciaguerra.com", "garqueros@agenciaguerra.com", "fguerra@agenciaguerra.com", "fguerrab@agenciaguerra.com"],
     subject: `Facturas de Honorarios - PETROQUIMICA DOW S.A. (${attachments.length} facturas)`,
     html,
     attachments,
