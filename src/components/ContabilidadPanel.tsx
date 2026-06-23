@@ -92,6 +92,27 @@ export default function ContabilidadPanel() {
     } catch {}
   }
 
+  async function handleGenerarFactura(despacho: string) {
+    const Swal = (await import("sweetalert2")).default;
+    Swal.fire({ title: "Generando Factura...", html: `Operación ${despacho}`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+      const res = await fetch("/api/operaciones/generar-factura", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nro_operacion: despacho }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await Swal.fire({ title: "✅ Factura generada", html: `Operación ${despacho}`, icon: "success", timer: 3000 });
+      } else {
+        await Swal.fire({ title: "Error", text: data.error, icon: "error" });
+      }
+    } catch (err) {
+      await Swal.fire({ title: "Error", text: err instanceof Error ? err.message : "Error", icon: "error" });
+    }
+    fetchData();
+  }
+
   async function handleGenerarTGRTodos() {
     const sinTGR = filtrados.filter(d => !d.tgr_url && d.fecha_pago_gravamenes);
     if (sinTGR.length === 0) return;
@@ -225,6 +246,11 @@ export default function ContabilidadPanel() {
                         {d.url_factura && <a href={d.url_factura} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="DTE Electrónico">
                           <span className="text-xs">📎</span>
                         </a>}
+                        {!d.url_factura && d.tgr_url && d.rut_cliente === "92933000-5" && (
+                          <button className="btn btn-xs btn-outline btn-secondary" onClick={() => handleGenerarFactura(d.despacho)} title="Generar Factura">
+                            Factura
+                          </button>
+                        )}
                         {d.tgr_url && !d.pago_directo_url && d.es_pago_directo && (
                           <button className="btn btn-xs btn-circle btn-outline btn-secondary" onClick={() => handlePagoDirecto(d.despacho)} title="Crear Pago Directo">
                             <span className="text-xs">💰</span>
