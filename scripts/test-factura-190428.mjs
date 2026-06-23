@@ -76,82 +76,101 @@ const NRO_OP = "190428";
     }
     console.log("   URL:", page.url());
 
-    // 6. Buscar pestaña "Gastos y Honorarios"
-    console.log("6. Buscando pestaña Gastos y Honorarios...");
-    const links = await page.$$eval("a", els => els.map(a => ({ text: a.textContent?.trim(), href: a.href })));
-    console.log("   Links:", links.filter(l => l.text && l.text.length > 2).map(l => l.text).join(" | "));
-
-    const gastosTab = links.find(l => l.text?.toLowerCase().includes("gasto") || l.text?.toLowerCase().includes("honorario"));
-    if (gastosTab) {
-      console.log("   Click:", gastosTab.text);
-      await page.evaluate((href) => { window.location.href = href; }, gastosTab.href);
-      await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-      await new Promise(r => setTimeout(r, 2000));
-    }
+    // 6. Click en pestaña "GASTOS Y HONORARIOS"
+    console.log("6. Pestaña Gastos y Honorarios...");
+    await page.evaluate(() => {
+      const links = document.querySelectorAll("a");
+      for (const a of links) {
+        if (a.textContent && a.textContent.trim() === "GASTOS Y HONORARIOS") {
+          a.click(); return;
+        }
+      }
+    });
+    await new Promise(r => setTimeout(r, 2000));
 
     // 7. Click "Traer Honorarios"
     console.log("7. Traer Honorarios...");
-    const traerBtn = await page.$('input[value*="Traer Honorarios"]') || await page.$('input[value*="raer"]');
-    if (traerBtn) {
+    const traerHonBtn = await page.evaluate(() => {
+      const inputs = document.querySelectorAll("input[type='button']");
+      for (const inp of inputs) {
+        if (inp.value && inp.value.toLowerCase().includes("honorarios")) return inp.value;
+      }
+      return null;
+    });
+    console.log("   Botón encontrado:", traerHonBtn);
+
+    if (traerHonBtn) {
       // Interceptar popup
       const popupPromise = new Promise(resolve => {
         browser.once("targetcreated", async target => { resolve(await target.page()); });
         setTimeout(() => resolve(null), 10000);
       });
-      await traerBtn.click();
+      await page.evaluate((val) => {
+        const inputs = document.querySelectorAll("input[type='button']");
+        for (const inp of inputs) {
+          if (inp.value === val) { inp.click(); return; }
+        }
+      }, traerHonBtn);
+      
       const popup = await popupPromise;
       if (popup) {
-        console.log("   Popup abierto, buscando detalle...");
-        await popup.waitForSelector("body", { timeout: 5000 }).catch(() => {});
+        console.log("   Popup abierto");
+        await new Promise(r => setTimeout(r, 3000));
+        // Click en el primer link o botón del popup (seleccionar detalle)
+        await popup.evaluate(() => {
+          const link = document.querySelector("a") || document.querySelector("input[type='button']");
+          if (link) link.click();
+        });
         await new Promise(r => setTimeout(r, 2000));
-        // Click en el detalle/seleccionar
-        const selBtn = await popup.$('a') || await popup.$('input[type="button"]');
-        if (selBtn) {
-          await selBtn.click();
-          await new Promise(r => setTimeout(r, 2000));
-        }
         await popup.close().catch(() => {});
         console.log("   Honorarios traídos");
+      } else {
+        console.log("   ⚠️ No se abrió popup");
       }
     } else {
-      console.log("   ⚠️ No se encontró botón Traer Honorarios");
-      // Listar botones
-      const btns = await page.$$eval("input[type='button'], input[type='submit']", els => els.map(e => e.value));
-      console.log("   Botones:", btns.join(" | "));
+      const allBtns = await page.$$eval("input[type='button']", els => els.map(e => e.value));
+      console.log("   ⚠️ Botones disponibles:", allBtns.join(" | "));
     }
+    await new Promise(r => setTimeout(r, 2000));
 
-    // 8. Pestaña Resumen
+    // 8. Click en pestaña "RESUMEN"
     console.log("8. Pestaña Resumen...");
-    const resumenTab = links.find(l => l.text?.toLowerCase().includes("resumen"));
-    if (resumenTab) {
-      await page.evaluate((href) => { window.location.href = href; }, resumenTab.href);
-      await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-      await new Promise(r => setTimeout(r, 2000));
-    }
+    await page.evaluate(() => {
+      const links = document.querySelectorAll("a");
+      for (const a of links) {
+        if (a.textContent && a.textContent.trim() === "RESUMEN") {
+          a.click(); return;
+        }
+      }
+    });
+    await new Promise(r => setTimeout(r, 2000));
 
     // 9. Click "Traer Pagos Directos y Anticipos"
     console.log("9. Traer Pagos Directos...");
-    const pagoBtn = await page.$('input[value*="Traer Pagos"]') || await page.$('input[value*="agos"]');
-    if (pagoBtn) {
-      await pagoBtn.click();
-      await new Promise(r => setTimeout(r, 3000));
-      console.log("   Pagos traídos");
-    } else {
-      const btns2 = await page.$$eval("input[type='button'], input[type='submit']", els => els.map(e => e.value));
-      console.log("   ⚠️ Botones:", btns2.join(" | "));
-    }
+    await page.evaluate(() => {
+      const inputs = document.querySelectorAll("input[type='button']");
+      for (const inp of inputs) {
+        if (inp.value && (inp.value.toLowerCase().includes("pago") || inp.value.toLowerCase().includes("anticipo"))) {
+          inp.click(); return;
+        }
+      }
+    });
+    await new Promise(r => setTimeout(r, 3000));
+    console.log("   Pagos traídos");
 
-    // 10. Grabar
+    // 10. Click "Grabar"
     console.log("10. Grabar...");
-    const grabarBtn = await page.$('input[value*="Grabar"]') || await page.$('input[value*="rabar"]');
-    if (grabarBtn) {
-      await grabarBtn.click();
-      await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-      await new Promise(r => setTimeout(r, 2000));
-      console.log("   ✅ Factura grabada");
-    } else {
-      console.log("   ⚠️ No se encontró botón Grabar");
-    }
+    await page.evaluate(() => {
+      const inputs = document.querySelectorAll("input[type='button'], input[type='submit']");
+      for (const inp of inputs) {
+        if (inp.value && inp.value.toLowerCase().includes("grabar")) {
+          inp.click(); return;
+        }
+      }
+    });
+    await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+    await new Promise(r => setTimeout(r, 2000));
+    console.log("   ✅ Factura grabada");
 
     console.log("URL final:", page.url());
   } catch (e) {
