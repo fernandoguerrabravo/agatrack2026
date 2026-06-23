@@ -213,20 +213,62 @@ export async function POST(request: Request) {
       await new Promise(r => setTimeout(r, 3000));
 
       // 10. Grabar
-      await page.evaluate(() => {
+      const grabarClicked = await page.evaluate(() => {
         const inputs = document.querySelectorAll("input[type='button'], input[type='submit']");
         for (const inp of inputs) {
           if ((inp as HTMLInputElement).value && (inp as HTMLInputElement).value.toLowerCase().includes("grabar")) {
-            (inp as HTMLInputElement).click(); return;
+            (inp as HTMLInputElement).click(); return true;
           }
         }
+        return false;
       });
+      if (!grabarClicked) {
+        console.error(`[factura] ❌ No se encontró botón Grabar para op ${nro_operacion}`);
+        await browser.close();
+        return NextResponse.json({ error: "No se encontró botón Grabar" }, { status: 500 });
+      }
       await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 3000));
 
-      // 11. Volver a lista y buscar la factura recién creada para enviar al SII
+      // Verificar si se grabó correctamente (URL debe cambiar a mensaje.php o lista.php)
+      const postGrabarUrl = page.url();
+      const postGrabarOk = postGrabarUrl.includes("mensaje.php") || postGrabarUrl.includes("lista.php");
+      if (!postGrabarOk) {
+        // Puede que siga en formulario.php por error de validación
+        const errorMsg = await page.evaluate(() => {
+          // Buscar mensajes de error en la página
+          const alerts = document.querySelectorAll(".alert, .error, .mensaje_error");
+          for (const a of alerts) { if (a.textContent?.trim()) return a.textContent.trim(); }
+          return "";
+        });
+        console.error(`[factura] ⚠️ Posible error al grabar op ${nro_operacion}: URL=${postGrabarUrl} error=${errorMsg}`);
+      }
+
+      // 11. Verificar y continuar
       if (skip_sii) {
-        console.log(`[factura] ✅ Factura confeccionada (sin enviar a SII) para op ${nro_operacion}`);
+        // Verificar que la factura realmente existe en la lista
+        await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
+        const verifyInput = await page.$('input[name="fil_lib_nid"]');
+        if (verifyInput) {
+          await verifyInput.type(nro_operacion);
+          await page.evaluate(() => {
+            if (typeof (window as unknown as Record<string, () => void>).filtrarLista === "function") {
+              (window as unknown as Record<string, () => void>).filtrarLista();
+            }
+          });
+          await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+          await new Promise(r => setTimeout(r, 2000));
+        }
+        const facturaExiste = await page.evaluate(() => {
+          return !!document.body.innerHTML.match(/imprimir\(\s*'\d+'\s*\)/);
+        });
+        if (facturaExiste) {
+          console.log(`[factura] ✅ Factura verificada en lista para op ${nro_operacion}`);
+        } else {
+          console.error(`[factura] ❌ Factura NO encontrada en lista para op ${nro_operacion}`);
+          await browser.close();
+          return NextResponse.json({ error: "Factura no se grabó correctamente" }, { status: 500 });
+        }
         await browser.close();
         return NextResponse.json({ ok: true, dte_url: "", skip_sii: true });
       }
