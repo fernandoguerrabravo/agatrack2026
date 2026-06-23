@@ -53,7 +53,7 @@ export async function GET(request: Request) {
   }
 
   baseQuery += ` GROUP BY o.nro_operacion, o.rut_cliente, o.estado, o.fecha_apertura, o.fecha_confeccion, o.notas, c.razon
-                 ORDER BY o.fecha_apertura DESC LIMIT 100`;
+                 ORDER BY o.nro_operacion DESC LIMIT 200`;
 
   const rows = await pgQuery(baseQuery, params);
   return NextResponse.json({ operaciones: rows });
