@@ -119,8 +119,20 @@ const BASE_URL = "https://fguerragodoy.aduananet2.cl";
 
     // Tabla
     const fechaAcept = r.fecha_aceptacion ? new Date(r.fecha_aceptacion).toLocaleDateString("es-CL") : "";
+    // Obtener nro factura de la API
+    let nroFactura = "";
+    try {
+      const { execSync } = await import("child_process");
+      const curlCmd = `curl -sk -u fguerragodoy:Uj7UarxZafsTL9G -X GET "${BASE_URL}/modulos/endpoints/api.php?endpoint=listaDTEs" -H "Content-Type: application/json" -d '{"despacho":${r.despacho}}'`;
+      const apiRaw = execSync(curlCmd, { timeout: 10000 }).toString();
+      const apiData = JSON.parse(apiRaw);
+      const fac = apiData.data?.find(d => d.codigo_tipo_dte === "33");
+      if (fac) nroFactura = fac.dte_folio;
+    } catch {}
+
     tableRows.push(`<tr>
       <td style="padding:6px 12px;border:1px solid #ddd;">${r.despacho}</td>
+      <td style="padding:6px 12px;border:1px solid #ddd;">${nroFactura}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${r.referencia || ""}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${r.nro_aceptacion || ""}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${fechaAcept}</td>
@@ -145,6 +157,7 @@ const BASE_URL = "https://fguerragodoy.aduananet2.cl";
       <thead>
         <tr style="background:#f5f5f5;">
           <th style="padding:8px 12px;border:1px solid #ddd;">Despacho</th>
+          <th style="padding:8px 12px;border:1px solid #ddd;">Nro Factura</th>
           <th style="padding:8px 12px;border:1px solid #ddd;">Referencia</th>
           <th style="padding:8px 12px;border:1px solid #ddd;">Nro Aceptación</th>
           <th style="padding:8px 12px;border:1px solid #ddd;">Fecha</th>
@@ -159,7 +172,7 @@ const BASE_URL = "https://fguerragodoy.aduananet2.cl";
 
   const result = await resend.emails.send({
     from: RESEND_FROM,
-    to: ["fguerrab@agenciaguerra.com"],
+    to: ["fguerrab@agenciaguerra.com", "garqueros@agenciaguerra.com"],
     subject: `Facturas Semanales - PETROQUIMICA DOW S.A. (${attachments.length} facturas)`,
     html,
     attachments,
