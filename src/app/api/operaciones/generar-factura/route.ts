@@ -84,6 +84,21 @@ export async function POST(request: Request) {
         await new Promise(r => setTimeout(r, 2000));
       }
 
+      // Fallback: si no llegamos a formulario.php, ir directo con URL
+      if (!page.url().includes("formulario.php")) {
+        console.log(`[factura] Flujo normal no llegó a formulario, usando URL directa para op ${nro_operacion}`);
+        const rutCliente = despachoData?.rut_cliente || "96691060";
+        const cliNombre = (despachoData?.cliente || "KSB CHILE S.A.").replace(/ /g, "+");
+        const directUrl = `${BASE_URL}/modulos/contabilidad/facturacion/afecta/formulario.php?opcion_clausula=&accion=N&tipo_fact=unitario&nid=${nro_operacion}&lib_base=1&opcion_facturar=iva&cli_id=${rutCliente.split("-")[0]}&txt_cli_id=${cliNombre}`;
+        await page.goto(directUrl, { waitUntil: "networkidle0" });
+        await new Promise(r => setTimeout(r, 2000));
+        if (!page.url().includes("formulario.php")) {
+          console.error(`[factura] ❌ No se pudo acceder al formulario para op ${nro_operacion}`);
+          await browser.close();
+          return NextResponse.json({ error: "No se pudo acceder al formulario de factura" }, { status: 500 });
+        }
+      }
+
       // 5.5. DATOS CLIENTE → Agregar Orden de Compra (solo para clientes que lo requieren)
       if (necesitaOrdenCompra && despachoData?.referencia) {
         // Limpiar referencia: eliminar sufijo _X (ej: "EM 260384_2" → "EM 260384")
