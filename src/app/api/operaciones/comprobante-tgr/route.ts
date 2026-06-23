@@ -285,15 +285,16 @@ async function guardarYResponder(pdfBuffer: Uint8Array, rutCliente: string, nroO
         }, 30000);
       }
 
-      // Auto factura para KSB (solo confección, sin SII)
-      if (clienteNombre.includes("KSB")) {
+      // Auto factura para KSB y MICROGEO (solo confección, sin SII)
+      const CLIENTES_FACTURA_SIN_SII = ["KSB", "MICROGEO"];
+      if (CLIENTES_FACTURA_SIN_SII.some(c => clienteNombre.includes(c))) {
         setTimeout(() => {
           fetch(`http://localhost:${port}/api/operaciones/generar-factura`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-inbound-secret": process.env.INBOUND_SECRET || "" },
             body: JSON.stringify({ nro_operacion: nroOperacion, skip_sii: true }),
-          }).then(() => console.log(`[tgr] ✅ Auto-factura KSB confeccionada (sin SII) para op ${nroOperacion}`))
-            .catch(err => console.error("[tgr] Error auto-factura KSB:", err));
+          }).then(() => console.log(`[tgr] ✅ Auto-factura confeccionada (sin SII) para op ${nroOperacion}`))
+            .catch(err => console.error("[tgr] Error auto-factura:", err));
         }, 30000);
       }
     }
