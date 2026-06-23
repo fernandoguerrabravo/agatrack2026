@@ -68,7 +68,26 @@ export async function POST(request: Request) {
         await new Promise(r => setTimeout(r, 2000));
       }
 
-      // 6. Pestaña Gastos y Honorarios
+      // 6. Pestaña DATOS DESPACHO → Actualizar Dolar
+      await page.evaluate(() => {
+        const links = document.querySelectorAll("a");
+        for (const a of links) {
+          if (a.textContent && a.textContent.trim() === "DATOS DESPACHOS") { a.click(); return; }
+        }
+      });
+      await new Promise(r => setTimeout(r, 2000));
+
+      await page.evaluate(() => {
+        const inputs = document.querySelectorAll("input[type='button'], input[type='submit']");
+        for (const inp of inputs) {
+          if ((inp as HTMLInputElement).value && (inp as HTMLInputElement).value.toLowerCase().includes("actualizar dolar")) {
+            (inp as HTMLInputElement).click(); return;
+          }
+        }
+      });
+      await new Promise(r => setTimeout(r, 3000));
+
+      // 7. Pestaña Gastos y Honorarios
       await page.evaluate(() => {
         const links = document.querySelectorAll("a");
         for (const a of links) {
