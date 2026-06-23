@@ -173,7 +173,7 @@ const BASE_URL = "https://fguerragodoy.aduananet2.cl";
   const result = await resend.emails.send({
     from: RESEND_FROM,
     to: ["fguerrab@agenciaguerra.com", "garqueros@agenciaguerra.com"],
-    subject: `Facturas Semanales - PETROQUIMICA DOW S.A. (${attachments.length} facturas)`,
+    subject: `Facturas de Honorarios - PETROQUIMICA DOW S.A. (${attachments.length} facturas)`,
     html,
     attachments,
   });
