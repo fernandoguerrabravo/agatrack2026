@@ -249,11 +249,7 @@ export default function ContabilidadPanel() {
                             <span className="text-xs">📎</span>
                           </a>
                         )}
-                        {!d.url_factura && !d.url_factura_final && d.tgr_url && d.rut_cliente === "92933000-5" && (
-                          <button className="btn btn-xs btn-outline btn-secondary" onClick={() => handleGenerarFactura(d.despacho)} title="Generar Factura">
-                            Factura
-                          </button>
-                        )}
+                        {/* Botón Factura oculto por ahora — facturación automática para Petroquímica */}
                         {d.tgr_url && !d.pago_directo_url && d.es_pago_directo && (
                           <button className="btn btn-xs btn-circle btn-outline btn-secondary" onClick={() => handlePagoDirecto(d.despacho)} title="Crear Pago Directo">
                             <span className="text-xs">💰</span>
