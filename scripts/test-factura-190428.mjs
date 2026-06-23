@@ -116,12 +116,25 @@ const NRO_OP = "190428";
       if (popup) {
         console.log("   Popup abierto");
         await new Promise(r => setTimeout(r, 3000));
-        // Click en el primer link o botón del popup (seleccionar detalle)
+        // Click en la primera fila de la grilla (tabla con datos)
         await popup.evaluate(() => {
-          const link = document.querySelector("a") || document.querySelector("input[type='button']");
-          if (link) link.click();
+          // Buscar la primera celda clickeable en la tabla de datos (no el header)
+          const rows = document.querySelectorAll("tr");
+          for (const row of rows) {
+            const cells = row.querySelectorAll("td");
+            if (cells.length > 0) {
+              // Buscar link dentro de la celda o hacer click en la fila
+              const link = row.querySelector("a");
+              if (link) { link.click(); return; }
+              // Si no hay link, click en la fila misma
+              const onclick = row.getAttribute("onclick") || row.getAttribute("onmousedown");
+              if (onclick) { row.click(); return; }
+              // Fallback: click en primera celda
+              cells[0].click(); return;
+            }
+          }
         });
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 3000));
         await popup.close().catch(() => {});
         console.log("   Honorarios traídos");
       } else {
@@ -146,9 +159,15 @@ const NRO_OP = "190428";
     await new Promise(r => setTimeout(r, 2000));
 
     // 9. Click "Traer Pagos Directos y Anticipos"
-    console.log("9. Traer Pagos Directos...");
+    console.log("9. Traer Pago Directo...");
     await page.evaluate(() => {
-      const inputs = document.querySelectorAll("input[type='button']");
+      const inputs = document.querySelectorAll("input[type='button'], input[type='submit']");
+      for (const inp of inputs) {
+        if (inp.value && inp.value.toLowerCase().includes("pago directo")) {
+          inp.click(); return;
+        }
+      }
+      // Fallback: buscar por "pago" o "anticipo"
       for (const inp of inputs) {
         if (inp.value && (inp.value.toLowerCase().includes("pago") || inp.value.toLowerCase().includes("anticipo"))) {
           inp.click(); return;
@@ -156,7 +175,7 @@ const NRO_OP = "190428";
       }
     });
     await new Promise(r => setTimeout(r, 3000));
-    console.log("   Pagos traídos");
+    console.log("   Pago directo traído");
 
     // 10. Click "Grabar"
     console.log("10. Grabar...");
