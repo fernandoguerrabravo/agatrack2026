@@ -619,8 +619,12 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
 
       // Si la IA ya clasificó como BL o Invoice con datos sólidos, NO reclasificar
       // (un BL puede mencionar "origin", "free trade" en cláusulas legales)
-      // EXCEPCIÓN: Si tiene indicadores claros de Instrucciones (GMID, Meridian, ATN, Posición Arancelaria), SIEMPRE reclasificar
-      const esInstruccionesClaramente = /GMID\s*:/i.test(textoClasif) && /MERIDIAN\s*:/i.test(textoClasif) && /ATN[\s.]*:/i.test(textoClasif);
+      // EXCEPCIÓN: Si tiene indicadores claros de Instrucciones, SIEMPRE reclasificar
+      // Terrestres (PSA/BDP/Petroquímica): GMID + Meridian + ATN + Posición Arancelaria
+      // Marítimos: memo con A:/ATN:/DE:/REF:/FECHA: + datos operación (AWB/BL, Prima Seguro, ETA)
+      const esInstruccionesTerrestre = /GMID\s*:/i.test(textoClasif) && /MERIDIAN\s*:/i.test(textoClasif);
+      const esInstruccionesMaritimo = /ATN[\s.]*:/i.test(textoClasif) && /\bDE\s*:/i.test(textoClasif) && /REF\s*:/i.test(textoClasif) && /FECHA\s*:/i.test(textoClasif) && /AWB|BL|CRT|PRIMA\s*DE\s*SEGURO|ETA\s*:/i.test(textoClasif);
+      const esInstruccionesClaramente = esInstruccionesTerrestre || esInstruccionesMaritimo;
       const esBLConfiable = tipoActual === "Bill of Lading (BL)" &&
         (analysis.datos_extraidos?.numero_bl_master || analysis.datos_extraidos?.numero_bl || Array.isArray(analysis.datos_extraidos?.contenedores))
         && !esInstruccionesClaramente;
@@ -637,7 +641,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
         analysis.tipo_documento = "MIC/DTA";
       } else
       // Instrucciones — memo de agente con datos de operación (ANTES de CRT para evitar falso positivo por "AWB/BL/CRT")
-      if ((/INSTRUCCI[OÓ]N|ATN[\s.]*:|GMID\s*:|POSICI[OÓ]N\s*ARANCELARIA|MERIDIAN\s*:|TIPO\s*DE\s*OPERACI[OÓ]N|PRIMA\s*DE\s*SEGURO\s*:/.test(textoClasif)
+      if ((/INSTRUCCI[OÓ]N|ATN[\s.]*:|GMID\s*:|POSICI[OÓ]N\s*ARANCELARIA|MERIDIAN\s*:|TIPO\s*DE\s*OPERACI[OÓ]N|PRIMA\s*DE\s*SEGURO\s*:|DIRECCI[OÓ]N\s*DE\s*ENTREGA/.test(textoClasif)
           || esInstruccionesClaramente)
           && tipoActual !== "Instrucciones") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Instrucciones");
