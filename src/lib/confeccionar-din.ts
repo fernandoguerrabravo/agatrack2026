@@ -193,19 +193,26 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   // Buscar consignante (emisor de la factura comercial)
   const proveedorNombre = String((invoice.proveedor as Record<string, unknown>)?.nombre || invoice.proveedor || "");
   if (proveedorNombre) {
-    const keyword = proveedorNombre.split(/\s+/).filter((w: string) => w.length > 3).slice(0, 2).join(" ");
-    const csgSearchUrl = `/modulos/general/ventanas/listados/consignante.php?identificador=&fil_csg_nombre=${encodeURIComponent(keyword)}`;
+    // Buscar usando primera palabra significativa (AduanaNet busca "empieza con")
+    const cleanedProv = proveedorNombre
+      .replace(/\b(S\.?R\.?L\.?|S\.?A\.?|LTDA\.?|INC\.?|LLC|SOCIEDAD\s*DE\s*RESPONS\w*)\b/gi, "")
+      .replace(/\(.*?\)/g, "")
+      .trim();
+    const firstWord = (cleanedProv || proveedorNombre).split(/[\s,]+/).find((w: string) => w.length >= 3) || proveedorNombre.substring(0, 6);
+    console.log(`[confeccionar] Buscando consignante: "${firstWord}" (original: "${proveedorNombre}")`);
+    const csgSearchUrl = `/modulos/general/ventanas/listados/consignante.php?identificador=&fil_csg_nombre=${encodeURIComponent(firstWord)}`;
     const csgHtml = await aduananetGet(csgSearchUrl);
     const csgMatches = [...csgHtml.matchAll(/seleccion\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'/gi)];
     
     if (csgMatches.length > 0) {
-      // Buscar coincidencia por nombre — el más largo y último creado
+      // Buscar coincidencia por nombre
       const target = proveedorNombre.toUpperCase();
       let best = csgMatches[0];
       for (const m of csgMatches) {
-        if (target.includes(m[2].toUpperCase().replace(/\s*\.\s*\.\s*\.?\s*/g, "").trim()) || 
-            m[2].toUpperCase().includes(target.split(/\s+/)[0])) {
-          if (Number(m[1]) > Number(best[1])) best = m;
+        const mNombre = m[2].toUpperCase().replace(/\s*\.\s*\.\s*\.?\s*/g, "").trim();
+        if (target.includes(mNombre) || mNombre.includes(target.split(/\s+/)[0]) || mNombre.includes(firstWord.toUpperCase())) {
+          best = m;
+          break;
         }
       }
       idf.csg_id = best[1];
@@ -213,9 +220,9 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
       idf.dus_nombre_consignatario = best[2];
       idf.csg_direccion = best[6] || "";
       idf.pai_id = best[3] || "";
+      console.log(`[confeccionar] Consignante encontrado: ${best[2]} (ID ${best[1]})`);
     } else {
-      // TODO: Crear consignante si no existe
-      console.log("[confeccionar] Consignante no encontrado:", proveedorNombre);
+      console.log("[confeccionar] ⚠️ Consignante no encontrado:", proveedorNombre);
     }
   }
 
@@ -673,7 +680,7 @@ async function confeccionarDINTerrestre(
   poliza: Record<string, unknown> | null
 ) {
   // Normalizar: si el documento CRT tiene sub-objetos crt y mic_dta, extraerlos
-  const crt = (crtRaw?.crt as Record<string, unknown>) || crtRaw;
+  const crt = (crtRaw?.crt as Record<string, unknown>) || (micRaw?.crt as Record<string, unknown>) || crtRaw;
   const mic = (crtRaw?.mic_dta as Record<string, unknown>) || (micRaw?.mic_dta as Record<string, unknown>) || micRaw;
   // Datos base
   let regimen = co ? resolverRegimen(String(co.tratado_aplicable || co.pais_origen || "")) : { regId: "1", nombre: "GENERAL" };
@@ -682,10 +689,11 @@ async function confeccionarDINTerrestre(
   const cvtId = "8"; // Terrestre CPT → código 8 (OTRA) en AduanaNet
   const fobValue = Number(invoice.fob_value || invoice.monto_total || 0);
   
-  // Flete terrestre: del CRT gastos.flete_monto_remitente o del MIC flete_usd
-  const gastosRaw = crt?.gastos as Record<string, unknown> | undefined;
+  // Flete terrestre: del CRT gastos (varios nombres posibles según extracción IA)
+  const gastosRaw = (crt?.gastos as Record<string, unknown>) || (mic?.gastos as Record<string, unknown>) || undefined;
   const fleteValue = Number(
     gastosRaw?.flete_monto_remitente ||
+    gastosRaw?.flete_remitente ||
     gastosRaw?.total_remitente ||
     (gastosRaw?.flete as Record<string, unknown>)?.monto_remitente ||
     mic?.flete_usd || 
@@ -740,13 +748,17 @@ async function confeccionarDINTerrestre(
       : (invoice.proveedor as Record<string, unknown>)?.nombre || invoice.proveedor || ""
   );
   if (proveedorNombre) {
-    // Limpiar nombre: quitar país, guiones, "Dow Argentina -" → solo el nombre real
+    // Buscar consignante en AduanaNet: usar primera palabra significativa del nombre
+    // AduanaNet busca "empieza con", así que usar el nombre/keyword más corto posible
     const cleanedName = proveedorNombre
-      .replace(/^.*?-\s*/, "") // "Dow Argentina - PBBPOLISUR S.R.L." → "PBBPOLISUR S.R.L."
-      .replace(/\b(S\.?R\.?L\.?|S\.?A\.?|LTDA\.?|INC\.?|LLC)\b/gi, "")
+      .replace(/\b(S\.?R\.?L\.?|S\.?A\.?|LTDA\.?|INC\.?|LLC|SOCIEDAD\s*DE\s*RESPONS\w*)\b/gi, "")
+      .replace(/\(.*?\)/g, "")
       .trim();
-    const keyword = (cleanedName || proveedorNombre).split(/\s+/).filter((w: string) => w.length > 3).slice(0, 2).join(" ");
-    const csgSearchUrl = `/modulos/general/ventanas/listados/consignante.php?identificador=&fil_csg_nombre=${encodeURIComponent(keyword)}`;
+    // Primera palabra que tenga al menos 3 caracteres (el keyword más preciso)
+    const firstWord = (cleanedName || proveedorNombre).split(/[\s,]+/).find((w: string) => w.length >= 3) || proveedorNombre.substring(0, 6);
+    console.log(`[confeccionar-terrestre] Buscando consignante: "${firstWord}" (original: "${proveedorNombre}")`);
+    
+    const csgSearchUrl = `/modulos/general/ventanas/listados/consignante.php?identificador=&fil_csg_nombre=${encodeURIComponent(firstWord)}`;
     const csgHtml = await aduananetGet(csgSearchUrl);
     const csgMatches = [...csgHtml.matchAll(/seleccion\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'/gi)];
 
@@ -754,9 +766,10 @@ async function confeccionarDINTerrestre(
       const target = proveedorNombre.toUpperCase();
       let best = csgMatches[0];
       for (const m of csgMatches) {
-        if (target.includes(m[2].toUpperCase().replace(/\s*\.\s*\.\s*\.?\s*/g, "").trim()) ||
-            m[2].toUpperCase().includes(target.split(/\s+/)[0])) {
-          if (Number(m[1]) > Number(best[1])) best = m;
+        const mNombre = m[2].toUpperCase().replace(/\s*\.\s*\.\s*\.?\s*/g, "").trim();
+        if (target.includes(mNombre) || mNombre.includes(target.split(/\s+/)[0]) || mNombre.includes(firstWord.toUpperCase())) {
+          best = m;
+          break;
         }
       }
       idf.csg_id = best[1];
@@ -764,6 +777,9 @@ async function confeccionarDINTerrestre(
       idf.dus_nombre_consignatario = best[2];
       idf.csg_direccion = best[6] || "";
       idf.pai_id = best[3] || "";
+      console.log(`[confeccionar-terrestre] Consignante encontrado: ${best[2]} (ID ${best[1]})`);
+    } else {
+      console.log(`[confeccionar-terrestre] ⚠️ Consignante no encontrado para "${firstWord}"`);
     }
   }
 
@@ -1229,7 +1245,7 @@ async function confeccionarDINTerrestre(
   }
 
   const idBultos = [
-    marcas ? marcas : "",
+    marcas ? `${marcas} ${String((crt?.destinatario as Record<string, unknown>)?.nombre || "")}`.trim() : "",
     `${cantidadBultos} ${tipoBultoEs} (${codBulto}) conteniendo ${cantidadContenido || ""} ${nombreContenido} (${codContenido})`,
   ].filter(Boolean).join("\n");
   bf.din_id_bultos = idBultos;
@@ -1237,7 +1253,9 @@ async function confeccionarDINTerrestre(
   // Observaciones banco central para terrestre
   const obsLines: string[] = [];
   if (regimen.regId !== "1") {
-    obsLines.push(`CERTIFICADO DE ORIGEN ${certNumero} FECHA ${certFecha}`);
+    // Formato: COD.-{país abreviado}. {número certificado} FECHA {fecha}
+    const paisAbrev = String(co?.pais_origen || "ARG").toUpperCase().substring(0, 3);
+    obsLines.push(`COD.-${paisAbrev}. ${certNumero} FECHA ${certFecha}`);
   }
   obsLines.push("TRANSPORTE PAGADO HASTA CLAUSULA CPT");
   obsLines.push("Mandato FEA");

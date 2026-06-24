@@ -619,9 +619,13 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
 
       // Si la IA ya clasificó como BL o Invoice con datos sólidos, NO reclasificar
       // (un BL puede mencionar "origin", "free trade" en cláusulas legales)
+      // EXCEPCIÓN: Si tiene indicadores claros de Instrucciones (GMID, Meridian, ATN, Posición Arancelaria), SIEMPRE reclasificar
+      const esInstruccionesClaramente = /GMID\s*:/i.test(textoClasif) && /MERIDIAN\s*:/i.test(textoClasif) && /ATN[\s.]*:/i.test(textoClasif);
       const esBLConfiable = tipoActual === "Bill of Lading (BL)" &&
-        (analysis.datos_extraidos?.numero_bl_master || analysis.datos_extraidos?.numero_bl || Array.isArray(analysis.datos_extraidos?.contenedores));
-      const esInvoiceConfiable = tipoActual === "Invoice (Factura Comercial)" && analysis.datos_extraidos?.numero_factura;
+        (analysis.datos_extraidos?.numero_bl_master || analysis.datos_extraidos?.numero_bl || Array.isArray(analysis.datos_extraidos?.contenedores))
+        && !esInstruccionesClaramente;
+      const esInvoiceConfiable = tipoActual === "Invoice (Factura Comercial)" && analysis.datos_extraidos?.numero_factura
+        && !esInstruccionesClaramente;
 
       if (esBLConfiable || esInvoiceConfiable) {
         console.log("[docs] CLASIFICACIÓN: respetando tipo IA confiable (", tipoActual, ") — no se reclasifica");
@@ -633,7 +637,8 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
         analysis.tipo_documento = "MIC/DTA";
       } else
       // Instrucciones — memo de agente con datos de operación (ANTES de CRT para evitar falso positivo por "AWB/BL/CRT")
-      if (/INSTRUCCI[OÓ]N|ATN\s*:|GMID\s*:|POSICI[OÓ]N\s*ARANCELARIA|MERIDIAN\s*:|TIPO\s*DE\s*OPERACI[OÓ]N/.test(textoClasif)
+      if ((/INSTRUCCI[OÓ]N|ATN[\s.]*:|GMID\s*:|POSICI[OÓ]N\s*ARANCELARIA|MERIDIAN\s*:|TIPO\s*DE\s*OPERACI[OÓ]N|PRIMA\s*DE\s*SEGURO\s*:/.test(textoClasif)
+          || esInstruccionesClaramente)
           && tipoActual !== "Instrucciones") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Instrucciones");
         analysis.tipo_documento = "Instrucciones";
@@ -690,12 +695,14 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
         analysis.tipo_documento = "Lista de Empaque (Packing List)";
       }
       // Certificado de Origen (solo si no es fitosanitario/calidad)
-      // Incluye certificados de TLC/FTA que NO dicen "certificate of origin" explícitamente
+      // EXCEPCIÓN: si el texto dice "Certificado de Origen : SI APLICA" o "NO APLICA" es una Instrucción, no un certificado real
       else if ((/CERTIFICATE\s*OF\s*ORIGIN|CERTIFICAT\s*D'ORIGINE|CERTIFICADO\s*DE\s*ORIGEN|ZERTIFIKAT|CERTIFICATO\s*DI\s*ORIGINE|\bFORM\s*[AEB]\b|EUR\.?\s*1|NON[\s-]*PREFERENTIAL\s*ORIGIN|PREFERENTIAL\s*ORIGIN|DECLARATION\s*OF\s*ORIGIN|CHAMBER\s*OF\s*COMMERCE|CCPIT/.test(textoClasif)
             || /CRITERIO\s*DE\s*ORIGEN/.test(textoClasif)
             || /PREFERENCE\s*CRITERION/.test(textoClasif)
             || (/TRATADO\s*DE\s*LIBRE\s*COMERCIO|FREE\s*TRADE\s*AGREEMENT/.test(textoClasif) && /ORIGEN|ORIGIN|ORIGINARIA|ORIGINATING|ARANCELARIA|HS\s*TARIFF/.test(textoClasif)))
           && !/FITOSANITARI|PHYTOSANITARY|QUALITY\s*CERTIFICATE|CERTIFICADO\s*DE\s*CALIDAD/.test(textoClasif)
+          && !esInstruccionesClaramente
+          && !/CERTIFICADO\s*DE\s*ORIGEN\s*:\s*(SI|NO)\s*APLICA/i.test(textoClasif)
           && tipoActual !== "Certificado de Origen") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Certificado de Origen");
         analysis.tipo_documento = "Certificado de Origen";
