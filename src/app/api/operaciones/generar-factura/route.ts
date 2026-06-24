@@ -215,6 +215,46 @@ export async function POST(request: Request) {
         }
       }
 
+      // 7.5. Regla parcialidades KSB: modificar honorarios
+      if (necesitaOrdenCompra && despachoData?.referencia) {
+        const referenciaBase = despachoData.referencia.replace(/_\d+$/, "").trim();
+        const esParcialidad = /_\d+$/.test(despachoData.referencia);
+        // Contar operaciones con la misma referencia base
+        const parcRows = await pgQuery<{ despacho: string; total_cif: string }>(
+          "SELECT despacho, total_cif FROM despachos_replica WHERE referencia LIKE $1 AND cliente ILIKE '%KSB%'",
+          [`${referenciaBase}%`]
+        );
+        const tieneParcialidades = parcRows.length > 1;
+
+        if (tieneParcialidades) {
+          if (!esParcialidad) {
+            // Primera operación: 0.22% × CIF total de todas las parcialidades
+            const cifTotal = parcRows.reduce((s, r) => s + parseFloat(r.total_cif || "0"), 0);
+            const tc = await page.evaluate(() => {
+              const frm = document.querySelector("form[name='frmEditar']") as HTMLFormElement;
+              return parseFloat((frm?.valor_dolar_honorarios?.value || "0").replace(/\./g, "").replace(",", "."));
+            });
+            let honorariosUSD = cifTotal * 0.0022;
+            if (honorariosUSD < 50) honorariosUSD = 50;
+            if (honorariosUSD > 300) honorariosUSD = 300;
+            const honorariosCLP = Math.round(honorariosUSD * tc);
+            const formatted = honorariosCLP.toLocaleString("es-CL");
+            await page.evaluate((val: string) => {
+              const frm = document.querySelector("form[name='frmEditar']") as HTMLFormElement;
+              if (frm?.fact_honorarios) frm.fact_honorarios.value = val;
+            }, formatted);
+            console.log(`[factura] Parcialidades: primera op, honorarios=${honorariosUSD.toFixed(2)} USD → ${formatted} CLP (CIF total=${cifTotal.toFixed(2)}, TC=${tc})`);
+          } else {
+            // Parcialidad: honorarios = 0
+            await page.evaluate(() => {
+              const frm = document.querySelector("form[name='frmEditar']") as HTMLFormElement;
+              if (frm?.fact_honorarios) frm.fact_honorarios.value = "0";
+            });
+            console.log(`[factura] Parcialidades: parcialidad, honorarios=0`);
+          }
+        }
+      }
+
       // 8. Pestaña Resumen
       await page.evaluate(() => {
         const links = document.querySelectorAll("a");
