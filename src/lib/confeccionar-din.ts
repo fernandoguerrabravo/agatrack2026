@@ -84,6 +84,11 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     return row ? parseDoc(row) : null;
   };
 
+  // Obtener cli_id (RUT sin DV) para búsqueda de descriptores
+  const { pgQuery: pgQ2 } = await import("./postgres");
+  const cliRows = await pgQ2<{ rut_cliente: string }>("SELECT rut_cliente FROM despachos_replica WHERE despacho = $1 LIMIT 1", [nroOperacion]);
+  const cliId = (cliRows[0]?.rut_cliente || "").split("-")[0].replace(/\./g, "") || "2710";
+
   const invoice = getDoc("Invoice (Factura Comercial)") as Record<string, unknown>;
   const co = getDoc("Certificado de Origen") as Record<string, unknown> | null;
   const bl = getDoc("Bill of Lading (BL)") as Record<string, unknown> | null;
@@ -97,7 +102,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   const esTerrestre = !!(crt || mic) && !bl;
   if (esTerrestre) {
     console.log("[confeccionar] Operación TERRESTRE detectada (CRT/MIC presente, sin BL)");
-    return confeccionarDINTerrestre(nroOperacion, docs, invoice, co, crt, mic, poliza);
+    return confeccionarDINTerrestre(nroOperacion, docs, invoice, co, crt, mic, poliza, cliId);
   }
 
   // Datos base
@@ -468,7 +473,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     // Obtener datos de arancel/descriptor via HTTP (más rápido que navegar)
     const codigoProd = String(item.codigo_material || item.codigo_producto || "");
     const cookies = await aduananetLogin();
-    const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=2710`, { headers: { Cookie: cookies } })).text();
+    const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=${cliId}`, { headers: { Cookie: cookies } })).text();
     const dscPartida = pickXml(descXml, "dsc_partida") || String((co?.mercancia as Record<string, unknown>)?.clasificacion_arancelaria_hs || "");
     const dscCod = pickXml(descXml, "dsc_cod_producto") || codigoProd;
     const merNombre = [dscCod.padEnd(16), pickXml(descXml, "dsc_descrip_corta"), pickXml(descXml, "dsc_otro1"), pickXml(descXml, "dsc_otro2"), pickXml(descXml, "dsc_obs")].join(";");
@@ -537,7 +542,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
       frm.mer_nro_item.value = "";
       frm.comando.value = "U";
     }, {
-      merProducto: `${dscCod}@#~2710`, codigoProd, dscPartida, codAranTratado,
+      merProducto: `${dscCod}@#~${cliId}`, codigoProd, dscPartida, codAranTratado,
       correlativo: sel ? (sel[4] || "") : "", nroAcuerdo, merNombre,
       cantidad: cantidad.toFixed(4), merFob, merCif,
       totalNeto: totalNetoItem.toFixed(6), advalorem,
@@ -677,7 +682,8 @@ async function confeccionarDINTerrestre(
   co: Record<string, unknown> | null,
   crtRaw: Record<string, unknown> | null,
   micRaw: Record<string, unknown> | null,
-  poliza: Record<string, unknown> | null
+  poliza: Record<string, unknown> | null,
+  cliId: string
 ) {
   // Normalizar: si el documento CRT tiene sub-objetos crt y mic_dta, extraerlos
   const crt = (crtRaw?.crt as Record<string, unknown>) || (micRaw?.crt as Record<string, unknown>) || crtRaw;
@@ -1074,7 +1080,7 @@ async function confeccionarDINTerrestre(
     // Obtener datos de arancel/descriptor via HTTP
     const codigoProd = String(item.codigo_material || item.codigo_producto || item.product_code || item.codigo_referencia || "");
     const cookies = await aduananetLogin();
-    const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=2710`, { headers: { Cookie: cookies } })).text();
+    const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=${cliId}`, { headers: { Cookie: cookies } })).text();
     const dscPartida = pickXml(descXml, "dsc_partida") || coPartida || "";
     const dscCod = pickXml(descXml, "dsc_cod_producto") || codigoProd;
     const merNombre = [dscCod.padEnd(16), pickXml(descXml, "dsc_descrip_corta"), pickXml(descXml, "dsc_otro1"), pickXml(descXml, "dsc_otro2"), pickXml(descXml, "dsc_obs")].join(";");
@@ -1153,7 +1159,7 @@ async function confeccionarDINTerrestre(
       frm.mer_nro_item.value = "";
       frm.comando.value = "U";
     }, {
-      merProducto: `${dscCod}@#~2710`, codigoProd, dscPartida, codAranTratado,
+      merProducto: `${dscCod}@#~${cliId}`, codigoProd, dscPartida, codAranTratado,
       correlativo: sel ? (sel[4] || "") : "", nroAcuerdo, merNombre,
       cantidad: cantidad.toFixed(4), merFob, merCif,
       totalNeto: totalNetoItem.toFixed(6), advalorem,
