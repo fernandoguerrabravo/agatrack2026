@@ -272,12 +272,15 @@ export async function POST(request: Request) {
             }, formatted);
             console.log(`[factura] Parcialidades: primera op, honorarios=${honorariosUSD.toFixed(2)} USD → ${formatted} CLP (CIF total=${cifTotal.toFixed(2)}, TC=${tc})`);
           } else {
-            // Parcialidad: honorarios = 0
+            // Parcialidad: honorarios = 0, movilización = 0
             await page.evaluate(() => {
               const frm = document.querySelector("form[name='frmEditar']") as HTMLFormElement;
               if (frm?.fact_honorarios) frm.fact_honorarios.value = "0";
+              // Movilización (faga_valor_2 o buscar por glosa MOVILIZACION)
+              if (frm?.faga_valor_uni_2) frm.faga_valor_uni_2.value = "0";
+              if (frm?.faga_valor_2) frm.faga_valor_2.value = "0";
             });
-            console.log(`[factura] Parcialidades: parcialidad, honorarios=0`);
+            console.log(`[factura] Parcialidades: parcialidad, honorarios=0, movilización=0`);
           }
         }
       }
