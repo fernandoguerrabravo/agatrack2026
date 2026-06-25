@@ -83,27 +83,32 @@ const RUT_TO_CLI_ID: Record<string, string> = {
 
 export async function detectarClientePorConsignatario(nombreConsignatario: string): Promise<{ rut: string; razon: string; cli_id: string } | null> {
   if (!nombreConsignatario) return null;
-  const keyword = nombreConsignatario.toUpperCase().split(/\s+/).filter(w => w.length > 3 && !/^(S\.?A\.?|LTDA?|INC|LLC|SPA)$/i.test(w)).slice(0, 2).join(" ");
-  if (!keyword) return null;
+  // Usar nombre más completo para búsqueda — mínimo 5 chars por palabra, hasta 4 palabras
+  const palabras = nombreConsignatario.toUpperCase().split(/\s+/).filter(w => w.length > 4 && !/^(S\.?A\.?|LTDA?|INC|LLC|SPA|CHILE|S\.?R\.?L\.?)$/i.test(w));
+  if (palabras.length === 0) return null;
   
-  const rows = await pgQuery<{ rut: string; razon: string }>(
-    "SELECT rut, razon FROM clientes WHERE UPPER(razon) LIKE $1 LIMIT 5",
-    [`%${keyword}%`]
-  );
-  
-  if (rows.length === 0) return null;
-  
-  let match = rows[0];
-  if (rows.length > 1) {
-    // Si hay varios, buscar el match más exacto
-    const target = nombreConsignatario.toUpperCase();
-    const sorted = rows.sort((a, b) => {
-      const aMatch = target.includes(a.razon.toUpperCase()) ? 1 : 0;
-      const bMatch = target.includes(b.razon.toUpperCase()) ? 1 : 0;
-      return bMatch - aMatch;
-    });
-    match = sorted[0];
+  // Intentar con nombre más largo primero (más específico)
+  for (let numPalabras = Math.min(palabras.length, 4); numPalabras >= 1; numPalabras--) {
+    const keyword = palabras.slice(0, numPalabras).join(" ");
+    const rows = await pgQuery<{ rut: string; razon: string }>(
+      "SELECT rut, razon FROM clientes WHERE UPPER(razon) LIKE $1 LIMIT 5",
+      [`%${keyword}%`]
+    );
+    
+    if (rows.length === 1) {
+      return { rut: rows[0].rut, razon: rows[0].razon, cli_id: RUT_TO_CLI_ID[rows[0].rut] || "" };
+    }
+    if (rows.length > 1 && numPalabras >= 2) {
+      // Varios resultados con búsqueda específica — tomar el match más exacto
+      const target = nombreConsignatario.toUpperCase();
+      const sorted = rows.sort((a, b) => {
+        const aScore = target.includes(a.razon.toUpperCase()) ? 2 : a.razon.toUpperCase().includes(keyword) ? 1 : 0;
+        const bScore = target.includes(b.razon.toUpperCase()) ? 2 : b.razon.toUpperCase().includes(keyword) ? 1 : 0;
+        return bScore - aScore;
+      });
+      return { rut: sorted[0].rut, razon: sorted[0].razon, cli_id: RUT_TO_CLI_ID[sorted[0].rut] || "" };
+    }
   }
   
-  return { rut: match.rut, razon: match.razon, cli_id: RUT_TO_CLI_ID[match.rut] || "" };
+  return null;
 }

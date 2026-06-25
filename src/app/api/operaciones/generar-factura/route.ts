@@ -45,10 +45,34 @@ export async function POST(request: Request) {
      WHERE o.nro_operacion = $1`,
     [nro_operacion]
   );
-  const yaExiste = opRows[0]?.url_dte || (opRows[0]?.notas && opRows[0].notas.includes("dte_url:"));
-  if (yaExiste) {
-    console.log(`[factura] ⏭️ Op ${nro_operacion} ya tiene DTE, saltando confección`);
+  const yaExisteDB = opRows[0]?.url_dte || (opRows[0]?.notas && opRows[0].notas.includes("dte_url:"));
+  if (yaExisteDB) {
+    console.log(`[factura] ⏭️ Op ${nro_operacion} ya tiene DTE en DB, saltando confección`);
     return NextResponse.json({ ok: true, dte_url: "ya_existe", skip: true });
+  }
+
+  // Verificar también en AduanaNet API si ya tiene factura emitida
+  try {
+    const { execSync } = await import("child_process");
+    const curlCmd = `curl -sk -u fguerragodoy:Uj7UarxZafsTL9G -X GET "${BASE_URL}/modulos/endpoints/api.php?endpoint=listaDTEs" -H "Content-Type: application/json" -d '{"despacho":${nro_operacion}}'`;
+    const apiRaw = execSync(curlCmd, { timeout: 10000 }).toString();
+    const apiData = JSON.parse(apiRaw);
+    const factura33 = apiData.data?.find((d: Record<string, string>) => d.codigo_tipo_dte === "33");
+    if (factura33) {
+      // Guardar DTE URL en nuestra DB
+      const folio = factura33.dte_folio;
+      const folioB64 = Buffer.from(folio).toString("base64");
+      const params = Buffer.from(`tipoDTE=MzM=&folio=${folioB64}&cedible=MA==&fact_id=&ticket=&outPut=`).toString("base64");
+      const dteUrl = `${BASE_URL}/modulos/facturacion_electronica/otros/mostrar_dte_pdf.php?params=${params}`;
+      await pgQuery(
+        "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
+        [`\ndte_url:${dteUrl}`, nro_operacion]
+      );
+      console.log(`[factura] ⏭️ Op ${nro_operacion} ya tiene DTE en AduanaNet (folio ${folio}), guardada y saltando`);
+      return NextResponse.json({ ok: true, dte_url: dteUrl, skip: true });
+    }
+  } catch {
+    // Si falla la verificación API, continuar con la confección
   }
 
   // Obtener datos del despacho (referencia, fecha_aceptacion, cliente)

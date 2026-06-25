@@ -19,6 +19,8 @@ const TIPOS_DOCUMENTO = [
   "Bill of Lading (BL)",
   "Carta de Porte Internacional (CRT)",
   "MIC/DTA",
+  "Guía Aérea (AWB)",
+  "Papeleta Aérea",
   "Invoice (Factura Comercial)",
   "Póliza de Seguro",
   "Lista de Empaque (Packing List)",
@@ -105,6 +107,8 @@ INSTRUCCIONES IMPORTANTES:
    - "Bill of Lading (BL)": "BILL OF LADING", "B/L", "CONOCIMIENTO DE EMBARQUE", "SEA WAYBILL". Solo documentos de TRANSPORTE MARÍTIMO. Si es transporte terrestre NO es BL.
    - "Carta de Porte Internacional (CRT)": documentos titulados "CARTA DE PORTE INTERNACIONAL", "CRT", "CARTA DE PORTE POR CARRETERA", "CONOCIMIENTO DE TRANSPORTE TERRESTRE", o documentos de transporte terrestre que mencionan camión/tractor, placa de camión, conductor, ruta terrestre. Si ves campos como "Camión/Tractor", "Placa Patente", "Conductor", "País de partida" con rutas terrestres → es CRT.
    - "MIC/DTA": documentos titulados "MIC/DTA", "MANIFIESTO INTERNACIONAL DE CARGA", "Manifiesto Internacional de Carga por Carretera", "Declaracion de Transito Aduanero", "MIC", "DTA". Si ves "MIC/DTA" en el encabezado o "Tránsito Aduanero" → clasificar como "MIC/DTA". OJO: MIC/DTA y CRT suelen venir juntos — el MIC/DTA es el manifiesto de tránsito aduanero y el CRT es la carta de porte comercial.
+   - "Guía Aérea (AWB)": documentos titulados "AIR WAYBILL", "AWB", "GUIA AEREA", "Not Negotiable Air Waybill". Documentos de TRANSPORTE AÉREO con campos como: MAWB/HAWB, Airport of Departure, Airport of Destination, Shipper, Consignee, No. of Pieces, Gross Weight, Rate, Charge, Nature and Quantity of Goods, Requested Flight/Date. Si ves "Air Waybill" o número con formato XXX-XXXXXXXX (3 dígitos guión 8 dígitos) → es "Guía Aérea (AWB)".
+   - "Papeleta Aérea": documentos titulados "PAPELETA", "PAPELETA AÉREA", emitidos por Depocargo u otros almacenes aeroportuarios. Contienen: # Papeleta, Número Manifiesto, Fecha Manifiesto, Compañía Aérea, Vuelo, Procedencia, Guía Aérea (MAWB/HAWB), Bultos, Kilogramos, Tipo, Estado, Ubicación, Fecha Internación. Si ves "PAPELETA" + "DEPOCARGO" o "MANIFIESTO CARGA GENERAL" con datos de vuelo → es "Papeleta Aérea".
    - "Invoice (Factura Comercial)": "COMMERCIAL INVOICE", "FACTURA COMERCIAL", "INVOICE" con precios/valores.
    - "Instrucciones": documentos titulados "INSTRUCCION", "INSTRUCCIONES", o memos/cartas de agentes (PSA, BDP, freight forwarders) dirigidas a la agencia de aduanas con datos de la operación como: Orden, Meridian, AWB/BL/CRT, Factura, GMID, Posición Arancelaria, Prima de Seguro, ETA, Tipo de operación. Si ves un formato de memo con "A:", "ATN:", "DE:", "REF:", "FECHA:" y listado de datos de importación → es "Instrucciones".
    IMPORTANTE: NO confundir Packing List con Invoice — el Packing List NO tiene precios, solo cantidades/pesos/bultos. NO confundir Certificado de Origen con otros certificados (fitosanitario, calidad). El tipo_documento debe coincidir EXACTAMENTE con uno de la lista permitida.
@@ -148,6 +152,8 @@ Responde SOLO con JSON válido (sin markdown, sin explicaciones) con este format
     // Invoice: numero_factura, proveedor, comprador, fecha, moneda, monto_total, items (array con descripcion, cantidad, unidad, precio_unitario, total), incoterm, pais_origen, condiciones_pago
     // Póliza: numero_poliza, aseguradora, asegurado, monto_asegurado, prima, moneda, cobertura, vigencia_desde, vigencia_hasta. IMPORTANTE PRIMA: la "prima" del seguro (premium) es OBLIGATORIA y va SIEMPRE en la raíz del JSON como campo "prima" (número). Buscarla con cuidado — suele aparecer como "PREMIUM", "PRIMA", o junto a las marcas/referencias. NO anidarla dentro de marcas_y_numeros. Convertir formato europeo (13,38 → 13.38). La prima es distinta del monto_asegurado (insured value).
     // Packing List: total_bultos, tipo_embalaje, peso_bruto_total, peso_neto_total, volumen_total, items (array con descripcion, cantidad, peso_bruto, peso_neto, dimensiones)
+    // Guía Aérea (AWB): numero_mawb (formato XXX-XXXXXXXX), numero_hawb, shipper (nombre, direccion), consignee (nombre, direccion), aeropuerto_origen, aeropuerto_destino, aerolinea, codigo_aerolinea, vuelo, fecha_vuelo, bultos, peso_bruto_kg, peso_cobrable_kg, flete (rate x chargeable weight), otros_cargos (array con concepto y monto), total_collect, total_prepaid, moneda, incoterm, referencia, marcas, descripcion_mercancia, dimensiones, numero_factura
+    // Papeleta Aérea: numero_papeleta, numero_manifiesto, fecha_manifiesto, compania_aerea, codigo_aerolinea, vuelo, procedencia, fecha_internacion, agente_chile, mawb, hawb, bultos, tipo_bulto, peso_doc_kg, peso_verificado_kg, estado, ubicacion, sucursal
     // Certificado de Origen: numero_certificado, pais_origen, exportador, importador, descripcion_mercancia, tratado_aplicable, partida_arancelaria, fecha_emision
     // Ficha Técnica: producto, marca, modelo, especificaciones_tecnicas, composicion, uso
     // Mandato: mandante (quien otorga), mandatario (agente de aduanas), rut_mandante, rut_mandatario, fecha_firma, fecha_vencimiento (1 año desde la firma), alcance, notario, repertorio
@@ -633,6 +639,20 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
 
       if (esBLConfiable || esInvoiceConfiable) {
         console.log("[docs] CLASIFICACIÓN: respetando tipo IA confiable (", tipoActual, ") — no se reclasifica");
+      } else
+      // Guía Aérea (AWB) — Air Waybill
+      if (/AIR\s*WAYBILL|NOT\s*NEGOTIABLE\s*AIR\s*WAYBILL|\b\d{3}[-\s]\d{8}\b/.test(textoClasif)
+          && /SHIPPER|CONSIGNEE|AIRPORT\s*OF\s*DEPARTURE|AIRPORT\s*OF\s*DESTINATION|PIECES|GROSS\s*WEIGHT/.test(textoClasif)
+          && tipoActual !== "Guía Aérea (AWB)") {
+        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Guía Aérea (AWB)");
+        analysis.tipo_documento = "Guía Aérea (AWB)";
+      } else
+      // Papeleta Aérea — Depocargo/almacén aeroportuario
+      if (/PAPELETA|DEPOCARGO/.test(textoClasif)
+          && /MANIFIESTO|GU[IÍ]A\s*A[EÉ]REA|VUELO|COMPA[NÑ][IÍ]A\s*A[EÉ]REA/.test(textoClasif)
+          && tipoActual !== "Papeleta Aérea") {
+        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Papeleta Aérea");
+        analysis.tipo_documento = "Papeleta Aérea";
       } else
       // MIC/DTA — Manifiesto Internacional de Carga por Carretera
       if (/MIC\s*\/?\s*DTA|MANIFIESTO\s*INTERNACIONAL\s*DE\s*CARGA|DECLARACI[OÓ]N\s*DE\s*TR[AÁ]NSITO\s*ADUANERO|TR[AÁ]NSITO\s*ADUANERO/.test(textoClasif)

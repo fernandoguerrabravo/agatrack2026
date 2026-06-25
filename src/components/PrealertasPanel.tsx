@@ -350,20 +350,22 @@ export default function PrealertasPanel() {
                       {(() => {
                         const tieneBL = grupo.documentos.some(d => d.tipo_documento === "Bill of Lading (BL)");
                         const tieneCRT = grupo.documentos.some(d => d.tipo_documento === "Carta de Porte Internacional (CRT)" || d.tipo_documento === "MIC/DTA");
+                        const tieneAWB = grupo.documentos.some(d => d.tipo_documento === "Guía Aérea (AWB)");
                         const tieneFactura = grupo.documentos.some(d => d.tipo_documento === "Invoice (Factura Comercial)");
                         const blCorregido = grupo.documentos.some(d => {
                           if (d.tipo_documento !== "Bill of Lading (BL)") return false;
                           const datos = typeof d.datos_extraidos === "string" ? JSON.parse(d.datos_extraidos || "{}") : (d.datos_extraidos || {});
                           return !!(datos._nave_corregida_shipsgo || datos.nave_corregida || datos.viaje_corregido || d.datos_shipsgo);
                         });
-                        const esTerrestre = tieneCRT && !tieneBL;
-                        const puedeConfeccionar = tieneFactura && (esTerrestre ? tieneCRT : (tieneBL && blCorregido));
+                        const esTerrestre = tieneCRT && !tieneBL && !tieneAWB;
+                        const esAereo = tieneAWB && !tieneBL;
+                        const puedeConfeccionar = tieneFactura && (esTerrestre ? tieneCRT : esAereo ? tieneAWB : (tieneBL && blCorregido));
                         return (
                           <button
                             className={`btn btn-xs ${puedeConfeccionar ? "btn-warning" : "btn-disabled"}`}
                             disabled={!puedeConfeccionar || confeccionando === grupo.nro_operacion}
                             onClick={() => handleConfeccionar(grupo.nro_operacion)}
-                            title={!tieneFactura ? "Falta Factura" : !tieneBL && !tieneCRT ? "Falta BL o CRT" : !esTerrestre && !blCorregido ? "BL no corregido (falta ShipsGo)" : "Enviar a confección DIN"}
+                            title={!tieneFactura ? "Falta Factura" : !tieneBL && !tieneCRT && !tieneAWB ? "Falta BL, CRT o AWB" : !esTerrestre && !esAereo && !blCorregido ? "BL no corregido (falta ShipsGo)" : "Enviar a confección DIN"}
                           >
                             {confeccionando === grupo.nro_operacion ? (
                               <span className="loading loading-spinner loading-xs"></span>

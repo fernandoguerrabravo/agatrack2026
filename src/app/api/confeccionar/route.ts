@@ -48,24 +48,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se encontraron documentos para esta operación." }, { status: 400 });
   }
 
-  // Verificar documentos mínimos: BL+Factura (marítimo) o CRT+Factura (terrestre)
+  // Verificar documentos mínimos: BL+Factura (marítimo) o CRT+Factura (terrestre) o AWB+Factura (aéreo)
   const tiposPresentes = docs.map(d => d.tipo_documento);
   const tieneBL = tiposPresentes.includes("Bill of Lading (BL)");
   const tieneCRT = tiposPresentes.includes("Carta de Porte Internacional (CRT)");
   const tieneMIC = tiposPresentes.includes("MIC/DTA");
+  const tieneAWB = tiposPresentes.includes("Guía Aérea (AWB)");
   const tieneFactura = tiposPresentes.includes("Invoice (Factura Comercial)");
-  const esTerrestre = (tieneCRT || tieneMIC) && !tieneBL;
+  const esTerrestre = (tieneCRT || tieneMIC) && !tieneBL && !tieneAWB;
+  const esAereo = tieneAWB && !tieneBL;
 
   if (!tieneFactura) {
     return NextResponse.json({ error: "Falta la Factura Comercial para confeccionar." }, { status: 400 });
   }
 
-  if (!tieneBL && !tieneCRT && !tieneMIC) {
-    return NextResponse.json({ error: "Falta el documento de transporte (BL o CRT) para confeccionar." }, { status: 400 });
+  if (!tieneBL && !tieneCRT && !tieneMIC && !tieneAWB) {
+    return NextResponse.json({ error: "Falta el documento de transporte (BL, CRT o AWB) para confeccionar." }, { status: 400 });
   }
 
   // Para marítimo: verificar que el BL esté corregido
-  if (!esTerrestre) {
+  if (!esTerrestre && !esAereo) {
     const blDoc = docs.find(d => d.tipo_documento === "Bill of Lading (BL)");
     const blDatos = typeof blDoc!.datos_extraidos === "string"
       ? JSON.parse(blDoc!.datos_extraidos)
