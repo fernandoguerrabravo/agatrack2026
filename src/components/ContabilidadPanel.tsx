@@ -251,7 +251,7 @@ export default function ContabilidadPanel() {
                         )}
                         {/* Botón Factura oculto por ahora — facturación automática para Petroquímica */}
                         {/* Botón Terminar Factura para KSB/MICROGEO: lleva a AduanaNet para finalizar */}
-                        {d.tgr_url && !d.url_factura && !d.url_factura_final && ((d.cliente || "").toUpperCase().includes("KSB") || (d.cliente || "").toUpperCase().includes("MICROGEO")) && (
+                        {d.tgr_url && !d.url_factura && !d.url_factura_final && ((d.cliente || "").toUpperCase().includes("KSB") || (d.cliente || "").toUpperCase().includes("MICROGEO") || (d.cliente || "").toUpperCase().includes("ANGLO") || (d.cliente || "").toUpperCase().includes("BROTHER") || (d.cliente || "").toUpperCase().includes("WIKA")) && (
                           <a
                             href={`https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/lista.php`}
                             target="_blank"

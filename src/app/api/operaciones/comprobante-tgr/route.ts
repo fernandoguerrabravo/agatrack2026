@@ -286,7 +286,7 @@ async function guardarYResponder(pdfBuffer: Uint8Array, rutCliente: string, nroO
       }
 
       // Auto factura para KSB y MICROGEO (solo confección, sin SII)
-      const CLIENTES_FACTURA_SIN_SII = ["KSB", "MICROGEO"];
+      const CLIENTES_FACTURA_SIN_SII = ["KSB", "MICROGEO", "ANGLO AMERICAN", "BROTHER", "WIKA"];
       if (CLIENTES_FACTURA_SIN_SII.some(c => clienteNombre.includes(c))) {
         setTimeout(() => {
           fetch(`http://localhost:${port}/api/operaciones/generar-factura`, {
