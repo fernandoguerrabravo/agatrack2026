@@ -38,20 +38,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Número de operación requerido." }, { status: 400 });
   }
 
-  // Verificar si ya tiene DTE (no crear duplicada)
+  // Verificar si ya tiene DTE o factura confeccionada (no crear duplicada)
   const opRows = await pgQuery<{ notas: string; url_dte: string }>(
     `SELECT o.notas, dr.url_dte FROM operaciones o
      LEFT JOIN despachos_replica dr ON dr.despacho = o.nro_operacion
      WHERE o.nro_operacion = $1`,
     [nro_operacion]
   );
-  const yaExisteDB = opRows[0]?.url_dte || (opRows[0]?.notas && opRows[0].notas.includes("dte_url:"));
+  const notas = opRows[0]?.notas || "";
+  const yaExisteDB = opRows[0]?.url_dte || notas.includes("dte_url:");
+  const yaConfeccionada = notas.includes("factura_confeccionada:");
   if (yaExisteDB) {
-    console.log(`[factura] ⏭️ Op ${nro_operacion} ya tiene DTE en DB, saltando confección`);
+    console.log(`[factura] ⏭️ Op ${nro_operacion} ya tiene DTE, saltando`);
     return NextResponse.json({ ok: true, dte_url: "ya_existe", skip: true });
   }
+  if (yaConfeccionada) {
+    console.log(`[factura] ⏭️ Op ${nro_operacion} ya tiene factura confeccionada, saltando`);
+    return NextResponse.json({ ok: true, dte_url: "", skip: true });
+  }
 
-  // Verificar también en AduanaNet API si ya tiene factura emitida
+  // Verificar en AduanaNet API si ya tiene DTE emitida
   try {
     const { execSync } = await import("child_process");
     const curlCmd = `curl -sk -u fguerragodoy:Uj7UarxZafsTL9G -X GET "${BASE_URL}/modulos/endpoints/api.php?endpoint=listaDTEs" -H "Content-Type: application/json" -d '{"despacho":${nro_operacion}}'`;
@@ -59,7 +65,6 @@ export async function POST(request: Request) {
     const apiData = JSON.parse(apiRaw);
     const factura33 = apiData.data?.find((d: Record<string, string>) => d.codigo_tipo_dte === "33");
     if (factura33) {
-      // Guardar DTE URL en nuestra DB
       const folio = factura33.dte_folio;
       const folioB64 = Buffer.from(folio).toString("base64");
       const params = Buffer.from(`tipoDTE=MzM=&folio=${folioB64}&cedible=MA==&fact_id=&ticket=&outPut=`).toString("base64");
@@ -68,12 +73,10 @@ export async function POST(request: Request) {
         "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
         [`\ndte_url:${dteUrl}`, nro_operacion]
       );
-      console.log(`[factura] ⏭️ Op ${nro_operacion} ya tiene DTE en AduanaNet (folio ${folio}), guardada y saltando`);
+      console.log(`[factura] ⏭️ Op ${nro_operacion} ya tiene DTE en AduanaNet (folio ${folio}), guardada`);
       return NextResponse.json({ ok: true, dte_url: dteUrl, skip: true });
     }
-  } catch {
-    // Si falla la verificación API, continuar con la confección
-  }
+  } catch {}
 
   // Obtener datos del despacho (referencia, fecha_aceptacion, cliente)
   const drRows = await pgQuery<{ referencia: string; fecha_aceptacion: string; cliente: string; rut_cliente: string }>(
@@ -345,6 +348,11 @@ export async function POST(request: Request) {
         // Verificar que la factura se grabó: URL debe ser lista.php o mensaje.php
         const finalUrl = page.url();
         if (finalUrl.includes("lista.php") || finalUrl.includes("mensaje.php") || finalUrl.includes("grabar.php")) {
+          // Marcar como confeccionada en DB
+          await pgQuery(
+            "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
+            [`\nfactura_confeccionada:${new Date().toISOString()}`, nro_operacion]
+          );
           console.log(`[factura] ✅ Factura confeccionada (sin SII) para op ${nro_operacion}`);
           await browser.close();
           return NextResponse.json({ ok: true, dte_url: "", skip_sii: true });
