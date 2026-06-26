@@ -384,7 +384,24 @@ export async function POST(request: Request) {
         await new Promise(r => setTimeout(r, 2000));
       }
 
-      // 12. Extraer ID de imprimir('ID') y ejecutar
+      // 12. Ir a lista de facturas y buscar la factura para transmitir
+      await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
+      await new Promise(r => setTimeout(r, 1500));
+      // Filtrar por nro operación
+      const filInputSII = await page.$('input[name="fil_lib_nid"]');
+      if (filInputSII) {
+        await page.evaluate(() => { const inp = document.querySelector('input[name="fil_lib_nid"]') as HTMLInputElement; if (inp) inp.value = ""; });
+        await filInputSII.type(nro_operacion);
+        await page.evaluate(() => {
+          const btn = document.querySelector('input[value="Filtrar"]') as HTMLInputElement | null;
+          if (btn) btn.click();
+          else if (typeof (window as unknown as Record<string, unknown>).filtrarLista === "function") (window as unknown as Record<string, () => void>).filtrarLista();
+        });
+        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+        await new Promise(r => setTimeout(r, 1500));
+      }
+
+      // Extraer ID de imprimir('ID') de la lista
       const imprimirId = await page.evaluate(() => {
         const html = document.body.innerHTML;
         const match = html.match(/imprimir\(\s*'(\d+)'\s*\)/);
@@ -466,6 +483,11 @@ export async function POST(request: Request) {
       }
 
       console.log(`[factura] ✅ Factura generada y enviada al SII para op ${nro_operacion}`);
+      // Marcar en BD que la factura se confeccionó
+      await pgQuery(
+        "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
+        [`\nfactura_confeccionada:${new Date().toISOString()}`, nro_operacion]
+      );
       await browser.close();
 
       return NextResponse.json({ ok: true, dte_url: dteUrl });
