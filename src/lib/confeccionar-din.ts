@@ -545,7 +545,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     // ═══ PASO 3: Unidad de medida y arancel ═══
     const umeId = await unidadMedidaDescriptor(dscCod, cliIdReal);
     const esPorPeso = umeId === "6" || umeId === "3";
-    const glosaUnidad = esPorPeso ? "KN" : "U";
+    const glosaUnidad = esPorPeso ? "KN" : "UNIDADES";
     const paisOrigenForm = await page.evaluate(() => (document as unknown as { frm: Record<string, HTMLInputElement> }).frm.pai_id_origen?.value || "225").catch(() => "225");
 
     // ═══ PASO 3b: Calcular FOB unitario y CIF item DIRECTAMENTE (igual que terrestre/marítimo) ═══
