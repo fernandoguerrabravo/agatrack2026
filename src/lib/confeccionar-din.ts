@@ -78,6 +78,24 @@ async function postForm(url: string, fields: Record<string, string>, referer?: s
 
 const INCOTERM_MAP: Record<string, string> = { CIF: "1", CFR: "2", CPT: "11", CIP: "12", EXW: "3", FAS: "4", FOB: "5", FCA: "7", DDP: "9" };
 
+/**
+ * Obtiene el código de unidad de medida (ume_id) de un descriptor de mercancía.
+ * El descriptor lo define en formulario_desde_mercancia.php (campo dsc_cod_unidad_medida).
+ * Es lo mismo que hace post_open_descriptor() en el navegador.
+ * Ej: bombas KSB partida 84137000 → "10" (U); graneles/químicos → "6" (KN).
+ */
+async function unidadMedidaDescriptor(codigoProducto: string, cliId: string): Promise<string> {
+  try {
+    const cookies = await aduananetLogin();
+    const url = `${BASE_URL}/modulos/mantenedores/dsc_mercancia/formulario_desde_mercancia.php?accion=E&dsc_cod_producto=${encodeURIComponent(codigoProducto)}&cli_id=${cliId}&cli_id_despacho=${cliId}`;
+    const html = await (await fetch(url, { headers: { Cookie: cookies, "User-Agent": "Mozilla/5.0 (AgaTrack DIN Bot)" } })).text();
+    const m = html.match(/name\s*=\s*["']dsc_cod_unidad_medida["'][^>]*\bvalue\s*=\s*["'](\d+)["']/i);
+    return (m && m[1]) ? m[1] : "6";
+  } catch {
+    return "6";
+  }
+}
+
 export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   const getDoc = (tipo: string) => {
     const row = docs.find(d => d.tipo_documento === tipo);
@@ -104,6 +122,12 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     console.log("[confeccionar] Operación TERRESTRE detectada (CRT/MIC presente, sin BL)");
     return confeccionarDINTerrestre(nroOperacion, docs, invoice, co, crt, mic, poliza, cliId);
   }
+
+  // Detectar aéreo
+  const awb = getDoc("Guía Aérea (AWB)") as Record<string, unknown> | null;
+  const papeleta = getDoc("Papeleta Aérea") as Record<string, unknown> | null;
+  const esAereo = !!awb && !bl;
+  if (esAereo) console.log("[confeccionar] Operación AÉREA detectada (AWB presente, sin BL)");
 
   // Datos base
   let regimen = co ? resolverRegimen(String(co.tratado_aplicable || co.pais_origen || "")) : { regId: "1", nombre: "GENERAL" };
@@ -132,20 +156,26 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   const nave = String(bl?.nave_corregida || bl?.nave || "");
   const viaje = String(bl?.viaje_corregido || bl?.viaje || "");
   const fobValue = Number(invoice.fob_value || invoice.monto_total || 0);
-  // Flete: todo lo prepaid del BL se suma como flete. THC/DTHC siempre es collect (excluir).
-  // En CMA CGM el flete total viene como "total_prepaid"
-  const fletePrepaid = Number(bl?.flete_total_prepaid || bl?.total_prepaid || 0);
-  // Gastos que la IA puso en gastos_hasta_fob pero son prepaid (excluir solo THC/DTHC que es collect)
-  const gastosHastaFob = (bl?.gastos_hasta_fob || []) as Array<Record<string, unknown>>;
-  const gastosPrepaidExtra = gastosHastaFob
-    .filter(g => !/\bTHC\b|\bDTHC\b|terminal\s*handling/i.test(String(g.concepto || "")))
-    .reduce((sum, g) => sum + Number(g.monto || 0), 0);
-  // Si ya viene total_prepaid (CMA CGM), no sumar gastos extra (ya están incluidos)
-  const fleteValue = bl?.total_prepaid ? Number(bl.total_prepaid) : fletePrepaid + gastosPrepaidExtra;
+  // Flete y peso: fuente según tipo de operación
+  let fleteValue = 0;
+  let pesoBruto = 0;
+  if (esAereo && awb) {
+    // AÉREO: flete y peso del AWB/Papeleta
+    fleteValue = Number((awb.flete as Record<string, unknown>)?.monto || awb.total_prepaid || 0);
+    pesoBruto = Number(papeleta?.peso_verificado_kg || awb.peso_bruto_kg || 0);
+  } else {
+    // MARÍTIMO: flete del BL
+    const fletePrepaid = Number(bl?.flete_total_prepaid || bl?.total_prepaid || 0);
+    const gastosHastaFob = (bl?.gastos_hasta_fob || []) as Array<Record<string, unknown>>;
+    const gastosPrepaidExtra = gastosHastaFob
+      .filter(g => !/\bTHC\b|\bDTHC\b|terminal\s*handling/i.test(String(g.concepto || "")))
+      .reduce((sum, g) => sum + Number(g.monto || 0), 0);
+    fleteValue = bl?.total_prepaid ? Number(bl.total_prepaid) : fletePrepaid + gastosPrepaidExtra;
+    pesoBruto = Number(bl?.peso_bruto_total || (invoice.items as Array<Record<string, unknown>>)?.[0]?.peso_bruto || 0);
+  }
   const primaRaw = poliza?.prima || (poliza?.marcas_y_numeros as Record<string, unknown>)?.prima || "0";
   const seguroValue = parseFloat(String(primaRaw).replace(",", ".")) || 0;
   const cifValue = fobValue + fleteValue + seguroValue;
-  const pesoBruto = Number(bl?.peso_bruto_total || (invoice.items as Array<Record<string, unknown>>)?.[0]?.peso_bruto || 0);
 
   const certNumero = String(co?.numero_certificado || "S/N");
   const certFecha = String((co?.representante_legal_autorizado as Record<string, unknown>)?.fecha_firma || co?.fecha_emision || "");
@@ -200,25 +230,32 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   if (proveedorNombre) {
     // Buscar usando primera palabra significativa (AduanaNet busca "empieza con")
     const cleanedProv = proveedorNombre
-      .replace(/\b(S\.?R\.?L\.?|S\.?A\.?|LTDA\.?|INC\.?|LLC|SOCIEDAD\s*DE\s*RESPONS\w*)\b/gi, "")
+      .replace(/\b(S\.?R\.?L\.?|S\.?A\.?|LTDA\.?|INC\.?|LLC|SOCIEDAD\s*DE\s*RESPONS\w*|DE\s*RESPONS\w*)\b/gi, "")
       .replace(/\(.*?\)/g, "")
+      .replace(/\s*-\s*.*$/, "")
       .trim();
-    const firstWord = (cleanedProv || proveedorNombre).split(/[\s,]+/).find((w: string) => w.length >= 3) || proveedorNombre.substring(0, 6);
+    const palabras = (cleanedProv || proveedorNombre).split(/[\s,]+/).filter((w: string) => w.length >= 3);
+    const firstWord = palabras.length > 0
+      ? palabras.sort((a, b) => b.length - a.length)[0]
+      : proveedorNombre.substring(0, 8);
     console.log(`[confeccionar] Buscando consignante: "${firstWord}" (original: "${proveedorNombre}")`);
     const csgSearchUrl = `/modulos/general/ventanas/listados/consignante.php?identificador=&fil_csg_nombre=${encodeURIComponent(firstWord)}`;
     const csgHtml = await aduananetGet(csgSearchUrl);
     const csgMatches = [...csgHtml.matchAll(/seleccion\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'/gi)];
     
     if (csgMatches.length > 0) {
-      // Buscar coincidencia por nombre
       const target = proveedorNombre.toUpperCase();
       let best = csgMatches[0];
+      let bestScore = 0;
       for (const m of csgMatches) {
         const mNombre = m[2].toUpperCase().replace(/\s*\.\s*\.\s*\.?\s*/g, "").trim();
-        if (target.includes(mNombre) || mNombre.includes(target.split(/\s+/)[0]) || mNombre.includes(firstWord.toUpperCase())) {
-          best = m;
-          break;
-        }
+        let score = 0;
+        if (target === mNombre) score = 10;
+        else if (target.includes(mNombre)) score = 8;
+        else if (mNombre.includes(target)) score = 7;
+        else if (mNombre.includes(firstWord.toUpperCase())) score = 5;
+        else if (target.includes(mNombre.split(/\s+/)[0])) score = 3;
+        if (score > bestScore) { bestScore = score; best = m; }
       }
       idf.csg_id = best[1];
       idf.csg_nombre = best[2];
@@ -270,9 +307,11 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   if (!paisAdquisicion) paisAdquisicion = paisCodigo; // fallback al mismo de origen
   df.pai_id_origen = paisCodigo;
   df.pai_id_adquisicion = paisAdquisicion;
-  df.via_id = "1";
-  // Puerto embarque = transbordo del BL (resolver código via popup)
-  const puertoEmbRaw = String(bl?.puerto_transbordo || bl?.puerto_embarque || "").toUpperCase();
+  df.via_id = esAereo ? "4" : "1"; // 4=aérea, 1=marítima
+  // Puerto embarque
+  const puertoEmbRaw = esAereo
+    ? String(awb?.aeropuerto_origen || "").replace(/\s*\([^)]*\)/, "").trim().toUpperCase()
+    : String(bl?.puerto_transbordo || bl?.puerto_embarque || "").toUpperCase();
   const puertoEmb = puertoEmbRaw
     .replace(/\([^)]*\)/g, "")  // quitar paréntesis: "CARTAGENA (COLOMBIA)" → "CARTAGENA"
     .replace(/,\s*(USA|CHILE|CHINA|DOMINICAN REPUBLIC|PERU|BRAZIL|COLOMBIA|REPUBLIC|TX|CA|NY).*$/i, "")
@@ -299,8 +338,8 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   df.nav_id = "";
   df.nav_nombre = "";
   df.dus_nombre_nave = "";
-  // Naviera/Cia Transportadora (del BL)
-  const navieraName = String(bl?.naviera || "");
+  // Naviera/Cia Transportadora (del BL o aerolínea del AWB)
+  const navieraName = String(esAereo ? (awb?.aerolinea || "") : (bl?.naviera || ""));
   if (navieraName) {
     const navieraRes = await buscarTransportista(navieraName, nroOperacion);
     if (navieraRes) {
@@ -341,7 +380,18 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     df.din_manifiesto1 = manifNumero;
     df.din_fec_manifiesto = ""; // No se pone fecha en anticipada
   }
-  // BL — documento de transporte
+  // Documento de transporte
+  if (esAereo) {
+    df.din_nro_docto_transp = String(awb?.numero_hawb || awb?.numero_mawb || "");
+    // Fecha AWB
+    const fechaAwb = String(awb?.fecha_emision || "");
+    const mesesAwb: Record<string, string> = { jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12" };
+    const pAwb = fechaAwb.match(/(\d{1,2})[/-](\w{3})[/-](\d{2,4})/i);
+    if (pAwb) { const m = mesesAwb[pAwb[2].toLowerCase()] || "01"; const y = pAwb[3].length === 2 ? "20" + pAwb[3] : pAwb[3]; df.din_fec_docto_transp = `${pAwb[1].padStart(2, "0")}/${m}/${y}`; }
+    else if (/^\d{2}\/\d{2}\/\d{4}$/.test(fechaAwb)) df.din_fec_docto_transp = fechaAwb;
+    // Manifiesto de papeleta
+    if (papeleta?.numero_manifiesto) { df.din_manifiesto1 = String(papeleta.numero_manifiesto); df.din_fec_manifiesto = String(papeleta.fecha_manifiesto || ""); }
+  } else {
   const blMaster = String(bl?.numero_bl_master || bl?.numero_bl || "");
   const blHouseNum = blHouse ? `(H)${blHouse}` : "";
   df.din_nro_docto_transp = blMaster + blHouseNum;
@@ -369,8 +419,8 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     }
   }
   df.din_fec_docto_transp = fechaDocto;
+  } // fin else marítimo doc transporte
   df.tic_id = "R";
-  
   // Certificado Sanitario SEREMI — va en Visto Bueno (SNS = código 2)
   const seremiRow = docs.find(d => d.tipo_documento === "Certificado Sanitario (SEREMI)");
   if (seremiRow) {
@@ -447,7 +497,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   // Consolidar items con mismo código de producto (sumar cantidades y montos)
   const itemMap = new Map<string, Record<string, unknown>>();
   for (const item of rawItems) {
-    const code = String(item.codigo_material || item.codigo_producto || "UNKNOWN");
+    const code = String(item.referencia_interna || item.product_code || item.codigo_material || item.codigo_producto || "UNKNOWN");
     if (itemMap.has(code)) {
       const existing = itemMap.get(code)!;
       existing.peso_neto = Number(existing.peso_neto || 0) + Number(item.peso_neto_kg || item.peso_neto || item.cantidad_kg || item.cantidad || 0);
@@ -470,38 +520,58 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   }
 
   for (const item of items) {
-    // Obtener datos de arancel/descriptor via HTTP (más rápido que navegar)
-    const codigoProd = String(item.codigo_material || item.codigo_producto || "");
+    const codigoProd = String(item.referencia_interna || item.product_code || item.codigo_material || item.codigo_producto || "");
+    const totalNetoItem = Number(item.monto || item.total || Number(invoice.monto_total) / items.length);
+    const cantidadRaw = String(item.peso_neto || item.cantidad_kg || item.cantidad || item.quantity_of_boxes || "1");
+    const cantidad = parseFloat(cantidadRaw.replace(/[^0-9.,]/g, "").replace(",", "")) || 1;
+    const cantStr = Math.round(cantidad).toString().padStart(8, "0");
+
+    // ═══ PASO 1: Navegar al form y extraer cli_id correcto (hardcodeado en busca_codigo) ═══
+    await page.goto(mercFormUrl, { waitUntil: "networkidle0" });
+    const cliIdForm = await page.evaluate(() => {
+      const scripts = Array.from(document.querySelectorAll("script")).map(s => s.textContent || "").join(" ");
+      const m = scripts.match(/cli_id\s*=\s*["'](\d+)["']/);
+      return m ? m[1] : "";
+    });
+    const cliIdReal = cliIdForm || cliId;
+
+    // ═══ PASO 2: Buscar descriptor via HTTP con cli_id correcto ═══
     const cookies = await aduananetLogin();
-    const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=${cliId}`, { headers: { Cookie: cookies } })).text();
+    const descXml = await (await fetch(`${BASE_URL}/inc/getXML/buscar_descriptores.php?partida=&codigo=${codigoProd}&descripcion=&cli_id=${cliIdReal}`, { headers: { Cookie: cookies } })).text();
     const dscPartida = pickXml(descXml, "dsc_partida") || String((co?.mercancia as Record<string, unknown>)?.clasificacion_arancelaria_hs || "");
     const dscCod = pickXml(descXml, "dsc_cod_producto") || codigoProd;
     const merNombre = [dscCod.padEnd(16), pickXml(descXml, "dsc_descrip_corta"), pickXml(descXml, "dsc_otro1"), pickXml(descXml, "dsc_otro2"), pickXml(descXml, "dsc_obs")].join(";");
 
-    // Consultar arancel
-    const arancelHtml = await aduananetGet(`/modulos/din/dus_encabezado/consulta_arancel_json.php?partida=${dscPartida}&pais=${(await aduananetGet(mercFormUrl)).match(/pai_id_origen[^>]*value\s*=\s*["']([^"']+)/i)?.[1] || "225"}&regimen=${regimen.regId}`);
+    // ═══ PASO 3: Unidad de medida y arancel ═══
+    const umeId = await unidadMedidaDescriptor(dscCod, cliIdReal);
+    const esPorPeso = umeId === "6" || umeId === "3";
+    const glosaUnidad = esPorPeso ? "KN" : "U";
+    const paisOrigenForm = await page.evaluate(() => (document as unknown as { frm: Record<string, HTMLInputElement> }).frm.pai_id_origen?.value || "225").catch(() => "225");
+
+    // ═══ PASO 3b: Calcular FOB unitario y CIF item DIRECTAMENTE (igual que terrestre/marítimo) ═══
+    // NO se abre el popup "Calculo Valores Item" ni "Calculo de Derechos": en Puppeteer headless
+    // el window.open() del popup derechos.php sólo funciona la 1ª vez por sesión (su window.close()
+    // interno envenena la sesión y bloquea los popups siguientes → cuelga la confección con 2+ items).
+    // Por eso replicamos EXACTAMENTE el cálculo de Aceptar() de derechos.php aquí.
+    const cifNeto = await page.evaluate(() => parseFloat((document as unknown as { frm: Record<string, HTMLInputElement> }).frm.cif_neto?.value) || 1);
+    const fobTotal = (await page.evaluate(() => parseFloat((document as unknown as { frm: Record<string, HTMLInputElement> }).frm.dus_total_valor_fob?.value) || 0)) || fobValue;
+    const merCif = (totalNetoItem * cifNeto).toFixed(2);
+    const merFob = cantidad > 0 ? ((totalNetoItem / Number(invoice.monto_total)) * fobTotal / cantidad).toFixed(6) : "0.000000";
+    const arancelHtml = await aduananetGet(`/modulos/din/dus_encabezado/consulta_arancel_json.php?partida=${dscPartida}&pais=${paisOrigenForm}&regimen=${regimen.regId}`);
     const sels = [...arancelHtml.matchAll(/seleccionar\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,?\s*'?([^']*)'?\s*\)/gi)];
     const sel = sels.find(s => s[3] && s[3] !== "") || sels[0];
     const advalorem = sel ? sel[1] : "0";
     const codAranTratado = sel ? sel[2] : dscPartida;
     const nroAcuerdo = sel ? sel[3] : "";
 
-    const totalNetoItem = Number(invoice.monto_total) / items.length;
-    const cantidadRaw = String(item.peso_neto || item.cantidad_kg || item.cantidad || "0");
-    const cantidad = parseFloat(cantidadRaw.replace(/[^0-9.,]/g, "").replace(",", "")) || 0;
-    const cantStr = Math.round(cantidad).toString().padStart(8, "0");
+    // Derechos (réplica de Aceptar() en derechos.php):
+    //   valoraduanero = CIF item; ad-valorem = CIF * %adv; IVA = (CIF + ad-valorem) * 19%
+    const advalNum = parseFloat(advalorem) || 0;
+    const val223 = parseFloat(merCif) * advalNum / 100;
+    const mtoCtaAdval = val223.toFixed(2);
+    const ivaMonto = ((parseFloat(merCif) + val223) * 19 / 100).toFixed(2);
 
-    // Navegar al formulario de mercancía en Puppeteer
-    await page.goto(mercFormUrl, { waitUntil: "networkidle0" });
-
-    // Leer valores precargados
-    const cifNeto = await page.evaluate(() => parseFloat((document as unknown as { frm: Record<string, HTMLInputElement> }).frm.cif_neto?.value) || 1);
-    const fobTotal = await page.evaluate(() => parseFloat((document as unknown as { frm: Record<string, HTMLInputElement> }).frm.dus_total_valor_fob?.value) || 0) || fobValue;
-    const merCif = (totalNetoItem * cifNeto).toFixed(2);
-    const merFob = cantidad > 0 ? ((totalNetoItem / Number(invoice.monto_total)) * fobTotal / cantidad).toFixed(6) : "0.000000";
-    const ivaMonto = (parseFloat(merCif) * 19 / 100).toFixed(2);
-
-    // Llenar campos via evaluate
+    // ═══ PASO 4: Setear campos manualmente (sin post_open_descriptor) ═══
     await page.evaluate((data: Record<string, string>) => {
       const frm = (document as unknown as { frm: Record<string, HTMLInputElement | HTMLSelectElement> }).frm;
       frm.linea.value = "";
@@ -515,8 +585,8 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
       if (frm.lmer_nro_acuerdo_comercial) frm.lmer_nro_acuerdo_comercial.value = data.nroAcuerdo;
       frm.mer_sujeto_cupo.value = "0";
       frm.mer_nombre.value = data.merNombre;
-      frm.ume_id.value = "6";
-      if (frm.lume_id) (frm.lume_id as HTMLSelectElement).value = "6";
+      frm.ume_id.value = data.umeId;
+      if (frm.lume_id) (frm.lume_id as HTMLSelectElement).value = data.umeId;
       frm.mer_cantidad.value = data.cantidad;
       frm.mer_cantidad_mercancia_um.value = data.cantidad;
       frm.mer_fob_unitario.value = data.merFob;
@@ -526,7 +596,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
       frm.mer_sig_ajuste.value = "+";
       frm.mer_porc_advalorem.value = data.advalorem;
       frm.mer_cuenta_advalorem.value = "223";
-      frm.mer_mto_cta_advalorem.value = "0.00";
+      frm.mer_mto_cta_advalorem.value = data.mtoCtaAdval;
       frm.mer_cod_obs1.value = "99";
       if (frm.lmer_cod_obs1) frm.lmer_cod_obs1.value = "99";
       frm.mer_obs1.value = data.obs1;
@@ -542,33 +612,21 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
       frm.mer_nro_item.value = "";
       frm.comando.value = "U";
     }, {
-      merProducto: `${dscCod}@#~${cliId}`, codigoProd, dscPartida, codAranTratado,
-      correlativo: sel ? (sel[4] || "") : "", nroAcuerdo, merNombre,
-      cantidad: cantidad.toFixed(4), merFob, merCif,
-      totalNeto: totalNetoItem.toFixed(6), advalorem,
-      obs1: `${cantStr}.000000 KG`, ivaMonto,
+      merProducto: `${dscCod}@#~${cliIdReal}`, codigoProd, dscPartida, codAranTratado,
+      correlativo: sel ? (sel[4] || "") : "", nroAcuerdo, merNombre, umeId,
+      cantidad: cantidad.toFixed(4), totalNeto: totalNetoItem.toFixed(6), advalorem,
+      obs1: `${cantStr}.000000 ${glosaUnidad}`,
+      merFob, merCif, ivaMonto, mtoCtaAdval,
     });
 
-    // Click "Cálculo de Derechos" (TraeCuenta) — popup
-    const popupPromise = new Promise<import("puppeteer").Page | null>(resolve => {
-      browser.once("targetcreated", async target => { resolve(await target.page()); });
-      setTimeout(() => resolve(null), 10000);
-    });
-    await page.evaluate(() => { (window as unknown as Record<string, () => void>).TraeCuenta(); });
-    const popupPage = await popupPromise;
-    if (popupPage) {
-      await popupPage.waitForSelector("body", { timeout: 5000 }).catch(() => {});
-      await new Promise(r => setTimeout(r, 2000));
-      const aceptarBtn = await popupPage.$('input[value="Aceptar"]') || await popupPage.$('input[type="button"]');
-      if (aceptarBtn) await aceptarBtn.click();
-      await new Promise(r => setTimeout(r, 1000));
-      await popupPage.close().catch(() => {});
-    }
-
-    // Grabar
+    // ═══ PASO 5: Grabar item ═══
+    // Los derechos (ad-valorem + IVA) ya quedaron seteados en PASO 4 replicando el cálculo
+    // de "Calculo de Derechos" (Aceptar de derechos.php). No se abre el popup porque en headless
+    // sólo funciona una vez por sesión y cuelga la confección con 2+ items.
+    console.log(`[confeccionar] Item ${codigoProd}: CIF=${merCif} adv=${advalorem}% IVA=${ivaMonto}`);
     await page.evaluate(() => { (document as unknown as { frm: HTMLFormElement }).frm.submit(); });
-    await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-    console.log(`[confeccionar] Mercancía item: cod=${codigoProd} arancel=${dscPartida} cantidad=${cantidad} cif=${merCif}`);
+    await page.waitForNavigation({ waitUntil: "networkidle0", timeout: 10000 }).catch(() => {});
+    console.log(`[confeccionar] ✅ Item grabado: ${codigoProd}`);
   }
   resultado.mercancia = `${items.length} items`;
 
@@ -576,6 +634,26 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   const bultosUrl = `${BASE_URL}/modulos/din/dus_encabezado/dus_desc_bulto.php?lib_base=1&lib_nid=${nroOperacion}&lbac_nid=0&dus_tipo_envio=2&comando=M&pagno=0`;
   const bultosHtml = await aduananetGet(bultosUrl);
   const bf = extractFields(bultosHtml);
+
+  if (esAereo && awb) {
+    // ── BULTOS AÉREOS ──
+    const cantBultos = Number(papeleta?.bultos_doc || awb.bultos || 0);
+    const marcasAereo = String(awb.marcas || "");
+    bf.din_id_bultos = `${marcasAereo}\n${cantBultos} CAJON (21)`;
+    const obsLinesAereo: string[] = [];
+    if (regimen.regId !== "1") obsLinesAereo.push(`CERTIFICADO DE ORIGEN ${certNumero} FECHA ${certFecha}`);
+    obsLinesAereo.push("Mandato FEA");
+    bf.din_obs_banco_sna = obsLinesAereo.join("\n");
+    bf.comando = "U";
+    await postForm(bultosUrl, bf, bultosUrl);
+    await postForm(`${BASE_URL}/modulos/din/dus_encabezado/dus_bulto.php`, {
+      lib_nid: nroOperacion, lib_base: "1", lbac_nid: "0", dus_tipo_envio: "2",
+      lineas: "1", enviar: "1", bul_sec_nro_bulto0: "1", bul_cod_tipo_bulto0: "21",
+      sel_bul_cod_tipo_bulto0: "21", bul_glosa0: "", bul_cantidad0: String(cantBultos),
+    });
+    resultado.bultos = `${cantBultos} CAJON (21)`;
+  } else {
+  // ── BULTOS MARÍTIMOS ──
   const contenedores = (bl?.contenedores || []) as Array<Record<string, unknown>>;
   const contNums = contenedores.map(c => {
     const num = String(c.numero_contenedor || "");
@@ -647,6 +725,7 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
   };
   await postForm(`${BASE_URL}/modulos/din/dus_encabezado/dus_bulto.php`, bultoPopup);
   resultado.bultos = `${contenedores.length} cont (${codCont})`;
+  } // fin else bultos marítimos
 
   // ── MÓDULO 8: CUENTAS Y VALORES (via Puppeteer — clickea "Traer Cuentas" + "Aceptar") ──
   try {

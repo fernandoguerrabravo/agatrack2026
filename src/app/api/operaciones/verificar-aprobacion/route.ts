@@ -103,17 +103,27 @@ export async function POST(request: Request) {
 
   for (const op of pendientesAduananet) {
     try {
-      // Filtrar en lista de DIN terminadas por lib_nid
+      // Filtrar en lista de DIN terminadas por lib_nid (con retry)
       const filterBody = new URLSearchParams();
       filterBody.set("accion", "F");
       filterBody.set("fil_lib_nid", op.nro_operacion);
 
-      const res = await fetch(`${BASE_URL}/modulos/din/dus_encabezado/lista.php?term=1`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookies },
-        body: filterBody.toString(),
-      });
-      const html = await res.text();
+      let html = "";
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const currentCookies = attempt > 0 ? await aduananetLogin(true) : cookies;
+          const res = await fetch(`${BASE_URL}/modulos/din/dus_encabezado/lista.php?term=1`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: currentCookies },
+            body: filterBody.toString(),
+          });
+          html = await res.text();
+          if (html.length > 100) break;
+        } catch (fetchErr) {
+          if (attempt === 0) { console.error(`[verificar] Retry para ${op.nro_operacion}:`, fetchErr instanceof Error ? fetchErr.message : fetchErr); continue; }
+          throw fetchErr;
+        }
+      }
 
       // Buscar fila con datos
       const rows = [...html.matchAll(/<tr[^>]*>\s*<td[^>]*bgcolor[^>]*>([\s\S]*?)<\/tr>/gi)];
