@@ -559,10 +559,18 @@ export async function confeccionarDIN(nroOperacion: string, docs: DocRow[]) {
     const merFob = cantidad > 0 ? ((totalNetoItem / Number(invoice.monto_total)) * fobTotal / cantidad).toFixed(6) : "0.000000";
     const arancelHtml = await aduananetGet(`/modulos/din/dus_encabezado/consulta_arancel_json.php?partida=${dscPartida}&pais=${paisOrigenForm}&regimen=${regimen.regId}`);
     const sels = [...arancelHtml.matchAll(/seleccionar\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,?\s*'?([^']*)'?\s*\)/gi)];
-    const sel = sels.find(s => s[3] && s[3] !== "") || sels[0];
-    const advalorem = sel ? sel[1] : "0";
+    // Ad-valorem en Chile = 6% sobre CIF (cuenta 223). Sólo baja a 0 si:
+    //   a) hay certificado de origen → tarifa preferencial del tratado (fila con nro_acuerdo), o
+    //   b) la partida es bien de capital (ley 18.634) → la fila general ya viene con 0%.
+    // Por eso: con CO usamos la fila del tratado; sin CO usamos la fila general (MFN/bien capital).
+    const tieneCO = !!co && certNumero !== "" && certNumero !== "S/N";
+    const selTratado = sels.find(s => s[3] && s[3] !== "");
+    const selGeneral = sels.find(s => !s[3] || s[3] === "") || sels[0];
+    const sel = (tieneCO && selTratado) ? selTratado : selGeneral;
+    const advalorem = sel ? sel[1] : (tieneCO ? "0" : "6");
     const codAranTratado = sel ? sel[2] : dscPartida;
-    const nroAcuerdo = sel ? sel[3] : "";
+    const nroAcuerdo = (tieneCO && sel) ? sel[3] : "";
+    console.log(`[confeccionar] Item ${codigoProd}: CO=${tieneCO} advalorem=${advalorem}% acuerdo=${nroAcuerdo || "-"}`);
 
     // Derechos (réplica de Aceptar() en derechos.php):
     //   valoraduanero = CIF item; ad-valorem = CIF * %adv; IVA = (CIF + ad-valorem) * 19%
