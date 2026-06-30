@@ -416,7 +416,10 @@ async function processInboundEmail(
         const ptoEmbarque = String(blData.puerto_embarque || "");
         const ptoTransbordo = String(blData.puerto_transbordo || "");
         const contenedores = (blData.contenedores || []) as Array<Record<string, unknown>>;
-        const proveedor = String((invData.proveedor as Record<string, unknown>)?.nombre || invData.proveedor || "");
+        const provRaw = invData.proveedor as unknown;
+        const proveedor = (provRaw && typeof provRaw === "object")
+          ? String((provRaw as Record<string, unknown>).razon_social || (provRaw as Record<string, unknown>).nombre || (provRaw as Record<string, unknown>).name || (provRaw as Record<string, unknown>).nombre_comercial || "")
+          : String(provRaw || "");
         const montoTotal = invData.monto_total || "";
         const moneda = String(invData.moneda || "USD").replace(/[^A-Z]/g, "") || "USD";
         const incoterm = String(invData.incoterm || "");

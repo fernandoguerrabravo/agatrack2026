@@ -43,7 +43,10 @@ const crt = micData.crt || micData || {};
 
 const esTerrestre = docs.some(d => d.tipo === "MIC/DTA" || d.tipo === "Carta de Porte Internacional (CRT)");
 const clienteNombre = "PETROQUIMICA DOW S.A.";
-const proveedor = String(invData?.proveedor?.nombre || invData?.proveedor || crt?.remitente?.nombre || "");
+const provRaw = invData?.proveedor ?? crt?.remitente;
+const proveedor = (provRaw && typeof provRaw === "object")
+  ? String(provRaw.razon_social || provRaw.nombre || provRaw.name || provRaw.nombre_comercial || "")
+  : String(provRaw || "");
 const montoTotal = invData.monto_total || "";
 const moneda = String(invData.moneda || "USD").replace(/[^A-Z]/g, "") || "USD";
 const incoterm = String(invData.incoterm || crt.incoterm || "");
