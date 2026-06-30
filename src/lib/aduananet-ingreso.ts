@@ -21,6 +21,8 @@ export type IngresoRemesaInput = {
 export type IngresoRemesaResult = {
   ok: boolean;
   comprobanteUrl?: string;
+  comprobanteNro?: string;
+  pdfUrl?: string;
   mensaje?: string;
   lineasSeteadas: number;
   totalSeteado: string;
@@ -107,6 +109,23 @@ export async function crearIngresoRemesa(page: Page, input: IngresoRemesaInput):
   await new Promise(r => setTimeout(r, 1500));
 
   const urlPost = page.url();
-  const ok = !/formulario\.php/.test(urlPost) || /mensaje|lista|exito|correct/i.test(await page.content());
-  return { ok, dryRun: false, comprobanteUrl: urlPost, lineasSeteadas: estado.lineasSeteadas, totalSeteado: estado.total, ctaaSeteada: estado.ctaa, mensaje: ok ? "Comprobante grabado" : "Revisar: siguió en formulario" };
+  const contenido = await page.content().catch(() => "");
+  // Log para descubrir/confirmar el mecanismo de PDF en la primera corrida real
+  console.log(`[ingreso] post-grabar url=${urlPost}`);
+  console.log(`[ingreso] post-grabar snippet=${contenido.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 400)}`);
+
+  // Extraer PDF del comprobante (patrón imprimir_pdf.php?cmp_...) y N° comprobante
+  let pdfUrl = "";
+  const pdfMatch = contenido.match(/(?:https?:\/\/[^"'\s>]+)?\/modulos\/contabilidad\/[^"'\s>]*imprimir_pdf\.php\?[^"'\s>]+/i)
+    || contenido.match(/[^"'\s>]*imprimir_pdf\.php\?[^"'\s>]+/i);
+  if (pdfMatch) pdfUrl = pdfMatch[0].startsWith("http") ? pdfMatch[0] : `${BASE_URL}${pdfMatch[0].startsWith("/") ? "" : "/"}${pdfMatch[0]}`;
+  const nroMatch = contenido.match(/comprobante[^0-9]{0,20}(\d{3,})/i) || contenido.match(/cmp_correlativo=(\d+)/i);
+  const comprobanteNro = nroMatch ? nroMatch[1] : "";
+
+  const ok = !/formulario\.php/.test(urlPost) || /mensaje|lista|exito|correct|grab/i.test(contenido);
+  return {
+    ok, dryRun: false, comprobanteUrl: urlPost, comprobanteNro, pdfUrl,
+    lineasSeteadas: estado.lineasSeteadas, totalSeteado: estado.total, ctaaSeteada: estado.ctaa,
+    mensaje: ok ? `Comprobante grabado${comprobanteNro ? " N° " + comprobanteNro : ""}` : "Revisar: siguió en formulario",
+  };
 }

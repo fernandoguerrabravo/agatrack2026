@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { pgQuery } from "@/lib/postgres";
 import { aduananetBrowserLogin } from "@/lib/aduananet-browser";
+import { aduananetLogin } from "@/lib/aduananet";
 import { parseRemesaTabla } from "@/lib/remesas/parse";
 import { crearIngresoRemesa } from "@/lib/aduananet-ingreso";
 
@@ -44,6 +45,52 @@ async function getEmailHtml(data: Record<string, unknown>, emailId: string): Pro
     }
   } catch {}
   return "";
+}
+
+/** Descarga el PDF del comprobante (autenticado) y responde al remitente con el adjunto. */
+async function responderRemitente(
+  from: string,
+  subjectOrig: string,
+  parsed: { lineas: { despacho: string; monto: number }[]; total: number },
+  result: { comprobanteNro?: string; pdfUrl?: string; mensaje?: string }
+) {
+  try {
+    let pdfBuffer: Buffer | null = null;
+    if (result.pdfUrl) {
+      try {
+        const cookies = await aduananetLogin();
+        const res = await fetch(result.pdfUrl, { headers: { Cookie: cookies, "User-Agent": "Mozilla/5.0 (AgaTrack)" } });
+        if (res.ok) {
+          const ct = res.headers.get("content-type") || "";
+          if (/pdf/i.test(ct)) pdfBuffer = Buffer.from(await res.arrayBuffer());
+        }
+      } catch (e) { console.error("[remesas] no se pudo bajar PDF:", e instanceof Error ? e.message : e); }
+    }
+
+    const filasHtml = parsed.lineas.map(l => `<tr><td style="padding:4px 10px;border:1px solid #ddd;">${l.despacho}</td><td style="padding:4px 10px;border:1px solid #ddd;text-align:right;">${l.monto.toLocaleString("es-CL")}</td></tr>`).join("");
+    const { Resend } = await import("resend");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
+      to: [from],
+      subject: `Comprobante de Ingreso de Remesa generado${result.comprobanteNro ? " N° " + result.comprobanteNro : ""}${subjectOrig ? " — " + subjectOrig : ""}`,
+      html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
+        <p>Estimados,</p>
+        <p>Se generó el comprobante de <b>Ingreso de Remesa</b> en AduanaNet${result.comprobanteNro ? ` (N° <b>${result.comprobanteNro}</b>)` : ""}.</p>
+        <table style="border-collapse:collapse;border:1px solid #ddd;margin:12px 0;">
+          <thead><tr style="background:#f5f5f5;"><th style="padding:6px 10px;border:1px solid #ddd;">N° Despacho</th><th style="padding:6px 10px;border:1px solid #ddd;">Monto</th></tr></thead>
+          <tbody>${filasHtml}</tbody>
+          <tfoot><tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:bold;">TOTAL</td><td style="padding:6px 10px;border:1px solid #ddd;text-align:right;font-weight:bold;">${parsed.total.toLocaleString("es-CL")}</td></tr></tfoot>
+        </table>
+        ${pdfBuffer ? "<p>Se adjunta el comprobante en PDF.</p>" : "<p style='color:#a15c00;'>(El PDF del comprobante no pudo adjuntarse automáticamente; queda disponible en AduanaNet.)</p>"}
+        <p style="color:#666;font-size:12px;">Generado automáticamente por AgaTrack.</p>
+      </div>`,
+      attachments: pdfBuffer ? [{ filename: `comprobante_remesa${result.comprobanteNro ? "_" + result.comprobanteNro : ""}.pdf`, content: pdfBuffer }] : undefined,
+    });
+    console.log(`[remesas] Respuesta enviada a ${from}${pdfBuffer ? " con PDF" : " sin PDF"}`);
+  } catch (err) {
+    console.error("[remesas] Error respondiendo al remitente:", err instanceof Error ? err.message : err);
+  }
 }
 
 export async function POST(request: Request) {
@@ -119,8 +166,13 @@ export async function POST(request: Request) {
       [parsed.total, parsed.lineas.length, JSON.stringify(parsed.lineas), result.ok ? (LIVE ? "creado" : "dry_run") : "error", result.comprobanteUrl || "", !LIVE, result.ok ? "" : (result.mensaje || ""), email_id]
     );
 
+    // Responder al remitente con el PDF del comprobante (solo si grabó de verdad y OK)
+    if (LIVE && result.ok) {
+      await responderRemitente(String(from), String(subject || ""), parsed, result);
+    }
+
     console.log(`[remesas] ${result.ok ? "✅" : "❌"} ${result.mensaje} (live=${LIVE})`);
-    return NextResponse.json({ ok: result.ok, live: LIVE, lineas: parsed.lineas.length, total: parsed.total, cuadra: parsed.cuadra, mensaje: result.mensaje });
+    return NextResponse.json({ ok: result.ok, live: LIVE, lineas: parsed.lineas.length, total: parsed.total, cuadra: parsed.cuadra, comprobante: result.comprobanteNro, mensaje: result.mensaje });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     console.error("[remesas] Error:", msg);
