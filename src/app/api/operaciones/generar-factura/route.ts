@@ -90,6 +90,21 @@ export async function POST(request: Request) {
   try {
     const { browser, page } = await aduananetBrowserLogin();
 
+    // Filtra la lista de facturación por nro de operación (campo correcto: fil_fact_nid).
+    // El campo "fil_lib_nid" y la función filtrarLista() NO existen en AduanaNet → antes nunca
+    // filtraba y se transmitía/leía la factura equivocada (la primera de la lista).
+    const filtrarPorNid = async (nid: string): Promise<boolean> => {
+      await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
+      const inp = await page.$('input[name="fil_fact_nid"]');
+      if (!inp) return false;
+      await page.evaluate(() => { const i = document.querySelector('input[name="fil_fact_nid"]') as HTMLInputElement | null; if (i) i.value = ""; });
+      await inp.type(nid);
+      await inp.press("Enter");
+      await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+      await new Promise(r => setTimeout(r, 1500));
+      return true;
+    };
+
     try {
       // 1. Lista facturación
       await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
@@ -366,47 +381,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Factura no se grabó correctamente" }, { status: 500 });
       }
 
-      await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
-      
-      // Filtrar por nro operación
-      const filInput = await page.$('input[name="fil_lib_nid"]');
-      if (filInput) {
-        await filInput.type(nro_operacion);
-        await page.evaluate(() => {
-          if (typeof (window as unknown as Record<string, () => void>).filtrarLista === "function") {
-            (window as unknown as Record<string, () => void>).filtrarLista();
-          } else {
-            const btn = document.querySelector('input[type="submit"]') as HTMLInputElement;
-            if (btn) btn.click();
-          }
-        });
-        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-        await new Promise(r => setTimeout(r, 2000));
-      }
+      // 12. Ir a lista de facturas, filtrar por la operación y transmitir al SII
+      const filtroOk = await filtrarPorNid(nro_operacion);
 
-      // 12. Ir a lista de facturas y buscar la factura para transmitir
-      await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
-      await new Promise(r => setTimeout(r, 1500));
-      // Filtrar por nro operación
-      const filInputSII = await page.$('input[name="fil_lib_nid"]');
-      if (filInputSII) {
-        await page.evaluate(() => { const inp = document.querySelector('input[name="fil_lib_nid"]') as HTMLInputElement; if (inp) inp.value = ""; });
-        await filInputSII.type(nro_operacion);
-        await page.evaluate(() => {
-          const btn = document.querySelector('input[value="Filtrar"]') as HTMLInputElement | null;
-          if (btn) btn.click();
-          else if (typeof (window as unknown as Record<string, unknown>).filtrarLista === "function") (window as unknown as Record<string, () => void>).filtrarLista();
-        });
-        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-        await new Promise(r => setTimeout(r, 1500));
-      }
-
-      // Extraer ID de imprimir('ID') de la lista
-      const imprimirId = await page.evaluate(() => {
+      // Extraer ID de imprimir('ID') de la fila ya filtrada (Total Registros: 1)
+      const imprimirId = filtroOk ? await page.evaluate(() => {
         const html = document.body.innerHTML;
-        const match = html.match(/imprimir\(\s*'(\d+)'\s*\)/);
+        const match = html.match(/imprimir\(\s*'?(\d+)'?\s*\)/);
         return match ? match[1] : null;
-      });
+      }) : null;
 
       if (imprimirId) {
         await page.evaluate((id: string) => { (window as unknown as Record<string, (id: string) => void>).imprimir(id); }, imprimirId);
@@ -424,22 +407,13 @@ export async function POST(request: Request) {
         });
         await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
         await new Promise(r => setTimeout(r, 3000));
-        console.log(`[factura] ✅ Factura enviada al SII para op ${nro_operacion}`);
+        console.log(`[factura] ✅ Factura ${imprimirId} enviada al SII para op ${nro_operacion}`);
+      } else {
+        console.error(`[factura] ⚠️ No se encontró factura para transmitir al SII (op ${nro_operacion}, filtro=${filtroOk})`);
       }
 
       // 14. Volver a lista y obtener URL del DTE
-      await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
-      const filInput2 = await page.$('input[name="fil_lib_nid"]');
-      if (filInput2) {
-        await filInput2.type(nro_operacion);
-        await page.evaluate(() => {
-          if (typeof (window as unknown as Record<string, () => void>).filtrarLista === "function") {
-            (window as unknown as Record<string, () => void>).filtrarLista();
-          }
-        });
-        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-        await new Promise(r => setTimeout(r, 2000));
-      }
+      await filtrarPorNid(nro_operacion);
 
       // Extraer ID del getUrl(true, ID) para construir la URL del DTE
       const dteId = await page.evaluate(() => {

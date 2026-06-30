@@ -654,10 +654,20 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Papeleta Aérea");
         analysis.tipo_documento = "Papeleta Aérea";
       } else
-      // MIC/DTA — Manifiesto Internacional de Carga por Carretera
-      if (/MIC\s*\/?\s*DTA|MANIFIESTO\s*INTERNACIONAL\s*DE\s*CARGA|DECLARACI[OÓ]N\s*DE\s*TR[AÁ]NSITO\s*ADUANERO|TR[AÁ]NSITO\s*ADUANERO/.test(textoClasif)
-          && tipoActual !== "MIC/DTA") {
-        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ MIC/DTA");
+      // MIC/DTA — Manifiesto Internacional de Carga por Carretera (incluye CRT combinado)
+      // Detecta por texto, por nombre de archivo (MIC/CRT/CT/DTA) o por estructura crt/mic ya extraída.
+      // Va ANTES de Instrucciones porque un CRT/MIC suele incluir "posición arancelaria" que
+      // gatillaba un falso positivo de Instrucciones y dejaba la operación sin doc de transporte.
+      const tieneEstructuraTransporte = !!(
+        analysis.datos_extraidos?.crt || analysis.datos_extraidos?.mic || analysis.datos_extraidos?.crt_adjunto ||
+        (claudeAnalysis as Record<string, unknown>)?.crt || (claudeAnalysis as Record<string, unknown>)?.mic
+      );
+      const nombreEsTransporte = /(^|[_\-\s])(MIC|CRT|DTA)([_\-\s.]|$)|MIC[_\-]?CT|CARTA[_\-\s]?PORTE/i.test(file.name || "");
+      if ((/MIC\s*\/?\s*DTA|MANIFIESTO\s*INTERNACIONAL\s*DE\s*CARGA|DECLARACI[OÓ]N\s*DE\s*TR[AÁ]NSITO\s*ADUANERO|TR[AÁ]NSITO\s*ADUANERO|CARTA\s*DE\s*PORTE\s*INTERNACIONAL|CONOCIMIENTO\s*DE\s*TRANSPORTE\s*TERRESTRE/.test(textoClasif)
+          || nombreEsTransporte || tieneEstructuraTransporte)
+          && tipoActual !== "MIC/DTA"
+          && tipoActual !== "Carta de Porte Internacional (CRT)") {
+        console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ MIC/DTA (transporte terrestre)");
         analysis.tipo_documento = "MIC/DTA";
       } else
       // Instrucciones — memo de agente con datos de operación (ANTES de CRT para evitar falso positivo por "AWB/BL/CRT")
