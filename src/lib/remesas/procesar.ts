@@ -1,7 +1,6 @@
 import "server-only";
 import { pgQuery } from "@/lib/postgres";
 import { aduananetBrowserLogin } from "@/lib/aduananet-browser";
-import { aduananetLogin } from "@/lib/aduananet";
 import { parseRemesaTabla } from "@/lib/remesas/parse";
 import { crearIngresoRemesa } from "@/lib/aduananet-ingreso";
 
@@ -46,38 +45,28 @@ async function responderRemitente(
   from: string,
   subjectOrig: string,
   parsed: { lineas: { despacho: string; monto: number }[]; total: number },
-  result: { comprobanteNro?: string; pdfUrl?: string }
+  result: { comprobanteNro?: string }
 ) {
   try {
-    let pdfBuffer: Buffer | null = null;
-    if (result.pdfUrl) {
-      try {
-        const cookies = await aduananetLogin();
-        const res = await fetch(result.pdfUrl, { headers: { Cookie: cookies, "User-Agent": "Mozilla/5.0 (AgaTrack)" } });
-        if (res.ok && /pdf/i.test(res.headers.get("content-type") || "")) pdfBuffer = Buffer.from(await res.arrayBuffer());
-      } catch (e) { console.error("[remesas] no se pudo bajar PDF:", e instanceof Error ? e.message : e); }
-    }
     const filasHtml = parsed.lineas.map(l => `<tr><td style="padding:4px 10px;border:1px solid #ddd;">${l.despacho}</td><td style="padding:4px 10px;border:1px solid #ddd;text-align:right;">${l.monto.toLocaleString("es-CL")}</td></tr>`).join("");
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
       from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
       to: [from],
-      subject: `Comprobante de Ingreso de Remesa generado${result.comprobanteNro ? " N° " + result.comprobanteNro : ""}${subjectOrig ? " — " + subjectOrig : ""}`,
+      subject: `✅ Comprobante de Ingreso de Remesa generado OK${result.comprobanteNro ? " N° " + result.comprobanteNro : ""} — Total ${parsed.total.toLocaleString("es-CL")}`,
       html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
         <p>Estimados,</p>
-        <p>Se generó el comprobante de <b>Ingreso de Remesa</b> en AduanaNet${result.comprobanteNro ? ` (N° <b>${result.comprobanteNro}</b>)` : ""}.</p>
+        <p>El comprobante de <b>Ingreso de Remesa</b> se generó correctamente en AduanaNet${result.comprobanteNro ? ` (N° <b>${result.comprobanteNro}</b>)` : ""} — cuenta KSB CHILE S.A., glosa PROVISIÓN DE IMPORTACIÓN.</p>
         <table style="border-collapse:collapse;border:1px solid #ddd;margin:12px 0;">
           <thead><tr style="background:#f5f5f5;"><th style="padding:6px 10px;border:1px solid #ddd;">N° Despacho</th><th style="padding:6px 10px;border:1px solid #ddd;">Monto</th></tr></thead>
           <tbody>${filasHtml}</tbody>
-          <tfoot><tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:bold;">TOTAL</td><td style="padding:6px 10px;border:1px solid #ddd;text-align:right;font-weight:bold;">${parsed.total.toLocaleString("es-CL")}</td></tr></tfoot>
+          <tfoot><tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:bold;">TOTAL (${parsed.lineas.length} despachos)</td><td style="padding:6px 10px;border:1px solid #ddd;text-align:right;font-weight:bold;">${parsed.total.toLocaleString("es-CL")}</td></tr></tfoot>
         </table>
-        ${pdfBuffer ? "<p>Se adjunta el comprobante en PDF.</p>" : "<p style='color:#a15c00;'>(El PDF no pudo adjuntarse automáticamente; queda disponible en AduanaNet.)</p>"}
         <p style="color:#666;font-size:12px;">Generado automáticamente por AgaTrack.</p>
       </div>`,
-      attachments: pdfBuffer ? [{ filename: `comprobante_remesa${result.comprobanteNro ? "_" + result.comprobanteNro : ""}.pdf`, content: pdfBuffer }] : undefined,
     });
-    console.log(`[remesas] Respuesta enviada a ${from}${pdfBuffer ? " con PDF" : " sin PDF"}`);
+    console.log(`[remesas] Confirmación enviada a ${from}`);
   } catch (err) {
     console.error("[remesas] Error respondiendo al remitente:", err instanceof Error ? err.message : err);
   }
