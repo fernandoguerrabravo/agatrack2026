@@ -637,6 +637,13 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       const esInvoiceConfiable = tipoActual === "Invoice (Factura Comercial)" && analysis.datos_extraidos?.numero_factura
         && !esInstruccionesClaramente;
 
+      // Señales de documento de transporte terrestre (MIC/DTA + CRT), por estructura o nombre de archivo
+      const tieneEstructuraTransporte = !!(
+        analysis.datos_extraidos?.crt || analysis.datos_extraidos?.mic || analysis.datos_extraidos?.crt_adjunto ||
+        (claudeAnalysis as Record<string, unknown>)?.crt || (claudeAnalysis as Record<string, unknown>)?.mic
+      );
+      const nombreEsTransporte = /(^|[_\-\s])(MIC|CRT|DTA)([_\-\s.]|$)|MIC[_\-]?CT|CARTA[_\-\s]?PORTE/i.test(file.name || "");
+
       if (esBLConfiable || esInvoiceConfiable) {
         console.log("[docs] CLASIFICACIÓN: respetando tipo IA confiable (", tipoActual, ") — no se reclasifica");
       } else
@@ -658,11 +665,6 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       // Detecta por texto, por nombre de archivo (MIC/CRT/CT/DTA) o por estructura crt/mic ya extraída.
       // Va ANTES de Instrucciones porque un CRT/MIC suele incluir "posición arancelaria" que
       // gatillaba un falso positivo de Instrucciones y dejaba la operación sin doc de transporte.
-      const tieneEstructuraTransporte = !!(
-        analysis.datos_extraidos?.crt || analysis.datos_extraidos?.mic || analysis.datos_extraidos?.crt_adjunto ||
-        (claudeAnalysis as Record<string, unknown>)?.crt || (claudeAnalysis as Record<string, unknown>)?.mic
-      );
-      const nombreEsTransporte = /(^|[_\-\s])(MIC|CRT|DTA)([_\-\s.]|$)|MIC[_\-]?CT|CARTA[_\-\s]?PORTE/i.test(file.name || "");
       if ((/MIC\s*\/?\s*DTA|MANIFIESTO\s*INTERNACIONAL\s*DE\s*CARGA|DECLARACI[OÓ]N\s*DE\s*TR[AÁ]NSITO\s*ADUANERO|TR[AÁ]NSITO\s*ADUANERO|CARTA\s*DE\s*PORTE\s*INTERNACIONAL|CONOCIMIENTO\s*DE\s*TRANSPORTE\s*TERRESTRE/.test(textoClasif)
           || nombreEsTransporte || tieneEstructuraTransporte)
           && tipoActual !== "MIC/DTA"
