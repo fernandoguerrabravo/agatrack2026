@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { pgQuery } from "@/lib/postgres";
 import { uploadToSpaces } from "@/lib/spaces";
 import { aduananetLogin } from "@/lib/aduananet";
+import { REMESAS_INBOUND_ADDR } from "@/lib/remesas/procesar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,6 +68,14 @@ export async function POST(request: Request) {
 
     const { email_id, from, to, subject } = payload.data;
     console.log(`[inbound] Email recibido: from=${from} to=${JSON.stringify(to)} subject=${subject} id=${email_id}`);
+
+    // Despacho a módulo de Remesas (Ingresos) si la casilla es remesas@
+    const toAddrEarly = (Array.isArray(to) ? to[0] : to || "").toLowerCase();
+    if (toAddrEarly === REMESAS_INBOUND_ADDR) {
+      const { procesarRemesa } = await import("@/lib/remesas/procesar");
+      const res = await procesarRemesa(email_id, from, subject, payload.data);
+      return NextResponse.json(res);
+    }
 
     // Idempotencia: no procesar el mismo email dos veces
     // Verificar tanto en documentos como en operaciones temporales
