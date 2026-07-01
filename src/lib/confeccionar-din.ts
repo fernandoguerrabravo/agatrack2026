@@ -78,6 +78,28 @@ async function postForm(url: string, fields: Record<string, string>, referer?: s
 
 const INCOTERM_MAP: Record<string, string> = { CIF: "1", CFR: "2", CPT: "11", CIP: "12", EXW: "3", FAS: "4", FOB: "5", FCA: "7", DDP: "9" };
 
+/** Resuelve el código de país AduanaNet a partir del nombre (para terrestre). Default Argentina (224). */
+function codigoPais(nombre: string, def = "224"): string {
+  const MAP: Record<string, string> = {
+    "UNITED STATES": "225", "USA": "225", "US": "225", "ESTADOS UNIDOS": "225",
+    "GERMANY": "563", "ALEMANIA": "563", "DEUTSCHLAND": "563",
+    "SPAIN": "517", "ESPAÑA": "517", "ESPANA": "517",
+    "FRANCE": "505", "FRANCIA": "505",
+    "ITALY": "504", "ITALIA": "504",
+    "NETHERLANDS": "506", "HOLANDA": "506", "PAISES BAJOS": "506",
+    "BELGIUM": "514", "BELGICA": "514", "BÉLGICA": "514",
+    "UNITED KINGDOM": "510", "UK": "510", "REINO UNIDO": "510", "ENGLAND": "510",
+    "SWITZERLAND": "508", "SUIZA": "508", "SWEDEN": "511", "SUECIA": "511",
+    "CHINA": "336", "JAPAN": "331", "JAPON": "331",
+    "KOREA": "333", "COREA": "333", "SOUTH KOREA": "333", "COREA DEL SUR": "333",
+    "INDIA": "317", "BRAZIL": "220", "BRASIL": "220",
+    "CANADA": "226", "MEXICO": "216", "COLOMBIA": "202",
+    "PERU": "219", "ARGENTINA": "224", "CHILE": "997",
+    "AUSTRALIA": "406", "TAIWAN": "330",
+  };
+  return MAP[String(nombre || "").toUpperCase().trim()] || def;
+}
+
 /**
  * Obtiene el código de unidad de medida (ume_id) de un descriptor de mercancía.
  * El descriptor lo define en formulario_desde_mercancia.php (campo dsc_cod_unidad_medida).
@@ -885,8 +907,18 @@ async function confeccionarDINTerrestre(
   const destHtml = await aduananetGet(destUrl);
   const df = extractFields(destHtml);
 
-  // País origen/adquisición = ARGENTINA (224)
-  df.pai_id_origen = "224";
+  // País origen = origen REAL de la mercancía (puede diferir del país de despacho terrestre).
+  // Ej: DOW Argentina despacha por carretera mercancía de origen Francia → origen 505, adquisición 224.
+  const paisOrigenNombreTerr = String(
+    invoice.pais_origen ||
+    (Array.isArray(invoice.items) ? (invoice.items[0] as Record<string, unknown>)?.pais_origen : "") ||
+    (crt as Record<string, unknown>)?.pais_origen_mercancia ||
+    (mic as Record<string, unknown>)?.pais_origen_mercancia ||
+    co?.pais_origen || ""
+  );
+  const paisOrigenTerr = codigoPais(paisOrigenNombreTerr, "224");
+  df.pai_id_origen = paisOrigenTerr;
+  // País de adquisición = país del despacho terrestre (Argentina)
   df.pai_id_adquisicion = "224";
 
   // Vía terrestre
@@ -1172,10 +1204,13 @@ async function confeccionarDINTerrestre(
     const dscCod = pickXml(descXml, "dsc_cod_producto") || codigoProd;
     const merNombre = [dscCod.padEnd(16), pickXml(descXml, "dsc_descrip_corta"), pickXml(descXml, "dsc_otro1"), pickXml(descXml, "dsc_otro2"), pickXml(descXml, "dsc_obs")].join(";");
 
-    // Consultar arancel con país Argentina (224)
-    const arancelHtml = await aduananetGet(`/modulos/din/dus_encabezado/consulta_arancel_json.php?partida=${dscPartida}&pais=224&regimen=${regimen.regId}`);
+    // Consultar arancel con el país de origen real (régimen general si no hay CO)
+    const arancelHtml = await aduananetGet(`/modulos/din/dus_encabezado/consulta_arancel_json.php?partida=${dscPartida}&pais=${paisOrigenTerr}&regimen=${regimen.regId}`);
     const sels = [...arancelHtml.matchAll(/seleccionar\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,?\s*'?([^']*)'?\s*\)/gi)];
-    const sel = sels.find(s => s[3] && s[3] !== "") || sels[0];
+    // Régimen general (sin CO) → NO aplicar fila de tratado; usar tarifa general (MFN, ~6%)
+    const sel = regimen.regId === "1"
+      ? (sels.find(s => !s[3] || s[3] === "") || sels[0])
+      : (sels.find(s => s[3] && s[3] !== "") || sels[0]);
     const advalorem = sel ? sel[1] : "0";
     const codAranTratado = sel ? sel[2] : dscPartida;
     const nroAcuerdo = sel ? sel[3] : "";
