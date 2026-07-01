@@ -637,12 +637,18 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       const esInvoiceConfiable = tipoActual === "Invoice (Factura Comercial)" && analysis.datos_extraidos?.numero_factura
         && !esInstruccionesClaramente;
 
-      // Señales de documento de transporte terrestre (MIC/DTA + CRT), por estructura o nombre de archivo
-      const tieneEstructuraTransporte = !!(
-        analysis.datos_extraidos?.crt || analysis.datos_extraidos?.mic || analysis.datos_extraidos?.crt_adjunto ||
-        (claudeAnalysis as Record<string, unknown>)?.crt || (claudeAnalysis as Record<string, unknown>)?.mic
+      // Señales de documento de transporte terrestre (MIC/DTA + CRT), por estructura o nombre de archivo.
+      // Los campos CRT pueden venir anidados (crt/mic) o PLANOS (numero_crt, transportador, etc.).
+      const _de = (analysis.datos_extraidos || {}) as Record<string, unknown>;
+      const _cl = (claudeAnalysis || {}) as Record<string, unknown>;
+      const camposCRT = (o: Record<string, unknown>) => !!(
+        o.crt || o.mic || o.crt_adjunto || o.numero_crt || o.numero_mic || o.numero_dta ||
+        o.tipo_documento_crt || o.monto_flete_externo ||
+        (o.transportador && o.remitente && o.destinatario)
       );
-      const nombreEsTransporte = /(^|[_\-\s])(MIC|CRT|DTA)([_\-\s.]|$)|MIC[_\-]?CT|CARTA[_\-\s]?PORTE/i.test(file.name || "");
+      const tieneEstructuraTransporte = camposCRT(_de) || camposCRT(_cl);
+      // Nombre: MIC/CRT/DTA como token, MIC_CT, "<algo>_CT.pdf", o "carta de porte"
+      const nombreEsTransporte = /(^|[_\-\s])(MIC|CRT|DTA)([_\-\s.]|$)|MIC[_\-]?CT|[_\-]CT(\.[a-z]+)?$|CARTA[_\-\s]?PORTE/i.test(file.name || "");
 
       if (esBLConfiable || esInvoiceConfiable) {
         console.log("[docs] CLASIFICACIÓN: respetando tipo IA confiable (", tipoActual, ") — no se reclasifica");
