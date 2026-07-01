@@ -35,12 +35,12 @@ export async function GET(request: Request) {
   } else {
     if (visibles === "all") {
       rows = await pgQuery(
-        "SELECT id, nro_operacion, rut_cliente, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, storage_url, created_at FROM documentos ORDER BY created_at DESC LIMIT 100",
+        "SELECT id, nro_operacion, rut_cliente, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, storage_url, created_at FROM documentos ORDER BY created_at DESC LIMIT 2000",
         []
       );
     } else {
       rows = await pgQuery(
-        "SELECT id, nro_operacion, rut_cliente, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, storage_url, created_at FROM documentos WHERE rut_cliente = ANY($1) ORDER BY created_at DESC LIMIT 100",
+        "SELECT id, nro_operacion, rut_cliente, nombre_archivo, tipo_documento, datos_extraidos, datos_extraidos_claude, datos_shipsgo, storage_url, created_at FROM documentos WHERE rut_cliente = ANY($1) ORDER BY created_at DESC LIMIT 2000",
         [visibles]
       );
     }
