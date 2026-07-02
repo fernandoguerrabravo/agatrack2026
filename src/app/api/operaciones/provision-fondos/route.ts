@@ -34,10 +34,37 @@ export async function POST(request: Request) {
     }
   }
 
-  const { nro_operacion } = await request.json();
+  const { nro_operacion, force } = await request.json();
   if (!nro_operacion) {
     return NextResponse.json({ error: "Número de operación requerido." }, { status: 400 });
   }
+
+  // Idempotencia: evitar provisiones duplicadas (múltiples triggers / polling de aprobación).
+  // Claim atómico: solo UN llamado procede; si ya existe provision_url o hay una en proceso, se omite.
+  if (!force) {
+    const claim = await pgQuery<{ nro_operacion: string }>(
+      `UPDATE operaciones SET notas = COALESCE(notas,'') || $1, updated_at = NOW()
+       WHERE nro_operacion = $2
+         AND COALESCE(notas,'') NOT LIKE '%provision_url:%'
+         AND COALESCE(notas,'') NOT LIKE '%provision_en_proceso:%'
+       RETURNING nro_operacion`,
+      [`\nprovision_en_proceso:${new Date().toISOString()}`, nro_operacion]
+    );
+    if (claim.length === 0) {
+      console.log(`[provision] ⏭️ Op ${nro_operacion} ya tiene provisión o hay una en proceso — se omite duplicado`);
+      return NextResponse.json({ ok: true, skip: true, message: "Provisión ya existe o en proceso" });
+    }
+  }
+
+  // Libera el claim (provision_en_proceso) para permitir reintento si algo falla.
+  const liberarClaim = async () => {
+    try {
+      await pgQuery(
+        "UPDATE operaciones SET notas = regexp_replace(COALESCE(notas,''), '\\nprovision_en_proceso:[^\\n]*', '', 'g') WHERE nro_operacion = $1",
+        [nro_operacion]
+      );
+    } catch {}
+  };
 
   try {
     // 1. Crear provisión con Puppeteer
@@ -45,6 +72,7 @@ export async function POST(request: Request) {
     const result = await browserProvisionFondos(nro_operacion);
 
     if (!result.ok) {
+      await liberarClaim();
       return NextResponse.json({ error: result.error || "Error creando provisión" }, { status: 500 });
     }
 
@@ -306,6 +334,7 @@ export async function POST(request: Request) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     console.error("[provision] Error:", msg);
+    await liberarClaim();
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
