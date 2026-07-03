@@ -436,6 +436,30 @@ export default function CustomerServicesPanel() {
     }
   }
 
+  async function handleTransmitirSII(nroOp: string) {
+    const Swal = (await import("sweetalert2")).default;
+    const c = await Swal.fire({
+      title: "¿Transmitir factura al SII?",
+      html: `Confirma que la factura de <b>${nroOp}</b> fue revisada y está correcta.<br>Se transmitirá al SII (acción irreversible).`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Transmitir al SII",
+      confirmButtonColor: "#0ea5e9",
+    });
+    if (!c.isConfirmed) return;
+    Swal.fire({ title: "Transmitiendo al SII...", html: "Enviando factura en AduanaNet.", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+      const res = await fetch("/api/operaciones/transmitir-sii", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nro_operacion: nroOp }) });
+      const data = await res.json();
+      if (res.ok) {
+        await Swal.fire({ title: "✅ Transmitida al SII", html: `<b>Op ${nroOp}</b>${data.dte_url ? "<br>DTE generado." : "<br>Transmitida (el DTE puede tardar unos segundos)."}`, icon: "success" });
+        fetchData();
+      } else {
+        await Swal.fire({ title: "Error", text: data.error, icon: "error" });
+      }
+    } catch (err) { await Swal.fire({ title: "Error", text: err instanceof Error ? err.message : "Error", icon: "error" }); }
+  }
+
   async function handleEnviarTTE(nroOp: string) {
     const Swal = (await import("sweetalert2")).default;
     const c = await Swal.fire({ title: "¿Enviar solicitud de transporte?", html: `Se enviará email con BL adjunto para la operación <b>${nroOp}</b>`, icon: "question", showCancelButton: true, confirmButtonText: "Enviar", confirmButtonColor: "#6366f1" });
@@ -495,6 +519,12 @@ export default function CustomerServicesPanel() {
             {op.estado !== "aprobada" && <button className="btn btn-xs btn-outline btn-warning" onClick={() => handleVerificarConsistencia(op.nro_operacion)}>🔍 Verificar</button>}
             {op.estado === "aprobada" && <button className="btn btn-xs btn-secondary" onClick={() => handleProvisionFondos(op.nro_operacion)}>Provisión de Fondos</button>}
             {op.estado === "aprobada" && <a href={`/api/operaciones/factura?nro_operacion=${op.nro_operacion}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-primary">📄 Factura</a>}
+            {op.estado === "aprobada" && op.rut_cliente === "92933000-5" && op.notas?.includes("factura_confeccionada:") && !op.notas?.includes("dte_url:") && (
+              <button className="btn btn-xs btn-info" onClick={() => handleTransmitirSII(op.nro_operacion)} title="Transmitir factura revisada al SII">📨 Transmitir SII</button>
+            )}
+            {op.estado === "aprobada" && op.notas?.includes("dte_url:") && (
+              <a href={op.notas.match(/dte_url:(https?:\/\/[^\s\n]+)/)?.[1] || "#"} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-info">Ver DTE</a>
+            )}
             {op.estado === "aprobada" && <a href={`/api/operaciones/imprimir?nro_operacion=${op.nro_operacion}`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline">🖨️ Imprimir</a>}
             {op.estado === "aprobada" && op.notas?.includes("tgr_url:") && (
               <a href={op.notas.match(/tgr_url:(https?:\/\/[^\s\n]+)/)?.[1] || "#"} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-outline btn-success">Ver TGR</a>
