@@ -273,14 +273,15 @@ async function guardarYResponder(pdfBuffer: Uint8Array, rutCliente: string, nroO
         body: JSON.stringify({ nro_operacion: nroOperacion }),
       }).catch(err => console.error("[tgr] Error auto pago-directo:", err));
 
-      // Auto factura para Petroquímica (completa con SII)
+      // Auto factura para Petroquímica: SOLO confección, SIN transmitir al SII.
+      // Las facturas de Petroquímica requieren revisión previa antes de enviarse al SII (manual).
       if (clienteRut === "92933000-5") {
         setTimeout(() => {
           fetch(`http://localhost:${port}/api/operaciones/generar-factura`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-inbound-secret": process.env.INBOUND_SECRET || "" },
-            body: JSON.stringify({ nro_operacion: nroOperacion }),
-          }).then(() => console.log(`[tgr] ✅ Auto-factura generada para op ${nroOperacion}`))
+            body: JSON.stringify({ nro_operacion: nroOperacion, skip_sii: true }),
+          }).then(() => console.log(`[tgr] ✅ Auto-factura confeccionada (sin SII, pendiente revisión) para op ${nroOperacion}`))
             .catch(err => console.error("[tgr] Error auto-factura:", err));
         }, 30000);
       }
