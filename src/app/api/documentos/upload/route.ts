@@ -650,6 +650,17 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       // Nombre: MIC/CRT/DTA como token, MIC_CT, "<algo>_CT.pdf", o "carta de porte"
       const nombreEsTransporte = /(^|[_\-\s])(MIC|CRT|DTA)([_\-\s.]|$)|MIC[_\-]?CT|[_\-]CT(\.[a-z]+)?$|CARTA[_\-\s]?PORTE/i.test(file.name || "");
 
+      // Aplica la clasificación corregida a AMBAS fuentes (analysis y claudeAnalysis).
+      // El valor guardado en BD (tipoFinal) prefiere claudeAnalysis.tipo_documento, así que
+      // corregir solo `analysis` hacía que la corrección se perdiera (ej: MIC/CRT que Claude
+      // clasificaba como "Instrucciones" quedaba sin doc de transporte → operación no se creaba).
+      const aplicarTipo = (t: string) => {
+        analysis.tipo_documento = t;
+        if (claudeAnalysis && typeof claudeAnalysis === "object") {
+          (claudeAnalysis as Record<string, unknown>).tipo_documento = t;
+        }
+      };
+
       if (esBLConfiable || esInvoiceConfiable) {
         console.log("[docs] CLASIFICACIÓN: respetando tipo IA confiable (", tipoActual, ") — no se reclasifica");
       } else
@@ -658,14 +669,14 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           && /SHIPPER|CONSIGNEE|AIRPORT\s*OF\s*DEPARTURE|AIRPORT\s*OF\s*DESTINATION|PIECES|GROSS\s*WEIGHT/.test(textoClasif)
           && tipoActual !== "Guía Aérea (AWB)") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Guía Aérea (AWB)");
-        analysis.tipo_documento = "Guía Aérea (AWB)";
+        aplicarTipo("Guía Aérea (AWB)");
       } else
       // Papeleta Aérea — Depocargo/almacén aeroportuario
       if (/PAPELETA|DEPOCARGO/.test(textoClasif)
           && /MANIFIESTO|GU[IÍ]A\s*A[EÉ]REA|VUELO|COMPA[NÑ][IÍ]A\s*A[EÉ]REA/.test(textoClasif)
           && tipoActual !== "Papeleta Aérea") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Papeleta Aérea");
-        analysis.tipo_documento = "Papeleta Aérea";
+        aplicarTipo("Papeleta Aérea");
       } else
       // MIC/DTA — Manifiesto Internacional de Carga por Carretera (incluye CRT combinado)
       // Detecta por texto, por nombre de archivo (MIC/CRT/CT/DTA) o por estructura crt/mic ya extraída.
@@ -676,14 +687,14 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           && tipoActual !== "MIC/DTA"
           && tipoActual !== "Carta de Porte Internacional (CRT)") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ MIC/DTA (transporte terrestre)");
-        analysis.tipo_documento = "MIC/DTA";
+        aplicarTipo("MIC/DTA");
       } else
       // Instrucciones — memo de agente con datos de operación (ANTES de CRT para evitar falso positivo por "AWB/BL/CRT")
       if ((/INSTRUCCI[OÓ]N|ATN[\s.]*:|GMID\s*:|POSICI[OÓ]N\s*ARANCELARIA|MERIDIAN\s*:|TIPO\s*DE\s*OPERACI[OÓ]N|PRIMA\s*DE\s*SEGURO\s*:|DIRECCI[OÓ]N\s*DE\s*ENTREGA/.test(textoClasif)
           || esInstruccionesClaramente)
           && tipoActual !== "Instrucciones") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Instrucciones");
-        analysis.tipo_documento = "Instrucciones";
+        aplicarTipo("Instrucciones");
       } else
       // Carta de Porte Internacional (CRT) — NO si es póliza de seguro, NO si tiene keywords de Instrucciones
       if (/CARTA\s*DE\s*PORTE\s*INTERNACIONAL|CONOCIMIENTO\s*DE\s*TRANSPORTE\s*TERRESTRE|PORTE\s*INTERNACIONAL\s*POR\s*CARRETERA/.test(textoClasif)
@@ -692,7 +703,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           && tipoActual !== "Carta de Porte Internacional (CRT)"
           && tipoActual !== "MIC/DTA") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Carta de Porte Internacional (CRT)");
-        analysis.tipo_documento = "Carta de Porte Internacional (CRT)";
+        aplicarTipo("Carta de Porte Internacional (CRT)");
       } else
       // Bill of Lading — rescatar si la IA lo puso como "Otro" pero tiene keywords de BL (SOLO marítimo)
       if (/BILL\s*OF\s*LADING|B\/L\s*N|CONOCIMIENTO\s*DE\s*EMBARQUE|SEA\s*WAYBILL|SHIPPED\s*ON\s*BOARD|OCEAN\s*BILL/.test(textoClasif)
@@ -701,7 +712,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           && tipoActual !== "Invoice (Factura Comercial)"
           && tipoActual !== "Lista de Empaque (Packing List)") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Bill of Lading (BL)");
-        analysis.tipo_documento = "Bill of Lading (BL)";
+        aplicarTipo("Bill of Lading (BL)");
       } else
       // Invoice — rescatar si tiene keywords de factura comercial
       if (/COMMERCIAL\s*INVOICE|FACTURA\s*COMERCIAL|INVOICE\s*N|INVOICE\s*DATE|TOTAL\s*AMOUNT|UNIT\s*PRICE|PRECIO\s*UNITARIO/.test(textoClasif)
@@ -711,7 +722,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           && tipoActual !== "Lista de Empaque (Packing List)"
           && tipoActual !== "Certificado de Origen") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Invoice (Factura Comercial)");
-        analysis.tipo_documento = "Invoice (Factura Comercial)";
+        aplicarTipo("Invoice (Factura Comercial)");
       } else
       // Póliza de Seguro — rescatar si tiene keywords de seguro/póliza (ANTES de Packing List)
       if (/INSURANCE\s*CERTIFICATE|INSURANCE\s*POLICY|POLIZA\s*DE\s*SEGURO|CERTIFICADO\s*DE\s*SEGURO|OPEN\s*CARGO\s*POLICY|MARINE\s*INSURANCE|INSURED\s*AMOUNT|MONTO\s*ASEGURADO|SUMA\s*ASEGURADA|CLAIM\s*AGENT/.test(textoClasif)
@@ -719,7 +730,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           && tipoActual !== "Bill of Lading (BL)"
           && tipoActual !== "Invoice (Factura Comercial)") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Póliza de Seguro");
-        analysis.tipo_documento = "Póliza de Seguro";
+        aplicarTipo("Póliza de Seguro");
       } else
       // Certificado Sanitario SEREMI — CDA, SEREMI, Destinación Aduanera
       if (/SEREMI|DESTINACI[OÓ]N\s*ADUANERA|\bCDA\b|CERTIFICADO\s*DE\s*DESTINACI|AUTORIDAD\s*SANITARIA/.test(textoClasif)
@@ -727,14 +738,14 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           && tipoActual !== "Bill of Lading (BL)"
           && tipoActual !== "Invoice (Factura Comercial)") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Certificado Sanitario (SEREMI)");
-        analysis.tipo_documento = "Certificado Sanitario (SEREMI)";
+        aplicarTipo("Certificado Sanitario (SEREMI)");
       } else
       // Packing List (NO aplicar si el documento ES una póliza de seguro)
       if (/PACKING\s*LIST|LISTA\s*DE\s*EMPAQUE|LISTA\s*DE\s*EMBALAJE|PACKING\s*SLIP|WEIGHT\s*LIST/.test(textoClasif)
           && !/INSURANCE\s*(CERTIFICATE|POLICY)|POLIZA\s*DE\s*SEGURO|OPEN\s*CARGO\s*POLICY|MARINE\s*INSURANCE/.test(textoClasif)
           && tipoActual !== "Lista de Empaque (Packing List)") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Lista de Empaque (Packing List)");
-        analysis.tipo_documento = "Lista de Empaque (Packing List)";
+        aplicarTipo("Lista de Empaque (Packing List)");
       }
       // Certificado de Origen (solo si no es fitosanitario/calidad)
       // EXCEPCIÓN: si el texto dice "Certificado de Origen : SI APLICA" o "NO APLICA" es una Instrucción, no un certificado real
@@ -747,7 +758,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
           && !/CERTIFICADO\s*DE\s*ORIGEN\s*:\s*(SI|NO)\s*APLICA/i.test(textoClasif)
           && tipoActual !== "Certificado de Origen") {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Certificado de Origen");
-        analysis.tipo_documento = "Certificado de Origen";
+        aplicarTipo("Certificado de Origen");
       }
     }
 
