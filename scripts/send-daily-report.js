@@ -112,6 +112,37 @@ const ALL_COLUMNS = [
   "url_dte", "url_factura", "url_despacho", "fecha_carga_data"
 ];
 
+// Columnas que representan montos/medidas/cantidades → deben quedar como NÚMERO en Excel
+// (no como texto) para poder sumarlas y operarlas. Los identificadores (despacho,
+// nro_aceptacion, referencia, aranceles, etc.) se dejan como texto a propósito.
+const NUMERIC_COLUMNS = new Set([
+  "total_itemes", "total_bultos", "total_parciales", "nro_parcial",
+  "total_peso_bruto", "total_peso_neto", "estimacion_peso",
+  "total_fob", "seguro_teorico", "valor_seguro", "flete_teorico", "valor_flete",
+  "total_cif", "tipo_cambio", "paridad", "iva",
+  "total_gravamenes_uss", "total_gravamenes_chs", "total_ajuste",
+  "valor_exfabrica", "valor_ex_fabrica", "gastos_hasta_fob", "gtos_hta_fob",
+  "gravamenes_valor_1", "gravamenes_valor_2", "gravamenes_valor_3", "gravamenes_valor_4",
+  "gravamenes_valor_5", "gravamenes_valor_6", "gravamenes_valor_7", "gravamenes_valor_8",
+  "otros_gtos_deducibles", "valor_liquido_retorno", "comisiones_exterior",
+  "valor_clausula_venta", "bulto_cantidad",
+]);
+
+// Formato de columnas enteras (cantidades) vs decimales (montos)
+const INTEGER_COLUMNS = new Set(["total_itemes", "total_bultos", "total_parciales", "nro_parcial", "bulto_cantidad"]);
+
+// Convierte un valor de texto a número si corresponde. Acepta "1234.56" y "1234,56".
+// Devuelve el número, o el valor original si no es un número válido.
+function aNumero(v) {
+  if (v === null || v === undefined) return v;
+  let s = String(v).trim();
+  if (s === "") return "";
+  // coma decimal sin punto → normalizar (los datos actuales usan punto)
+  if (s.includes(",") && !s.includes(".")) s = s.replace(",", ".");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : v;
+}
+
 async function generateReport(pgPool, cliente) {
   const { rut, nombre, periodo, columnas } = cliente;
 
@@ -142,8 +173,30 @@ async function generateReport(pgPool, cliente) {
 
   if (rows.length === 0) return null;
 
+  // Convertir columnas numéricas de texto → número (para que Excel las sume/opere)
+  const numericRows = rows.map((row) => {
+    const out = { ...row };
+    for (const col of columns) {
+      if (NUMERIC_COLUMNS.has(col)) out[col] = aNumero(out[col]);
+    }
+    return out;
+  });
+
   // Generar Excel
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const ws = XLSX.utils.json_to_sheet(numericRows);
+
+  // Aplicar formato numérico a las celdas numéricas (miles + 2 decimales para montos, entero para cantidades)
+  const numRows = numericRows.length + 1; // +1 header
+  columns.forEach((col, cIdx) => {
+    if (!NUMERIC_COLUMNS.has(col)) return;
+    const fmt = INTEGER_COLUMNS.has(col) ? "#,##0" : "#,##0.00";
+    for (let r = 1; r < numRows; r++) {
+      const ref = XLSX.utils.encode_cell({ r, c: cIdx });
+      const cell = ws[ref];
+      if (cell && typeof cell.v === "number") { cell.t = "n"; cell.z = fmt; }
+    }
+  });
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Despachos");
 
