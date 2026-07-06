@@ -492,6 +492,12 @@ export default function CustomerServicesPanel() {
             <span className="text-xs">{isCollapsed ? "▶" : "▼"}</span>
             <span className="badge badge-primary badge-sm font-mono">{op.nro_operacion}</span>
             {op.cliente_nombre && <span className="text-xs text-base-content/60">{op.cliente_nombre}</span>}
+            {op.estado === "aprobada" && op.notas?.includes("factura_confeccionada:") && !op.notas?.includes("dte_url:") && (
+              <span className="badge badge-warning badge-sm gap-1" title="Factura confeccionada en AduanaNet — pendiente de envío al SII">✏️ Confeccionada</span>
+            )}
+            {op.estado === "aprobada" && op.notas?.includes("dte_url:") && (
+              <span className="badge badge-success badge-sm gap-1" title="Factura enviada al SII">✅ SII</span>
+            )}
             {op.notas?.match(/ref:\s*([^\s|\n]+)/i) && <span className="text-xs text-base-content/50 font-mono">REF: {op.notas.match(/ref:\s*([^\s|\n]+)/i)?.[1]}</span>}
             {sg && <span className="text-xs text-base-content/50">| {naveShipsgo} {viajeShipsgo} → {String(pod?.name || "")} ETA: {podDate}</span>}
           </div>
