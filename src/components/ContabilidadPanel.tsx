@@ -29,7 +29,9 @@ type Despacho = {
   fecha_pago_gravamenes: string;
   tgr_url?: string;
   pago_directo_url?: string;
+  dte_url_notas?: string;
   url_factura_final?: string;
+  factura_confeccionada?: boolean;
   es_pago_directo?: boolean;
 };
 
@@ -112,6 +114,30 @@ export default function ContabilidadPanel() {
       await Swal.fire({ title: "Error", text: err instanceof Error ? err.message : "Error", icon: "error" });
     }
     fetchData();
+  }
+
+  async function handleTransmitirSII(despacho: string) {
+    const Swal = (await import("sweetalert2")).default;
+    const c = await Swal.fire({
+      title: "¿Transmitir factura al SII?",
+      html: `Confirma que la factura de <b>${despacho}</b> fue revisada y está correcta.<br>Se transmitirá al SII (acción irreversible).`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Transmitir al SII",
+      confirmButtonColor: "#0ea5e9",
+    });
+    if (!c.isConfirmed) return;
+    Swal.fire({ title: "Transmitiendo al SII...", html: "Enviando factura en AduanaNet.", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+      const res = await fetch("/api/operaciones/transmitir-sii", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nro_operacion: despacho }) });
+      const data = await res.json();
+      if (res.ok) {
+        await Swal.fire({ title: "✅ Transmitida al SII", html: `<b>Op ${despacho}</b>${data.dte_url ? "<br>DTE generado." : "<br>Transmitida (el DTE puede tardar unos segundos)."}`, icon: "success" });
+        fetchData();
+      } else {
+        await Swal.fire({ title: "Error", text: data.error, icon: "error" });
+      }
+    } catch (err) { await Swal.fire({ title: "Error", text: err instanceof Error ? err.message : "Error", icon: "error" }); }
   }
 
   async function handleGenerarTGRTodos() {
@@ -261,6 +287,16 @@ export default function ContabilidadPanel() {
                           >
                             <span className="text-xs">✏️</span>
                           </a>
+                        )}
+                        {/* Petroquímica: factura confeccionada pendiente de revisión/envío a SII */}
+                        {d.factura_confeccionada && !d.url_dte && !d.url_factura && !d.url_factura_final && !d.dte_url_notas && ((d.rut_cliente || "").startsWith("92933000") || (d.cliente || "").toUpperCase().includes("PETROQUIMICA")) && (
+                          <button
+                            className="btn btn-xs btn-outline btn-warning"
+                            onClick={() => handleTransmitirSII(d.despacho)}
+                            title="Factura confeccionada — revisar y transmitir al SII"
+                          >
+                            <span className="text-xs">✏️ Revisar/SII</span>
+                          </button>
                         )}
                         {d.tgr_url && !d.pago_directo_url && d.es_pago_directo && (
                           <button className="btn btn-xs btn-circle btn-outline btn-secondary" onClick={() => handlePagoDirecto(d.despacho)} title="Crear Pago Directo">

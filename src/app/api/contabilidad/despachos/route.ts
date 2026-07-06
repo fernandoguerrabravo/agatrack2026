@@ -47,6 +47,8 @@ export async function GET() {
       dte_url_notas: r.notas?.match(/dte_url:(https?:\/\/[^\s\n]+)/)?.[1] || null,
       // url_factura: primero de despachos_replica, si no de notas
       url_factura_final: r.url_factura || r.notas?.match(/dte_url:(https?:\/\/[^\s\n]+)/)?.[1] || null,
+      // Factura confeccionada en AduanaNet pero aún NO enviada al SII (revisión previa Petroquímica)
+      factura_confeccionada: !!(r.notas && r.notas.includes("factura_confeccionada:")),
       es_pago_directo: CLIENTES_PAGO_DIRECTO.some(c => (r.cliente || "").toUpperCase().includes(c)),
       notas: undefined,
     }));
