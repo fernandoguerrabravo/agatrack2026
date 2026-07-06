@@ -237,12 +237,37 @@ async function processInboundEmail(
       }
     }
 
-    // PASO 3: Extraer referencia del invoice
+    // PASO 3: Extraer referencia.
+    // Petroquímica/DOW: la referencia SIEMPRE tiene formato 4010xxxxxx (10 dígitos).
+    // Se prioriza ese patrón por sobre cualquier otro campo, porque a veces la IA extrae
+    // un numero_factura con formato GUID/UUID (ej: "733D3EED-...") que NO es la referencia.
+    const REF_4010 = /\b(4010\d{6})\b/;
+    const esGuid = (s: unknown) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || "").trim());
     let referencia = "";
+
+    // 1) Preferir el patrón 4010xxxxxx encontrado en CUALQUIER documento o en el asunto
+    const candidatosRef: string[] = [];
+    for (const doc of processedDocs) {
+      const d = doc.datos || {};
+      for (const key of ["customer_order_number", "internal_document_number", "orden", "our_reference", "orden_compra", "po_number", "order_number", "shipment_number", "referencia", "numero_factura"]) {
+        const v = (d as Record<string, unknown>)[key];
+        if (v) candidatosRef.push(String(v));
+      }
+      const crt = (d as Record<string, unknown>).crt as Record<string, unknown> | undefined;
+      if (crt && typeof crt === "object" && crt.orden) candidatosRef.push(String(crt.orden));
+    }
+    if (subject) candidatosRef.push(subject);
+    for (const c of candidatosRef) {
+      const m = String(c).match(REF_4010);
+      if (m) { referencia = m[1]; break; }
+    }
+
+    // 2) Si no hubo patrón 4010, usar la lógica por documento (descartando GUIDs)
     const invoiceDoc = processedDocs.find(d => d.tipo === "Invoice (Factura Comercial)");
-    if (invoiceDoc) {
+    if (!referencia && invoiceDoc) {
       const d = invoiceDoc.datos;
-      referencia = String(d.customer_order_number || d.internal_document_number || d.orden || d.our_reference || d.orden_compra || d.po_number || d.numero_factura || "");
+      const numFact = esGuid(d.numero_factura) ? "" : d.numero_factura;
+      referencia = String(d.customer_order_number || d.internal_document_number || d.orden || d.our_reference || d.orden_compra || d.po_number || numFact || "");
     }
 
     // Fallback: buscar referencia en CRT (terrestres — campo crt.orden)
