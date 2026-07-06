@@ -116,30 +116,6 @@ export default function ContabilidadPanel() {
     fetchData();
   }
 
-  async function handleTransmitirSII(despacho: string) {
-    const Swal = (await import("sweetalert2")).default;
-    const c = await Swal.fire({
-      title: "¿Transmitir factura al SII?",
-      html: `Confirma que la factura de <b>${despacho}</b> fue revisada y está correcta.<br>Se transmitirá al SII (acción irreversible).`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Transmitir al SII",
-      confirmButtonColor: "#0ea5e9",
-    });
-    if (!c.isConfirmed) return;
-    Swal.fire({ title: "Transmitiendo al SII...", html: "Enviando factura en AduanaNet.", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    try {
-      const res = await fetch("/api/operaciones/transmitir-sii", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nro_operacion: despacho }) });
-      const data = await res.json();
-      if (res.ok) {
-        await Swal.fire({ title: "✅ Transmitida al SII", html: `<b>Op ${despacho}</b>${data.dte_url ? "<br>DTE generado." : "<br>Transmitida (el DTE puede tardar unos segundos)."}`, icon: "success" });
-        fetchData();
-      } else {
-        await Swal.fire({ title: "Error", text: data.error, icon: "error" });
-      }
-    } catch (err) { await Swal.fire({ title: "Error", text: err instanceof Error ? err.message : "Error", icon: "error" }); }
-  }
-
   async function handleGenerarTGRTodos() {
     const sinTGR = filtrados.filter(d => !d.tgr_url && d.fecha_pago_gravamenes);
     if (sinTGR.length === 0) return;
@@ -289,16 +265,19 @@ export default function ContabilidadPanel() {
                           </a>
                         )}
                         {/* Petroquímica: factura afecta confeccionada pendiente de revisión/envío a SII.
-                            Solo cuenta el dte_url de notas (factura 33). NO usar despachos_replica.url_dte,
-                            que corresponde a guías de despacho (tipoDTE=52) y siempre viene poblado. */}
+                            Igual que los otros clientes: solo enlace a AduanaNet para revisar/terminar la
+                            factura manualmente (NO transmitir desde AgaTrack). Se usa dte_url de notas
+                            (factura 33), NO despachos_replica.url_dte (guías de despacho tipoDTE=52). */}
                         {d.factura_confeccionada && !d.dte_url_notas && ((d.rut_cliente || "").startsWith("92933000") || (d.cliente || "").toUpperCase().includes("PETROQUIMICA")) && (
-                          <button
+                          <a
+                            href={`https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/lista.php`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="btn btn-xs btn-outline btn-warning"
-                            onClick={() => handleTransmitirSII(d.despacho)}
-                            title="Factura confeccionada — revisar y transmitir al SII"
+                            title="Revisar/Terminar Factura en AduanaNet"
                           >
-                            <span className="text-xs">✏️ Revisar/SII</span>
-                          </button>
+                            <span className="text-xs">✏️</span>
+                          </a>
                         )}
                         {d.tgr_url && !d.pago_directo_url && d.es_pago_directo && (
                           <button className="btn btn-xs btn-circle btn-outline btn-secondary" onClick={() => handlePagoDirecto(d.despacho)} title="Crear Pago Directo">
