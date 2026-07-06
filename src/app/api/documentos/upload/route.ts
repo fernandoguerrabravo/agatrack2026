@@ -690,9 +690,17 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
         aplicarTipo("MIC/DTA");
       } else
       // Instrucciones — memo de agente con datos de operación (ANTES de CRT para evitar falso positivo por "AWB/BL/CRT")
+      // NO reclasificar a Instrucciones un documento de transporte (MIC/DTA o CRT): los CRT/MIC
+      // incluyen "posición arancelaria" y gatillaban un falso positivo que dejaba la operación
+      // sin doc de transporte y no la creaba. Si la IA ya lo clasificó como transporte, o el
+      // nombre/estructura indican transporte, se respeta.
       if ((/INSTRUCCI[OÓ]N|ATN[\s.]*:|GMID\s*:|POSICI[OÓ]N\s*ARANCELARIA|MERIDIAN\s*:|TIPO\s*DE\s*OPERACI[OÓ]N|PRIMA\s*DE\s*SEGURO\s*:|DIRECCI[OÓ]N\s*DE\s*ENTREGA/.test(textoClasif)
           || esInstruccionesClaramente)
-          && tipoActual !== "Instrucciones") {
+          && tipoActual !== "Instrucciones"
+          && tipoActual !== "MIC/DTA"
+          && tipoActual !== "Carta de Porte Internacional (CRT)"
+          && !nombreEsTransporte
+          && !tieneEstructuraTransporte) {
         console.log("[docs] CLASIFICACIÓN corregida:", tipoActual, "→ Instrucciones");
         aplicarTipo("Instrucciones");
       } else
