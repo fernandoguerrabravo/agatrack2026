@@ -63,7 +63,20 @@ export async function enviarEmailSolicitudTTE(nroOperacion: string): Promise<{ o
     const nave = bl.nave_corregida || bl.nave || "";
     const viaje = bl.viaje_corregido || bl.viaje || "";
     const puertoDesembarque = "SAN ANTONIO";
-    const referencia = inv.customer_order_number || inv.our_reference || inv.numero_factura || "";
+
+    // Referencia Petroquímica: SIEMPRE formato 4010xxxxxx. Se prioriza la referencia ya
+    // normalizada en operaciones.notas, luego el patrón 4010 en la factura, y NUNCA un
+    // numero_factura con formato GUID/UUID (que la IA a veces extrae por error).
+    const REF_4010 = /\b(4010\d{6})\b/;
+    const esGuidRef = (s: unknown) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || "").trim());
+    const opNotasRows = await pgQuery<{ notas: string }>("SELECT notas FROM operaciones WHERE nro_operacion = $1", [nroOperacion]);
+    const refNotas = (opNotasRows[0]?.notas || "").match(/ref:\s*([^\s|\n]+)/i)?.[1] || "";
+    let referencia = "";
+    const refCandidatos = [refNotas, inv.customer_order_number, inv.internal_document_number, inv.orden, inv.our_reference, inv.order_number, inv.numero_factura].map(x => String(x || ""));
+    for (const c of refCandidatos) { const m = c.match(REF_4010); if (m) { referencia = m[1]; break; } }
+    if (!referencia) {
+      referencia = (REF_4010.test(refNotas) ? refNotas : "") || inv.customer_order_number || inv.our_reference || (esGuidRef(inv.numero_factura) ? "" : inv.numero_factura) || refNotas || "";
+    }
     const contenedores = bl.contenedores || [];
     const items = inv.items || [];
 
