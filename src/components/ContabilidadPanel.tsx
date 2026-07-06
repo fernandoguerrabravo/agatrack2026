@@ -288,8 +288,10 @@ export default function ContabilidadPanel() {
                             <span className="text-xs">✏️</span>
                           </a>
                         )}
-                        {/* Petroquímica: factura confeccionada pendiente de revisión/envío a SII */}
-                        {d.factura_confeccionada && !d.url_dte && !d.url_factura && !d.url_factura_final && !d.dte_url_notas && ((d.rut_cliente || "").startsWith("92933000") || (d.cliente || "").toUpperCase().includes("PETROQUIMICA")) && (
+                        {/* Petroquímica: factura afecta confeccionada pendiente de revisión/envío a SII.
+                            Solo cuenta el dte_url de notas (factura 33). NO usar despachos_replica.url_dte,
+                            que corresponde a guías de despacho (tipoDTE=52) y siempre viene poblado. */}
+                        {d.factura_confeccionada && !d.dte_url_notas && ((d.rut_cliente || "").startsWith("92933000") || (d.cliente || "").toUpperCase().includes("PETROQUIMICA")) && (
                           <button
                             className="btn btn-xs btn-outline btn-warning"
                             onClick={() => handleTransmitirSII(d.despacho)}
