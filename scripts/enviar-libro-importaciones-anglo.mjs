@@ -131,15 +131,15 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
     const tc = parseFloat(r.tipo_cambio || "0");
 
     impuestosData.push({
-      "Referencia": r.referencia || "",
+      "OC": r.referencia || "",
       "Proveedor": r.consignante || "",
       "Nro Aceptación": r.nro_aceptacion || "",
       "Fecha Pago TGR": fechaPagoFmt,
-      "CIF + Derechos CLP": Math.round((cif + derechosUSD) * tc),
+      "CIF CLP": Math.round(cif * tc),
       "Derechos CLP": Math.round(derechosUSD * tc),
       "Total Pagado CLP": totalGravCLP,
       "Tipo Cambio": tc,
-      "CIF + Derechos USD": Math.round((cif + derechosUSD) * 100) / 100,
+      "CIF USD": Math.round(cif * 100) / 100,
       "IVA USD": ivaUSD,
       "Derechos USD": derechosUSD,
       "Total Impuestos USD": totalGravUSD,
