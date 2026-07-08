@@ -69,7 +69,7 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
     ORDER BY dr.fecha_aceptacion
   `, [lookbackStr, mesFinalStr]);
 
-  console.log(`[libro] ${rows.length} operaciones Anglo American ${mesNombre} ${anio}`);
+  console.log(`[libro] ${rows.length} operaciones en ventana (lookback ${LOOKBACK_MESES}m); se filtrarán por fecha de factura + fecha de pago del mes ${mesNombre} ${anio}`);
 
   const impuestosData = [];
   const facturasData = [];
@@ -279,7 +279,7 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
       <p>Estimado,</p>
       <p>Adjunto Libro de Importaciones de <b>Anglo American Sur S.A.</b> correspondiente a <b>${mesNombre} ${anio}</b>.</p>
       <ul>
-        <li><b>${rows.length}</b> operaciones</li>
+        <li><b>${impuestosData.length}</b> operaciones</li>
         <li><b>${pdfAttachments.length}</b> comprobantes TGR+DIN</li>
       </ul>
       <p style="color:#666;font-size:12px;">Generado automáticamente por AgaTrack.</p>
