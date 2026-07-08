@@ -135,6 +135,9 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
       else fechaPagoFmt = fechaPago;
     }
 
+    // FILTRO: solo operaciones con FECHA DE PAGO (de derechos) existente. Aplica a ambas hojas.
+    if (!fechaPagoFmt) continue;
+
     // === EXCEL 1: Impuestos ===
     const cif = parseFloat(r.total_cif || "0");
     const fob = parseFloat(r.total_fob || "0");
