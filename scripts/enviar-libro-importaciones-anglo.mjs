@@ -45,6 +45,13 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
   const mesFinalAnio = mes + 2 > 12 ? anio + 1 : anio;
   const mesFinalStr = `${mesFinalAnio}-${String((mes + 2) > 12 ? 1 : mes + 2).padStart(2, "0")}-01`;
 
+  // El reporte se arma por FECHA DE FACTURA (dte_fecha) del mes. Una operación facturada
+  // en el mes puede haberse aceptado meses antes, por eso ampliamos la ventana de aceptación
+  // hacia atrás (la factura siempre es posterior o igual a la aceptación).
+  const LOOKBACK_MESES = 6;
+  const lookbackDate = new Date(anio, mes - LOOKBACK_MESES, 1);
+  const lookbackStr = `${lookbackDate.getFullYear()}-${String(lookbackDate.getMonth() + 1).padStart(2, "0")}-01`;
+
   // 1. Obtener operaciones
   const { rows } = await pool.query(`
     SELECT dr.despacho, dr.referencia, dr.consignante, dr.nro_aceptacion,
@@ -60,7 +67,7 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
       AND dr.fecha_aceptacion < $2
       AND dr.dus_tipo_envio NOT IN ('EXPO', 'SALIDA')
     ORDER BY dr.fecha_aceptacion
-  `, [mesInicio, mesFinalStr]);
+  `, [lookbackStr, mesFinalStr]);
 
   console.log(`[libro] ${rows.length} operaciones Anglo American ${mesNombre} ${anio}`);
 
@@ -99,6 +106,13 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
         }
       }
     } catch {}
+
+    // FILTRO PRINCIPAL: el reporte (ambas hojas) se arma por FECHA DE FACTURA.
+    // Solo se incluyen operaciones con factura 33 emitida (dte_fecha) dentro del mes del reporte.
+    const dteFecha = factura?.dte_fecha || "";
+    if (!factura || !(dteFecha >= mesInicio && dteFecha < mesFinalStr)) {
+      continue;
+    }
 
     // Fallback fecha del TGR
     if (!fechaPago && tgrUrl) {
