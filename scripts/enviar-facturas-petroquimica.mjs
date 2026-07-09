@@ -142,6 +142,11 @@ const BASE_URL = "https://fguerragodoy.aduananet2.cl";
         }
       } catch {}
     }
+    // Fallback fecha factura: desde notas (dte_fecha:) si la API no la entregó (ej. endpoint con error)
+    if (!fechaFactura) {
+      const dfm = (r.notas || "").match(/dte_fecha:(\d{4}-\d{2}-\d{2})/);
+      if (dfm) fechaFactura = dfm[1];
+    }
     // Formatear fecha factura dd/mm/yyyy
     let fechaFacturaFmt = "";
     if (fechaFactura) {
