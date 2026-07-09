@@ -119,20 +119,40 @@ const BASE_URL = "https://fguerragodoy.aduananet2.cl";
 
     // Tabla
     const fechaAcept = r.fecha_aceptacion ? new Date(r.fecha_aceptacion).toLocaleDateString("es-CL") : "";
-    // Obtener nro factura de la API
+    // Obtener nro y fecha de factura de la API
     let nroFactura = "";
+    let fechaFactura = "";
     try {
       const { execSync } = await import("child_process");
       const curlCmd = `curl -sk -u fguerragodoy:Uj7UarxZafsTL9G -X GET "${BASE_URL}/modulos/endpoints/api.php?endpoint=listaDTEs" -H "Content-Type: application/json" -d '{"despacho":${r.despacho}}'`;
       const apiRaw = execSync(curlCmd, { timeout: 10000 }).toString();
       const apiData = JSON.parse(apiRaw);
       const fac = apiData.data?.find(d => d.codigo_tipo_dte === "33");
-      if (fac) nroFactura = fac.dte_folio;
+      if (fac) { nroFactura = fac.dte_folio || ""; fechaFactura = fac.dte_fecha || ""; }
     } catch {}
+    // Fallback Nro Factura: folio embebido (base64) en el dte_url guardado.
+    // Necesario cuando el endpoint listaDTEs falla para un despacho (ej. error XML puntual).
+    if (!nroFactura && dteUrl) {
+      try {
+        const pm = dteUrl.match(/params=([^&\s]+)/);
+        if (pm) {
+          const dec = Buffer.from(pm[1], "base64").toString();
+          const fm = dec.match(/folio=([^&]+)/);
+          if (fm) nroFactura = Buffer.from(fm[1], "base64").toString();
+        }
+      } catch {}
+    }
+    // Formatear fecha factura dd/mm/yyyy
+    let fechaFacturaFmt = "";
+    if (fechaFactura) {
+      const pf = fechaFactura.match(/(\d{4})-(\d{2})-(\d{2})/);
+      fechaFacturaFmt = pf ? `${pf[3]}/${pf[2]}/${pf[1]}` : fechaFactura;
+    }
 
     tableRows.push(`<tr>
       <td style="padding:6px 12px;border:1px solid #ddd;">${r.despacho}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${nroFactura}</td>
+      <td style="padding:6px 12px;border:1px solid #ddd;">${fechaFacturaFmt}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${r.referencia || ""}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${r.nro_aceptacion || ""}</td>
       <td style="padding:6px 12px;border:1px solid #ddd;">${fechaAcept}</td>
@@ -158,9 +178,10 @@ const BASE_URL = "https://fguerragodoy.aduananet2.cl";
         <tr style="background:#f5f5f5;">
           <th style="padding:8px 12px;border:1px solid #ddd;">Despacho</th>
           <th style="padding:8px 12px;border:1px solid #ddd;">Nro Factura</th>
+          <th style="padding:8px 12px;border:1px solid #ddd;">Fecha Factura</th>
           <th style="padding:8px 12px;border:1px solid #ddd;">Referencia</th>
           <th style="padding:8px 12px;border:1px solid #ddd;">Nro Aceptación</th>
-          <th style="padding:8px 12px;border:1px solid #ddd;">Fecha</th>
+          <th style="padding:8px 12px;border:1px solid #ddd;">Fecha Aceptación</th>
           <th style="padding:8px 12px;border:1px solid #ddd;">CIF USD</th>
         </tr>
       </thead>
