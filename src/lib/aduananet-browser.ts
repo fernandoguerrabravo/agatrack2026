@@ -1,16 +1,42 @@
 import "server-only";
 import puppeteer, { Browser, Page } from "puppeteer";
+import { execSync } from "child_process";
 
 const BASE_URL = process.env.ADUANANET_URL || "https://fguerragodoy.aduananet2.cl";
 const LOGIN = process.env.ADUANANET_LOGIN || "";
 const CLAVE = process.env.ADUANANET_CLAVE || "";
 
 /**
+ * Barre perfiles temporales de Puppeteer/Chromium y temporales viejos (> 15 min) que
+ * no se limpiaron al cerrar navegadores previos (crashes/timeouts). Cada job de Puppeteer,
+ * al cerrar su navegador, dispara este barrido → los perfiles no se acumulan y el disco no se llena.
+ * El umbral de 15 min evita tocar perfiles de navegadores que estén corriendo en paralelo.
+ */
+export function sweepPuppeteerTmp(): void {
+  try {
+    execSync(
+      "find /tmp/snap-private-tmp/snap.chromium/tmp -maxdepth 1 -name 'puppeteer_dev_chrome_profile-*' -type d -mmin +15 -exec rm -rf {} + 2>/dev/null; " +
+      "find /tmp -maxdepth 1 \\( -name 'upload_*' -o -name 'cl_*' -o -name 'puppeteer_dev_chrome_profile-*' \\) -mmin +15 -exec rm -rf {} + 2>/dev/null",
+      { timeout: 25000, shell: "/bin/bash" }
+    );
+  } catch { /* best-effort, nunca debe romper el flujo */ }
+}
+
+/** Envuelve browser.close() para que además barra perfiles temporales viejos. */
+function conLimpieza(browser: Browser): Browser {
+  const original = browser.close.bind(browser);
+  browser.close = async () => {
+    try { await original(); } finally { sweepPuppeteerTmp(); }
+  };
+  return browser;
+}
+
+/**
  * Crea una sesión de browser autenticada en AduanaNet.
  * Retorna { browser, page } — recuerda cerrar el browser al terminar.
  */
 export async function aduananetBrowserLogin(): Promise<{ browser: Browser; page: Page }> {
-  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+  const browser = conLimpieza(await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] }));
   const page = await browser.newPage();
   page.setDefaultTimeout(30000);
 

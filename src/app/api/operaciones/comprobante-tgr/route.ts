@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { pgQuery } from "@/lib/postgres";
 import { uploadToSpaces } from "@/lib/spaces";
+import { sweepPuppeteerTmp } from "@/lib/aduananet-browser";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -234,6 +235,7 @@ export async function POST(request: Request) {
       return await guardarYResponder(pdfBuffer, rutCliente, nro_operacion);
     } finally {
       await browser.close().catch(() => {});
+      sweepPuppeteerTmp(); // limpia perfiles temporales viejos tras cada job
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
