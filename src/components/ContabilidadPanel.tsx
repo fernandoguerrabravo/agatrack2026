@@ -197,6 +197,7 @@ export default function ContabilidadPanel() {
               <thead>
                 <tr className="bg-base-200/50 border-b-2 border-base-300">
                   <th className="font-semibold text-xs uppercase tracking-wider">Despacho</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Referencia</th>
                   <th className="font-semibold text-xs uppercase tracking-wider">Fecha</th>
                   <th className="font-semibold text-xs uppercase tracking-wider">Cliente</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-right">CIF USD</th>
@@ -208,12 +209,13 @@ export default function ContabilidadPanel() {
               </thead>
               <tbody>
                 {despachosPagina.length === 0 ? (
-                  <tr><td colSpan={8} className="text-center py-8 text-base-content/50">Sin resultados</td></tr>
+                  <tr><td colSpan={9} className="text-center py-8 text-base-content/50">Sin resultados</td></tr>
                 ) : despachosPagina.map((d, i) => (
                   <tr key={d.nro_aceptacion || d.despacho} className={`hover:bg-base-200/30 transition-colors ${i % 2 === 0 ? "" : "bg-base-200/10"}`}>
                     <td>
                       <span className="font-mono font-bold text-primary">{d.despacho}</span>
                     </td>
+                    <td className="text-sm font-mono text-base-content/80">{d.referencia || "-"}</td>
                     <td className="text-sm text-base-content/70">
                       {d.fecha_aceptacion ? (() => {
                         const [y, m, day] = d.fecha_aceptacion.substring(0, 10).split("-");
