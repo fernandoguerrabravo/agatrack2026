@@ -54,6 +54,7 @@ async function responderRemitente(
     await resend.emails.send({
       from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
       to: [from],
+      cc: ["garqueros@agenciaguerra.com", "yannelys@agenciaguerra.com"],
       subject: `✅ Comprobante de Ingreso de Remesa generado OK${result.comprobanteNro ? " N° " + result.comprobanteNro : ""} — Total ${parsed.total.toLocaleString("es-CL")}`,
       html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">
         <p>Estimados,</p>
