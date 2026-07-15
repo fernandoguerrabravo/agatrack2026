@@ -290,7 +290,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       let usedVision = false;
       try {
         const { execSync } = await import("child_process");
-        const { writeFileSync, readFileSync, unlinkSync } = await import("fs");
+        const { writeFileSync, readFileSync, unlinkSync, readdirSync, statSync } = await import("fs");
         const { join } = await import("path");
         const os = await import("os");
 
@@ -299,14 +299,24 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
         const tmpPng = join(tmpDir, `upload_${Date.now()}`);
 
         writeFileSync(tmpPdf, buffer);
-        execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r400 -dJPEGQ=95 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.jpg" "${tmpPdf}"`, { timeout: 60000 });
-
-        const dirFiles = require("fs").readdirSync(tmpDir) as string[];
+        // Anthropic rechaza imágenes > ~10MB. Generamos con DPI adaptativo: bajamos la resolución
+        // hasta que la imagen más grande quede bajo ~4.5MB (evita el error "image exceeds 10 MB").
         const baseName = tmpPng.split("/").pop()!;
-        const pngFiles = dirFiles
-          .filter((f: string) => f.startsWith(baseName) && (f.endsWith(".png") || f.endsWith(".jpg")))
-          .sort()
-          .map((f: string) => join(tmpDir, f));
+        const MAX_IMG_BYTES = 4.5 * 1024 * 1024;
+        const genImgs = (dpi: number, q: number): string[] => {
+          (readdirSync(tmpDir) as string[]).filter(f => f.startsWith(baseName) && f.endsWith(".jpg")).forEach(f => { try { unlinkSync(join(tmpDir, f)); } catch {} });
+          execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r${dpi} -dJPEGQ=${q} -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.jpg" "${tmpPdf}"`, { timeout: 60000 });
+          return (readdirSync(tmpDir) as string[]).filter(f => f.startsWith(baseName) && f.endsWith(".jpg")).sort().map(f => join(tmpDir, f));
+        };
+        let pngFiles: string[] = [];
+        for (const [dpi, q] of [[400, 90], [300, 85], [220, 80], [150, 75]] as [number, number][]) {
+          pngFiles = genImgs(dpi, q);
+          const maxSize = pngFiles.reduce((m, f) => Math.max(m, statSync(f).size), 0);
+          console.log(`[docs] pdf->jpg DPI ${dpi} → max ${(maxSize / 1024 / 1024).toFixed(2)} MB (${pngFiles.length} pág)`);
+          if (pngFiles.length === 0 || maxSize <= MAX_IMG_BYTES) break;
+        }
+        // Seguridad: nunca enviar imágenes que sigan sobre 9MB
+        pngFiles = pngFiles.filter(f => statSync(f).size <= 9 * 1024 * 1024);
 
         if (pngFiles.length > 0) {
           const imageContents = pngFiles.slice(0, 10).map((pf: string) => {
@@ -354,7 +364,7 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
       let converted = false;
       try {
         const { execSync } = await import("child_process");
-        const { writeFileSync, readFileSync, unlinkSync, existsSync } = await import("fs");
+        const { writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, statSync } = await import("fs");
         const { join } = await import("path");
         const os = await import("os");
 
@@ -364,16 +374,22 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
 
         writeFileSync(tmpPdf, buffer);
 
-        // Convertir TODAS las páginas a PNG
-        execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r400 -dJPEGQ=95 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.jpg" "${tmpPdf}"`, { timeout: 60000 });
-
-        // Buscar todos los archivos PNG generados
-        const dirFiles = require("fs").readdirSync(tmpDir) as string[];
+        // DPI adaptativo: bajar resolución hasta que cada imagen quede bajo ~4.5MB (límite Anthropic ~10MB)
         const baseName = tmpPng.split("/").pop()!;
-        const pngFiles = dirFiles
-          .filter((f: string) => f.startsWith(baseName) && (f.endsWith(".png") || f.endsWith(".jpg")))
-          .sort()
-          .map((f: string) => join(tmpDir, f));
+        const MAX_IMG_BYTES = 4.5 * 1024 * 1024;
+        const genImgs = (dpi: number, q: number): string[] => {
+          (readdirSync(tmpDir) as string[]).filter(f => f.startsWith(baseName) && f.endsWith(".jpg")).forEach(f => { try { unlinkSync(join(tmpDir, f)); } catch {} });
+          execSync(`gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r${dpi} -dJPEGQ=${q} -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="${tmpPng}-%03d.jpg" "${tmpPdf}"`, { timeout: 60000 });
+          return (readdirSync(tmpDir) as string[]).filter(f => f.startsWith(baseName) && f.endsWith(".jpg")).sort().map(f => join(tmpDir, f));
+        };
+        let pngFiles: string[] = [];
+        for (const [dpi, q] of [[400, 90], [300, 85], [220, 80], [150, 75]] as [number, number][]) {
+          pngFiles = genImgs(dpi, q);
+          const maxSize = pngFiles.reduce((m, f) => Math.max(m, statSync(f).size), 0);
+          console.log(`[docs] pdf->jpg (escaneado) DPI ${dpi} → max ${(maxSize / 1024 / 1024).toFixed(2)} MB (${pngFiles.length} pág)`);
+          if (pngFiles.length === 0 || maxSize <= MAX_IMG_BYTES) break;
+        }
+        pngFiles = pngFiles.filter(f => statSync(f).size <= 9 * 1024 * 1024);
 
         console.log("[docs] PNG pages generated:", pngFiles.length);
 
