@@ -27,6 +27,40 @@ const BASE_URL = "https://fguerragodoy.aduananet2.cl";
 (async () => {
   const { PDFDocument } = await import("pdf-lib");
 
+  // 0. BACKFILL desde AduanaNet: operaciones Petroquímica (últimos 60 días) sin dte_url en notas
+  //    y sin enviar. Si la factura 33 YA está emitida en AduanaNet, registramos dte_url + dte_fecha
+  //    para que el envío de más abajo las capture. Evita que se escapen facturas emitidas cuyo
+  //    dte_url no quedó guardado (ej. transmitidas manualmente en AduanaNet).
+  try {
+    const { execSync } = await import("child_process");
+    const pend = await pool.query(`
+      SELECT dr.despacho FROM despachos_replica dr JOIN operaciones o ON dr.despacho = o.nro_operacion
+      WHERE dr.rut_cliente = '92933000-5'
+        AND dr.fecha_aceptacion >= (CURRENT_DATE - INTERVAL '60 days')
+        AND (o.notas NOT LIKE '%dte_url:%')
+        AND (o.notas NOT LIKE '%factura_enviada:true%')
+        AND dr.dus_tipo_envio NOT IN ('EXPO', 'SALIDA')
+    `);
+    let bf = 0;
+    for (const r of pend.rows) {
+      try {
+        const cmd = `curl -sk -u fguerragodoy:Uj7UarxZafsTL9G -X GET "${BASE_URL}/modulos/endpoints/api.php?endpoint=listaDTEs" -H "Content-Type: application/json" -d '{"despacho":${r.despacho}}'`;
+        const d = JSON.parse(execSync(cmd, { timeout: 10000 }).toString());
+        const fac = (d.data || []).find(t => t.codigo_tipo_dte === "33");
+        if (!fac || !fac.dte_folio) continue;
+        const fb = Buffer.from(String(fac.dte_folio)).toString("base64");
+        const params = Buffer.from(`tipoDTE=MzM=&folio=${fb}&cedible=MA==&fact_id=&ticket=&outPut=`).toString("base64");
+        const url = `${BASE_URL}/modulos/facturacion_electronica/otros/mostrar_dte_pdf.php?params=${params}`;
+        let add = `\ndte_url:${url}`;
+        if (fac.dte_fecha) add += `\ndte_fecha:${fac.dte_fecha}`;
+        await pool.query("UPDATE operaciones SET notas = COALESCE(notas,'') || $1, updated_at = NOW() WHERE nro_operacion = $2", [add, r.despacho]);
+        console.log(`[facturas-petro] backfill dte_url desde AduanaNet: ${r.despacho} (folio ${fac.dte_folio})`);
+        bf++;
+      } catch { /* ignorar errores puntuales de la API */ }
+    }
+    if (bf > 0) console.log(`[facturas-petro] backfill AduanaNet: ${bf} operacion(es) con factura emitida registradas`);
+  } catch (e) { console.error("[facturas-petro] backfill AduanaNet error:", e.message); }
+
   // 1. Buscar operaciones Petroquímica con factura (dte_url) desde 22/06/2026 no enviadas
   const { rows } = await pool.query(`
     SELECT dr.despacho, dr.referencia, dr.nro_aceptacion, dr.fecha_aceptacion,
