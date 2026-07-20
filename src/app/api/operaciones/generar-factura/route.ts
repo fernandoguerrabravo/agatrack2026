@@ -106,6 +106,26 @@ export async function POST(request: Request) {
     };
 
     try {
+      // 0. ANTI-DUPLICADO: si ya existe una factura (prefactura confeccionada o factura final)
+      // para este despacho en la lista de facturación afecta de AduanaNet, NO crear otra.
+      // Esto cubre el caso en que la prefactura/factura se creó fuera de nuestro sistema y no
+      // quedó registrada en las notas.
+      const yaExisteFiltro = await filtrarPorNid(nro_operacion);
+      const yaExisteFactura = yaExisteFiltro
+        ? await page.evaluate(() => /imprimir\(\s*'?\d+'?\s*\)/.test(document.body.innerHTML))
+        : false;
+      if (yaExisteFactura) {
+        console.log(`[factura] ⏭️ Op ${nro_operacion} ya tiene factura/prefactura en AduanaNet, no se duplica`);
+        if (!notas.includes("factura_confeccionada:")) {
+          await pgQuery(
+            "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
+            [`\nfactura_confeccionada:${new Date().toISOString()}`, nro_operacion]
+          );
+        }
+        await browser.close();
+        return NextResponse.json({ ok: true, dte_url: "", skip: true, motivo: "factura_existente_aduananet" });
+      }
+
       // 1. Lista facturación
       await page.goto(`${BASE_URL}/modulos/contabilidad/facturacion/afecta/lista.php`, { waitUntil: "networkidle0" });
 
