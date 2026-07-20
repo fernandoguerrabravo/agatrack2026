@@ -33,12 +33,17 @@ type Despacho = {
   url_factura_final?: string;
   factura_confeccionada?: boolean;
   es_pago_directo?: boolean;
+  operacion?: string;
+  dus_tipo_envio?: string;
 };
 
 const POR_PAGINA = 20;
 
 export default function ContabilidadPanel() {
   const [despachos, setDespachos] = useState<Despacho[]>([]);
+  const [despachosExpo, setDespachosExpo] = useState<Despacho[]>([]);
+  const [tab, setTab] = useState<"impo" | "expo">("impo");
+  const [expoCargado, setExpoCargado] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generandoTGR, setGenerandoTGR] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
@@ -56,7 +61,25 @@ export default function ContabilidadPanel() {
     setLoading(false);
   }
 
-  const filtrados = despachos.filter(d => {
+  async function fetchExpo() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/contabilidad/despachos?tipo=expo");
+      const data = await res.json();
+      if (data.despachos) setDespachosExpo(data.despachos);
+      setExpoCargado(true);
+    } catch {}
+    setLoading(false);
+  }
+
+  function cambiarTab(t: "impo" | "expo") {
+    setTab(t);
+    setPagina(1);
+    setBusqueda("");
+    if (t === "expo" && !expoCargado) fetchExpo();
+  }
+
+  const filtrados = (tab === "expo" ? despachosExpo : despachos).filter(d => {
     if (!busqueda) return true;
     const q = busqueda.toLowerCase();
     return (
@@ -163,14 +186,34 @@ export default function ContabilidadPanel() {
 
   return (
     <div className="space-y-5">
+      {/* Pestañas Importaciones / Exportaciones */}
+      <div role="tablist" className="tabs tabs-boxed bg-base-200/50 w-fit">
+        <button
+          role="tab"
+          className={`tab ${tab === "impo" ? "tab-active" : ""}`}
+          onClick={() => cambiarTab("impo")}
+        >
+          📥 Importaciones
+        </button>
+        <button
+          role="tab"
+          className={`tab ${tab === "expo" ? "tab-active" : ""}`}
+          onClick={() => cambiarTab("expo")}
+        >
+          📤 Exportaciones y Salida
+        </button>
+      </div>
+
       {/* Header con buscador y acciones */}
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <button className="btn btn-sm btn-success gap-1" onClick={handleGenerarTGRTodos}>
-                🏦 Generar TGR pendientes
-              </button>
+              {tab === "impo" && (
+                <button className="btn btn-sm btn-success gap-1" onClick={handleGenerarTGRTodos}>
+                  🏦 Generar TGR pendientes
+                </button>
+              )}
               <div className="badge badge-neutral badge-outline">{filtrados.length} registros</div>
             </div>
             <div className="relative">
@@ -189,7 +232,8 @@ export default function ContabilidadPanel() {
         </div>
       </div>
 
-      {/* Tabla */}
+      {/* Tabla Importaciones */}
+      {tab === "impo" && (
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body p-0">
           <div className="overflow-x-auto">
@@ -300,6 +344,60 @@ export default function ContabilidadPanel() {
           </div>
         </div>
       </div>
+      )}
+
+      {/* Tabla Exportaciones y Salida (solo lectura) */}
+      {tab === "expo" && (
+      <div className="card bg-base-100 shadow-sm">
+        <div className="card-body p-0">
+          <div className="overflow-x-auto">
+            <table className="table table-sm w-full">
+              <thead>
+                <tr className="bg-base-200/50 border-b-2 border-base-300">
+                  <th className="font-semibold text-xs uppercase tracking-wider">Despacho</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Referencia</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Fecha</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Cliente</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Tipo</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider text-right">FOB USD</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider text-center">T/C</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Aduana</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider text-center">DUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {despachosPagina.length === 0 ? (
+                  <tr><td colSpan={9} className="text-center py-8 text-base-content/50">Sin resultados</td></tr>
+                ) : despachosPagina.map((d, i) => (
+                  <tr key={d.nro_aceptacion || d.despacho} className={`hover:bg-base-200/30 transition-colors ${i % 2 === 0 ? "" : "bg-base-200/10"}`}>
+                    <td><span className="font-mono font-bold text-primary">{d.despacho}</span></td>
+                    <td className="text-sm font-mono text-base-content/80">{d.referencia || "-"}</td>
+                    <td className="text-sm text-base-content/70">
+                      {d.fecha_aceptacion ? (() => {
+                        const [y, m, day] = d.fecha_aceptacion.substring(0, 10).split("-");
+                        return `${day}/${m}/${y}`;
+                      })() : "-"}
+                    </td>
+                    <td><span className="text-sm max-w-36 block truncate" title={d.cliente}>{d.cliente}</span></td>
+                    <td className="text-xs text-base-content/70">{d.dus_tipo_envio || d.operacion || "-"}</td>
+                    <td className="text-right font-mono text-sm">{d.total_fob ? Number(d.total_fob).toLocaleString("es-CL") : "-"}</td>
+                    <td className="text-center text-xs text-base-content/60">{d.tipo_cambio || "-"}</td>
+                    <td className="text-sm">{d.aduana || "-"}</td>
+                    <td className="text-center">
+                      {d.url_despacho ? (
+                        <a href={d.url_despacho} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-outline btn-info" title="Ver DUS">
+                          <span className="text-xs">📋</span>
+                        </a>
+                      ) : "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      )}
 
       {/* Paginador */}
       {totalPaginas > 1 && (
