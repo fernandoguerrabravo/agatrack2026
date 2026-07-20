@@ -1800,9 +1800,14 @@ IMPORTANTE: Si el BL actual es de una naviera listada arriba, SEGUIR el mismo pa
                   await pgQuery("UPDATE documentos SET datos_shipsgo = $1 WHERE id = $2", [JSON.stringify(shipsgoData), docId]);
                   console.log("[upload] ShipsGo data guardada para BL:", blNumber, "id:", shipsgoId);
 
-                  // Enviar correo actualización ETA si hay ruta
+                  // Enviar correo actualización ETA si hay ruta.
+                  // NO enviar si la operación aún es temporal (INBOUND_/TEMP_): en ese momento el
+                  // documento no está asociado al nro de operación real ni tiene referencia, y saldría
+                  // un correo con "INBOUND_xxx" y REF vacío. El flujo inbound envía su propia
+                  // notificación (apertura/actualización) una vez creada la operación real.
                   const sgRoute = (shipsgoData as Record<string, unknown>).route as Record<string, unknown> | undefined;
-                  if (sgRoute) {
+                  const esOpTemporal = /^(INBOUND_|TEMP_)/.test(String(nroOperacion || ""));
+                  if (sgRoute && !esOpTemporal) {
                     try {
                       const { Resend: ResendEta } = await import("resend");
                       const resendEta = new ResendEta(process.env.RESEND_API_KEY);
