@@ -39,6 +39,18 @@ type Despacho = {
 
 const POR_PAGINA = 20;
 
+// Clasifica el tipo de exportación a una etiqueta legible + color, en base al campo `operacion`.
+function tipoExportacion(op?: string): { label: string; cls: string } {
+  const o = (op || "").toUpperCase();
+  if (o.includes("SERVICIO")) return { label: "Servicios", cls: "badge-info" };
+  if (o.includes("REEXPORT")) return { label: "Reexportación", cls: "badge-warning" };
+  if (o.includes("SALIDA TEMPORAL")) return { label: "Salida Temporal", cls: "badge-accent" };
+  if (o.includes("EXPORT") && o.includes("NORMAL")) return { label: "Normal", cls: "badge-success" };
+  if (o.includes("EXPORT")) return { label: "Exportación", cls: "badge-success" };
+  if (o.includes("SALIDA")) return { label: "Salida", cls: "badge-neutral" };
+  return { label: op || "-", cls: "badge-ghost" };
+}
+
 export default function ContabilidadPanel() {
   const [despachos, setDespachos] = useState<Despacho[]>([]);
   const [despachosExpo, setDespachosExpo] = useState<Despacho[]>([]);
@@ -358,7 +370,7 @@ export default function ContabilidadPanel() {
                   <th className="font-semibold text-xs uppercase tracking-wider">Referencia</th>
                   <th className="font-semibold text-xs uppercase tracking-wider">Fecha</th>
                   <th className="font-semibold text-xs uppercase tracking-wider">Cliente</th>
-                  <th className="font-semibold text-xs uppercase tracking-wider">Tipo</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider">Tipo Exportación</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-right">FOB USD</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-center">T/C</th>
                   <th className="font-semibold text-xs uppercase tracking-wider">Aduana</th>
@@ -379,7 +391,12 @@ export default function ContabilidadPanel() {
                       })() : "-"}
                     </td>
                     <td><span className="text-sm max-w-36 block truncate" title={d.cliente}>{d.cliente}</span></td>
-                    <td className="text-xs text-base-content/70">{d.dus_tipo_envio || d.operacion || "-"}</td>
+                    <td>
+                      {(() => {
+                        const t = tipoExportacion(d.operacion);
+                        return <span className={`badge badge-sm ${t.cls} badge-outline whitespace-nowrap`} title={d.operacion || ""}>{t.label}</span>;
+                      })()}
+                    </td>
                     <td className="text-right font-mono text-sm">{d.total_fob ? Number(d.total_fob).toLocaleString("es-CL") : "-"}</td>
                     <td className="text-center text-xs text-base-content/60">{d.tipo_cambio || "-"}</td>
                     <td className="text-sm">{d.aduana || "-"}</td>
