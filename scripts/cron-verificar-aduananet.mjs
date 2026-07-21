@@ -35,6 +35,17 @@ const DRY_RUN = process.env.DRY_RUN === "1";
 const MAX_OPS = Number(process.env.MAX_OPS || 40);
 // Correos + auto-provisión: true para enviar; se controla con env ENVIAR_CORREOS.
 const ENVIAR_CORREOS = process.env.ENVIAR_CORREOS !== "0";
+// ANTI-FLOOD: solo se envía correo/provisión si la aceptación es de los últimos
+// EMAIL_MAX_DIAS días. Las aceptaciones más viejas (backlog) se marcan aprobadas
+// EN SILENCIO. Así, al ponerse al día con un backlog, NO se inunda de correos.
+const EMAIL_MAX_DIAS = Number(process.env.EMAIL_MAX_DIAS || 1);
+function esAceptacionReciente(fechaDMY) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(fechaDMY || "");
+  if (!m) return false;
+  const f = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  const diffDias = Math.floor((Date.now() - f.getTime()) / 86400000);
+  return diffDias >= 0 && diffDias <= EMAIL_MAX_DIAS;
+}
 
 function sweepTmp() {
   try {
@@ -148,7 +159,9 @@ async function enviarCorreoAprobacion(op, nroAceptacion, fecha, referencia, rutC
       );
       if (updated.rowCount === 0) continue;
 
-      if (ENVIAR_CORREOS) {
+      // Anti-flood: solo notificar/provisionar aceptaciones recientes; el backlog se marca en silencio.
+      const reciente = esAceptacionReciente(acep.fecha);
+      if (ENVIAR_CORREOS && reciente) {
         const rut = updated.rows[0].rut_cliente || "";
         try { await enviarCorreoAprobacion(op.nro_operacion, acep.nroAceptacion, acep.fecha, acep.referencia, rut); }
         catch (e) { console.error(`  ${op.nro_operacion} email err:`, e.message); }
@@ -162,6 +175,8 @@ async function enviarCorreoAprobacion(op, nroAceptacion, fecha, referencia, rutC
             console.log(`  ${op.nro_operacion} provisión: HTTP ${r.status}`);
           } catch (e) { console.error(`  ${op.nro_operacion} provisión err:`, e.message); }
         }
+      } else {
+        console.log(`  ${op.nro_operacion} marcada aprobada SIN correo (aceptación ${acep.fecha}${reciente ? "" : " no reciente / backlog"}).`);
       }
     }
   } finally {
