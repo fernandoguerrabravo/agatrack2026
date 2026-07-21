@@ -36,141 +36,121 @@ export async function POST(request: Request) {
     const { browser, page } = await aduananetBrowserLogin();
 
     try {
-      // 1. Ir a la lista de pago directo
-      await page.goto(`${BASE_URL}/modulos/contabilidad/pago_directo/lista.php`, { waitUntil: "networkidle0" });
+      // Helper: consulta datos_nid_pd.php para saber si el pago directo YA existe.
+      // AduanaNet (actualización jul-2026) responde una página que, si el comprobante
+      // ya está creado, invoca ya_existe('agno','mes','tipo','corr'); si el despacho es
+      // válido para crear, invoca seleccion(...) con los datos a cargar en el formulario.
+      const consultarComprobante = async (): Promise<{ agno: string; mes: string; tipo: string; corr: string } | null> => {
+        return await page.evaluate(async (op) => {
+          try {
+            const r = await fetch(`/modulos/general/ventanas/destellantes/datos_nid_pd.php?identificador=1&valor=${op}`, { credentials: "include" });
+            const t = await r.text();
+            // La invocación real ya_existe('2026','6','E','487922') lleva comillas;
+            // la definición de la función usa parámetros sin comillas, así que este
+            // patrón solo captura la invocación (comprobante ya creado).
+            const m = t.match(/ya_existe\(\s*'(\d+)'\s*,\s*'(\d+)'\s*,\s*'([^']+)'\s*,\s*'(\d+)'\s*\)/);
+            if (m) return { agno: m[1], mes: m[2], tipo: m[3], corr: m[4] };
+            return null;
+          } catch { return null; }
+        }, nro_operacion);
+      };
 
-      // 2. Click en "Nuevo" — ejecutar función nuevo() de la página
-      await page.evaluate(() => { (window as unknown as Record<string, () => void>).nuevo(); });
-      await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+      // 1. ¿Ya existe el pago directo para este despacho?
+      let comp = await consultarComprobante();
+      const yaExiste = !!comp;
 
-      // 3. Obtener fecha de pago del PDF TGR
-      const opRows = await pgQuery<{ notas: string }>(
-        "SELECT notas FROM operaciones WHERE nro_operacion = $1",
-        [nro_operacion]
-      );
-      const tgrUrlMatch = (opRows[0]?.notas || "").match(/tgr_url:(https?:\/\/[^\s\n]+)/);
-      const tgrUrl = tgrUrlMatch ? tgrUrlMatch[1] : "";
+      if (!comp) {
+        // 2. No existe → crearlo.
+        // 2a. Abrir formulario "Nuevo"
+        await page.goto(`${BASE_URL}/modulos/contabilidad/pago_directo/lista.php`, { waitUntil: "networkidle0" });
+        await page.evaluate(() => { (window as unknown as Record<string, () => void>).nuevo(); });
+        await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
 
-      let fechaPago = "";
-      if (tgrUrl) {
-        try {
-          const pdfRes = await fetch(tgrUrl);
-          if (pdfRes.ok) {
-            const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
-            const pdfParse = require("pdf-parse");
-            const pdfData = await pdfParse(pdfBuffer);
-            const text = pdfData.text || "";
-            // Buscar "Fecha Pago" seguido de una fecha dd-mm-yyyy o dd/mm/yyyy
-            const fechaPagoMatch = text.match(/Fecha\s*Pago\s*(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i);
-            if (fechaPagoMatch) {
-              fechaPago = `${fechaPagoMatch[1]}/${fechaPagoMatch[2]}/${fechaPagoMatch[3]}`;
-            } else {
-              // Fallback: segunda fecha (la primera suele ser vencimiento)
-              const allFechas = text.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/g) || [];
-              if (allFechas.length >= 2) {
-                const parts = allFechas[1].match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
-                if (parts) fechaPago = `${parts[1]}/${parts[2]}/${parts[3]}`;
-              } else if (allFechas.length === 1) {
-                const parts = allFechas[0].match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+        // 2b. Fecha de pago desde el PDF TGR
+        const opRows = await pgQuery<{ notas: string }>(
+          "SELECT notas FROM operaciones WHERE nro_operacion = $1",
+          [nro_operacion]
+        );
+        const tgrUrlMatch = (opRows[0]?.notas || "").match(/tgr_url:(https?:\/\/[^\s\n]+)/);
+        const tgrUrl = tgrUrlMatch ? tgrUrlMatch[1] : "";
+        let fechaPago = "";
+        if (tgrUrl) {
+          try {
+            const pdfRes = await fetch(tgrUrl);
+            if (pdfRes.ok) {
+              const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
+              const pdfParse = require("pdf-parse");
+              const pdfData = await pdfParse(pdfBuffer);
+              const text = pdfData.text || "";
+              const fechaPagoMatch = text.match(/Fecha\s*Pago\s*(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i);
+              if (fechaPagoMatch) {
+                fechaPago = `${fechaPagoMatch[1]}/${fechaPagoMatch[2]}/${fechaPagoMatch[3]}`;
+              } else {
+                const allFechas = text.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/g) || [];
+                const pick = allFechas.length >= 2 ? allFechas[1] : allFechas[0];
+                const parts = pick ? pick.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/) : null;
                 if (parts) fechaPago = `${parts[1]}/${parts[2]}/${parts[3]}`;
               }
             }
+          } catch (pdfErr) {
+            console.error("[pago-directo] Error leyendo PDF TGR:", pdfErr instanceof Error ? pdfErr.message : pdfErr);
           }
-        } catch (pdfErr) {
-          console.error("[pago-directo] Error leyendo PDF TGR:", pdfErr instanceof Error ? pdfErr.message : pdfErr);
         }
-      }
-      if (!fechaPago) {
-        // Fallback: fecha de hoy
-        const hoy = new Date();
-        fechaPago = `${String(hoy.getDate()).padStart(2, "0")}/${String(hoy.getMonth() + 1).padStart(2, "0")}/${hoy.getFullYear()}`;
-      }
+        if (!fechaPago) {
+          const hoy = new Date();
+          fechaPago = `${String(hoy.getDate()).padStart(2, "0")}/${String(hoy.getMonth() + 1).padStart(2, "0")}/${hoy.getFullYear()}`;
+        }
 
-      // 4. Ingresar fecha y despacho con Tab
-      // Interceptar alerts y confirm
-      await page.evaluate(() => {
-        (window as unknown as Record<string, string>).__lastAlert = "";
-        window.alert = (msg: string) => { (window as unknown as Record<string, string>).__lastAlert = msg; };
-        window.confirm = () => true; // Auto-aceptar confirms
-      });
-
-      // Campo cmp_fecha (fecha de pago)
-      const fechaInput = await page.$('input[name="cmp_fecha"]');
-      if (fechaInput) {
-        await fechaInput.click({ count: 3 });
-        await fechaInput.type(fechaPago);
-      }
-
-      // Campo lib_nid (despacho) + Tab
-      const libNidInput = await page.$('input[name="lib_nid"]');
-      if (libNidInput) {
-        await libNidInput.click({ count: 3 });
-        await libNidInput.type(nro_operacion);
-        await page.keyboard.press("Tab");
-        // Esperar que onblur cargue datos
-        await new Promise(r => setTimeout(r, 3000));
-      }
-
-      console.log(`[pago-directo] Op=${nro_operacion} fecha=${fechaPago}`);
-
-      // 5. Click Ingresar via validaForm + aceptar dialogs
-      // Override confirm para aceptar el sweet alert
-      await page.evaluate(() => {
-        window.confirm = () => true;
-      });
-
-      const ingresarBtn = await page.$('input[name="btnGuardar"]') || await page.$('input[value*="ngresar"]');
-      if (ingresarBtn) {
-        await ingresarBtn.click();
-      } else {
+        // 2c. Interceptar alerts/confirm
         await page.evaluate(() => {
-          const form = (document as unknown as Record<string, HTMLFormElement>).frmEditar;
-          if (typeof (window as unknown as Record<string, (f: HTMLFormElement) => boolean>).validaForm === "function") {
-            (window as unknown as Record<string, (f: HTMLFormElement) => boolean>).validaForm(form);
-          }
+          (window as unknown as Record<string, string>).__lastAlert = "";
+          window.alert = (msg: string) => { (window as unknown as Record<string, string>).__lastAlert = msg; };
+          window.confirm = () => true;
         });
-      }
-      await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
-      await new Promise(r => setTimeout(r, 3000));
 
-      // 5. Verificar resultado
-      const alertMsg = await page.evaluate(() => (window as unknown as Record<string, string>).__lastAlert || "");
-      const bodyText = await page.evaluate(() => document.body.innerText?.substring(0, 500) || "");
-      const yaExiste = (alertMsg + bodyText).toLowerCase().includes("ya fue") || 
-                       (alertMsg + bodyText).toLowerCase().includes("ya existe") ||
-                       (alertMsg + bodyText).toLowerCase().includes("ya se encuentra");
+        // 2d. Fecha de pago
+        const fechaInput = await page.$('input[name="cmp_fecha"]');
+        if (fechaInput) { await fechaInput.click({ count: 3 }); await fechaInput.type(fechaPago); }
 
-      if (yaExiste) {
-        console.log(`[pago-directo] Ya existe para op ${nro_operacion}: "${alertMsg}"`);
-      } else {
-        console.log(`[pago-directo] Creado para op ${nro_operacion}${alertMsg ? " (alert: " + alertMsg + ")" : ""}`);
-      }
+        // 2e. Despacho + Tab (dispara onblur open_datos_nid_pd que puebla cli/dus_*)
+        const libNidInput = await page.$('input[name="lib_nid"]');
+        if (libNidInput) {
+          await libNidInput.click({ count: 3 });
+          await libNidInput.type(nro_operacion);
+          await page.keyboard.press("Tab");
+          await new Promise(r => setTimeout(r, 3500));
+        }
 
-      // 6. Ir a la lista y filtrar por despacho
-      await page.goto(`${BASE_URL}/modulos/contabilidad/pago_directo/lista.php`, { waitUntil: "networkidle0" });
-      const filInput = await page.$('input[name="fil_lib_nid"]');
-      if (filInput) {
-        await filInput.evaluate(el => (el as HTMLInputElement).value = "");
-        await filInput.type(nro_operacion);
-        // Click filtrar via filtrarLista()
-        await page.evaluate(() => {
-          if (typeof (window as unknown as Record<string, () => void>).filtrarLista === "function") {
-            (window as unknown as Record<string, () => void>).filtrarLista();
-          }
-        });
+        console.log(`[pago-directo] Creando op=${nro_operacion} fecha=${fechaPago}`);
+
+        // 2f. Guardar
+        const ingresarBtn = await page.$('input[name="btnGuardar"]') || await page.$('input[value*="ngresar"]');
+        if (ingresarBtn) {
+          await ingresarBtn.click();
+        } else {
+          await page.evaluate(() => {
+            const form = (document as unknown as Record<string, HTMLFormElement>).frmEditar;
+            if (typeof (window as unknown as Record<string, (f: HTMLFormElement) => boolean>).validaForm === "function") {
+              (window as unknown as Record<string, (f: HTMLFormElement) => boolean>).validaForm(form);
+            }
+          });
+        }
         await page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {});
+        await new Promise(r => setTimeout(r, 3000));
+
+        // 2g. Reconsultar para obtener los parámetros del comprobante recién creado
+        comp = await consultarComprobante();
+      } else {
+        console.log(`[pago-directo] Ya existía para op ${nro_operacion}: ${comp.agno}/${comp.mes}/${comp.tipo}/${comp.corr}`);
       }
 
-      // 7. Extraer parámetros del comprobante desde la función ver('año','mes','tipo','correlativo')
-      const pageHtml = await page.content();
-      const verMatch = pageHtml.match(/ver\(\s*'(\d+)'\s*,\s*'(\d+)'\s*,\s*'(\w+)'\s*,\s*'(\d+)'\s*\)/);
+      // 3. Construir URL del PDF del comprobante
       let pdfUrl = "";
-      if (verMatch) {
-        const [, agno, mes, tipo, correlativo] = verMatch;
-        pdfUrl = `${BASE_URL}/modulos/contabilidad/comprobante/imprimir_pdf.php?cmp_agno=${agno}&cmp_mes=${mes}&cmp_tipo_c=${tipo}&cmp_correlativo=${correlativo}`;
-        console.log(`[pago-directo] ✅ PDF: agno=${agno} mes=${mes} tipo=${tipo} corr=${correlativo}`);
+      if (comp) {
+        pdfUrl = `${BASE_URL}/modulos/contabilidad/comprobante/imprimir_pdf.php?cmp_agno=${comp.agno}&cmp_mes=${comp.mes}&cmp_tipo_c=${comp.tipo}&cmp_correlativo=${comp.corr}`;
+        console.log(`[pago-directo] ✅ PDF: agno=${comp.agno} mes=${comp.mes} tipo=${comp.tipo} corr=${comp.corr}`);
       } else {
-        console.log(`[pago-directo] No se encontró comprobante en lista para op ${nro_operacion}`);
+        console.log(`[pago-directo] No se pudo obtener comprobante para op ${nro_operacion}`);
       }
 
       await browser.close();
@@ -186,11 +166,20 @@ export async function POST(request: Request) {
         [nro_operacion, rutCliente]
       );
 
-      // Guardar flag de pago directo creado (con o sin PDF URL)
+      // Guardar flag de pago directo (con o sin PDF URL)
       const pago_directo_value = pdfUrl || `${BASE_URL}/modulos/contabilidad/pago_directo/lista.php`;
-      // Solo guardar si no tenía ya pago_directo_url
       const opCheck = await pgQuery<{ notas: string }>("SELECT notas FROM operaciones WHERE nro_operacion = $1", [nro_operacion]);
-      if (!(opCheck[0]?.notas || "").includes("pago_directo_url:")) {
+      const notasActuales = opCheck[0]?.notas || "";
+      const tieneReal = /pago_directo_url:https?:\/\/[^\s\n]*imprimir_pdf\.php/.test(notasActuales);
+      if (pdfUrl) {
+        // Tenemos URL real del comprobante: reemplazar cualquier pago_directo_url previo.
+        const notasLimpias = notasActuales.split("\n").filter(l => !l.startsWith("pago_directo_url:")).join("\n").replace(/\n{2,}/g, "\n");
+        await pgQuery(
+          "UPDATE operaciones SET notas = $1, updated_at = NOW() WHERE nro_operacion = $2",
+          [`${notasLimpias}\npago_directo_url:${pago_directo_value}`.trim(), nro_operacion]
+        );
+      } else if (!notasActuales.includes("pago_directo_url:") && !tieneReal) {
+        // Sin URL real y sin registro previo: guardar fallback.
         await pgQuery(
           "UPDATE operaciones SET notas = COALESCE(notas, '') || $1, updated_at = NOW() WHERE nro_operacion = $2",
           [`\npago_directo_url:${pago_directo_value}`, nro_operacion]
