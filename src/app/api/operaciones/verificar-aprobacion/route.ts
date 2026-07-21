@@ -5,6 +5,10 @@ import { pgQuery } from "@/lib/postgres";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// ⛔ Correos automáticos de aprobación + auto-provisión deshabilitados (2026-07-21).
+// Cambiar a true para reactivar el envío automático.
+const ENVIAR_CORREOS_APROBACION = false;
+
 /**
  * POST /api/operaciones/verificar-aprobacion
  * Body: { nro_operacion: string } o sin body para verificar todas las confeccionadas
@@ -62,8 +66,10 @@ export async function POST(request: Request) {
       [`\nAprobada (replica): ${ap.nro_aceptacion}`, ap.despacho]
     );
 
-    // Si se actualizó (no era ya aprobada), enviar correo + provisión
-    if (updated.length > 0) {
+    // Si se actualizó (no era ya aprobada), enviar correo + provisión.
+    // ⛔ Correos automáticos + auto-provisión DESHABILITADOS (2026-07-21):
+    // poner ENVIAR_CORREOS_APROBACION en true para reactivar.
+    if (updated.length > 0 && ENVIAR_CORREOS_APROBACION) {
       const rutCliente = updated[0].rut_cliente || "";
       const notas = updated[0].notas || "";
       const refMatch = notas.match(/ref:\s*([^\s|\n]+)/i);

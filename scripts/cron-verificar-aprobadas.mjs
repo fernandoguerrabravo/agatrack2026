@@ -17,6 +17,10 @@ const get = (k) => { const m = env.match(new RegExp("^" + k + "=(.*)$", "m")); l
 const POSTGRES_URL = get("POSTGRES_URL").replace(/[?&]sslmode=[^&]*/g, "");
 const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthorized: false } });
 
+// ⛔ Correos automáticos de aprobación + auto-provisión DESHABILITADOS (2026-07-21).
+// Poner en true para reactivar el envío de correo "Despacho Aprobado" y la provisión auto.
+const ENVIAR_CORREOS = false;
+
 (async () => {
   const start = Date.now();
 
@@ -60,6 +64,8 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
     );
     if (updated.rowCount > 0) {
       actualizadas++;
+      // Correos automáticos + provisión deshabilitados: solo se marca el estado.
+      if (!ENVIAR_CORREOS) continue;
       // Enviar correo de notificación de aprobación
       try {
         const rutCliente = updated.rows[0]?.rut_cliente || "";
