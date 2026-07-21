@@ -41,12 +41,19 @@ export async function POST(request: Request) {
   const cookies = await aduananetLogin();
   const aprobadas: Array<{ nro_operacion: string; nro_aceptacion: string; fecha_aceptacion: string }> = [];
 
-  // Primero verificar en despachos_replica (más confiable)
+  // Primero verificar en despachos_replica (más confiable).
+  // IMPORTANTE: solo estado 'C' (Cursada/legalizada) = despacho APROBADO.
+  // estado 'I' (Ingresada) = DIN presentada pero en trámite / no legalizada → NO aprobar
+  // (evita enviar correo de "Despacho Aprobado" a despachos aún en curso).
   const nros = operaciones.map(o => o.nro_operacion);
-  const replicaAprobadas = await pgQuery<{ despacho: string; nro_aceptacion: string; fecha_aceptacion: string }>(
-    `SELECT despacho, nro_aceptacion, fecha_aceptacion FROM despachos_replica WHERE despacho = ANY($1)`,
+  const replicaRows = await pgQuery<{ despacho: string; nro_aceptacion: string; fecha_aceptacion: string; estado: string }>(
+    `SELECT despacho, nro_aceptacion, fecha_aceptacion, estado FROM despachos_replica WHERE despacho = ANY($1)`,
     [nros]
   );
+  const replicaAprobadas = replicaRows.filter(r => r.estado === "C");
+  // Despachos presentes en la réplica pero NO legalizados (estado != 'C'): no aprobar aún,
+  // ni por réplica ni por el fallback de AduanaNet.
+  const noLegalizados = new Set(replicaRows.filter(r => r.estado !== "C").map(r => r.despacho));
   for (const ap of replicaAprobadas) {
     aprobadas.push({
       nro_operacion: ap.despacho,
@@ -102,6 +109,9 @@ export async function POST(request: Request) {
   const pendientesAduananet = operaciones.filter(o => !yaAprobadas.has(o.nro_operacion));
 
   for (const op of pendientesAduananet) {
+    // Si la réplica ya lo tiene como Ingresado (estado 'I'), aún no está aprobado:
+    // no marcar por el fallback de AduanaNet (la réplica es la fuente de verdad).
+    if (noLegalizados.has(op.nro_operacion)) continue;
     try {
       // Filtrar en lista de DIN terminadas por lib_nid (con retry)
       const filterBody = new URLSearchParams();
