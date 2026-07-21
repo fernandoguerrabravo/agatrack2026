@@ -4,7 +4,7 @@
  * Si el nro_operacion aparece en la columna "despacho" de despachos_replica, se marca como aprobada.
  * 
  * Uso: node scripts/cron-verificar-aprobadas.mjs
- * Cron: */5 * * * * cd /opt/agatrack2026 && /usr/bin/node scripts/cron-verificar-aprobadas.mjs >> /var/log/agatrack-aprobadas.log 2>&1
+ * Cron sugerido: cada 5 minutos.
  */
 import pg from "pg";
 import fs from "fs";
@@ -17,9 +17,9 @@ const get = (k) => { const m = env.match(new RegExp("^" + k + "=(.*)$", "m")); l
 const POSTGRES_URL = get("POSTGRES_URL").replace(/[?&]sslmode=[^&]*/g, "");
 const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthorized: false } });
 
-// ⛔ Correos automáticos de aprobación + auto-provisión DESHABILITADOS (2026-07-21).
-// Poner en true para reactivar el envío de correo "Despacho Aprobado" y la provisión auto.
-const ENVIAR_CORREOS = false;
+// Correos de aprobación + auto-provisión. ON: aprueba por réplica estado 'C' (legalizada)
+// y envía correo/provisión. La detección temprana por aceptación la hace cron-verificar-aduananet.
+const ENVIAR_CORREOS = true;
 
 (async () => {
   const start = Date.now();
