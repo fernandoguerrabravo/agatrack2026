@@ -44,9 +44,28 @@ export async function aduananetBrowserLogin(): Promise<{ browser: Browser; page:
   await page.goto(`${BASE_URL}/modulos/usuarios/login.php?status=-1`);
   await page.type('input[name="login"]', LOGIN);
   await page.type('input[name="clave"]', CLAVE);
+  // AduanaNet cambió el botón de login: ya no es <input type="submit"> sino
+  // <button type="button" onclick="myFunction()">Entrar</button>. Se intenta el
+  // submit clásico (compatibilidad) y si no, el botón "Entrar" / la función global.
+  const submitLogin = async () => {
+    const classic = await page.$('input[type="submit"], button[type="submit"]');
+    if (classic) { await classic.click(); return; }
+    const clicked = await page.evaluate(() => {
+      const w = window as unknown as Record<string, () => void>;
+      const btns = Array.from(document.querySelectorAll("button")) as HTMLButtonElement[];
+      const entrar = btns.find(b =>
+        /entrar/i.test(b.textContent || "") ||
+        (b.getAttribute("onclick") || "").includes("myFunction")
+      );
+      if (entrar) { entrar.click(); return true; }
+      if (typeof w.myFunction === "function") { w.myFunction(); return true; }
+      return false;
+    });
+    if (!clicked) throw new Error("No se encontró el botón de login de AduanaNet");
+  };
   await Promise.all([
-    page.waitForNavigation({ waitUntil: "networkidle0" }),
-    page.click('input[type="submit"], button[type="submit"]'),
+    page.waitForNavigation({ waitUntil: "networkidle0" }).catch(() => {}),
+    submitLogin(),
   ]);
 
   // Manejar dialogs automáticamente
