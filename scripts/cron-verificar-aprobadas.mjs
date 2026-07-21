@@ -32,11 +32,14 @@ const pool = new pg.Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthor
 
   const nros = pendientes.map(r => r.nro_operacion);
 
-  // Buscar cuáles aparecen en despachos_replica
+  // Buscar cuáles aparecen en despachos_replica COMO APROBADAS.
+  // IMPORTANTE: solo estado 'C' (Cursada/legalizada) = aprobado.
+  // estado 'I' (Ingresada) = DIN en trámite / no legalizada → NO aprobar
+  // (evita marcar aprobados y enviar correos de despachos aún en curso).
   const { rows: aprobadas } = await pool.query(
     `SELECT despacho, nro_aceptacion, fecha_aceptacion 
      FROM despachos_replica 
-     WHERE despacho = ANY($1)`,
+     WHERE despacho = ANY($1) AND estado = 'C'`,
     [nros]
   );
 

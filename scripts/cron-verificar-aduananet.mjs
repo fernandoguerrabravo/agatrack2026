@@ -22,6 +22,15 @@ const BASE_URL = get("ADUANANET_URL") || "https://fguerragodoy.aduananet2.cl";
 const LOGIN = get("ADUANANET_LOGIN");
 const CLAVE = get("ADUANANET_CLAVE");
 
+// ⛔ DESHABILITADO (2026-07-21). Este cron marcaba como aprobado cualquier despacho
+// del que extrajera un número de 10 dígitos del HTML (`\b(\d{10})\b`) — tomaba números
+// que NO eran nro de aceptación, aprobando despachos en trámite (e inexistentes en la
+// réplica), enviando correos de "Despacho Aprobado" y disparando provisiones de fondos
+// indebidas a DOW. La aprobación ahora se determina SOLO por la réplica (estado 'C') en
+// cron-verificar-aprobadas.mjs. Este script queda como no-op.
+console.log(`[${new Date().toISOString()}] cron-verificar-aduananet DESHABILITADO (aprobación buggy). No-op.`);
+process.exit(0);
+
 (async () => {
   const start = Date.now();
 
