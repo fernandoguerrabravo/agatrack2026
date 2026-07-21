@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { pgQuery } from "@/lib/postgres";
-import { aduananetLogin } from "@/lib/aduananet";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const BASE_URL = process.env.ADUANANET_URL || "https://fguerragodoy.aduananet2.cl";
 
 /**
  * POST /api/operaciones/verificar-aprobacion
@@ -38,22 +35,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, verificadas: 0, aprobadas: [] });
   }
 
-  const cookies = await aduananetLogin();
   const aprobadas: Array<{ nro_operacion: string; nro_aceptacion: string; fecha_aceptacion: string }> = [];
 
-  // Primero verificar en despachos_replica (más confiable).
-  // IMPORTANTE: solo estado 'C' (Cursada/legalizada) = despacho APROBADO.
-  // estado 'I' (Ingresada) = DIN presentada pero en trámite / no legalizada → NO aprobar
-  // (evita enviar correo de "Despacho Aprobado" a despachos aún en curso).
+  // Fuente ÚNICA de verdad: despachos_replica con estado 'C' (Cursada/legalizada) = APROBADO.
+  // estado 'I' (Ingresada) = DIN presentada pero en trámite / no legalizada → NO aprobar.
+  // Se ELIMINÓ el fallback contra la lista de DIN terminadas de AduanaNet porque su parseo
+  // marcaba como aprobados despachos que no lo estaban (extraía cualquier número como
+  // nro_aceptación) y enviaba correos de "Despacho Aprobado" a operaciones aún en trámite,
+  // incluso a despachos que ni siquiera existen en la réplica.
   const nros = operaciones.map(o => o.nro_operacion);
   const replicaRows = await pgQuery<{ despacho: string; nro_aceptacion: string; fecha_aceptacion: string; estado: string }>(
-    `SELECT despacho, nro_aceptacion, fecha_aceptacion, estado FROM despachos_replica WHERE despacho = ANY($1)`,
+    `SELECT despacho, nro_aceptacion, fecha_aceptacion, estado FROM despachos_replica WHERE despacho = ANY($1) AND estado = 'C'`,
     [nros]
   );
-  const replicaAprobadas = replicaRows.filter(r => r.estado === "C");
-  // Despachos presentes en la réplica pero NO legalizados (estado != 'C'): no aprobar aún,
-  // ni por réplica ni por el fallback de AduanaNet.
-  const noLegalizados = new Set(replicaRows.filter(r => r.estado !== "C").map(r => r.despacho));
+  const replicaAprobadas = replicaRows;
   for (const ap of replicaAprobadas) {
     aprobadas.push({
       nro_operacion: ap.despacho,
@@ -104,101 +99,10 @@ export async function POST(request: Request) {
     }
   }
 
-  // Luego verificar en AduanaNet las que no se encontraron en replica
-  const yaAprobadas = new Set(aprobadas.map(a => a.nro_operacion));
-  const pendientesAduananet = operaciones.filter(o => !yaAprobadas.has(o.nro_operacion));
-
-  for (const op of pendientesAduananet) {
-    // Si la réplica ya lo tiene como Ingresado (estado 'I'), aún no está aprobado:
-    // no marcar por el fallback de AduanaNet (la réplica es la fuente de verdad).
-    if (noLegalizados.has(op.nro_operacion)) continue;
-    try {
-      // Filtrar en lista de DIN terminadas por lib_nid (con retry)
-      const filterBody = new URLSearchParams();
-      filterBody.set("accion", "F");
-      filterBody.set("fil_lib_nid", op.nro_operacion);
-
-      let html = "";
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const currentCookies = attempt > 0 ? await aduananetLogin(true) : cookies;
-          const res = await fetch(`${BASE_URL}/modulos/din/dus_encabezado/lista.php?term=1`, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: currentCookies },
-            body: filterBody.toString(),
-          });
-          html = await res.text();
-          if (html.length > 100) break;
-        } catch (fetchErr) {
-          if (attempt === 0) { console.error(`[verificar] Retry para ${op.nro_operacion}:`, fetchErr instanceof Error ? fetchErr.message : fetchErr); continue; }
-          throw fetchErr;
-        }
-      }
-
-      // Buscar fila con datos
-      const rows = [...html.matchAll(/<tr[^>]*>\s*<td[^>]*bgcolor[^>]*>([\s\S]*?)<\/tr>/gi)];
-      for (const row of rows) {
-        const cells = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(c =>
-          c[1].replace(/<[^>]*>/g, "").replace(/&nbsp;?/gi, "").trim()
-        );
-        // Estructura: tio_id | adu_id | referencia | nro_aceptacion | fecha | cliente | autor
-        // El nro_aceptacion tiene formato XXXXXXXXXX (10 dígitos)
-        const nroAceptacion = cells.find(c => /^\d{8,12}$/.test(c)) || "";
-        const fechaAceptacion = cells.find(c => /^\d{2}\/\d{2}\/\d{4}$/.test(c)) || "";
-
-        if (nroAceptacion) {
-          aprobadas.push({
-            nro_operacion: op.nro_operacion,
-            nro_aceptacion: nroAceptacion,
-            fecha_aceptacion: fechaAceptacion,
-          });
-
-          // Actualizar en BD
-          const updatedAdu = await pgQuery<{ rut_cliente: string; notas: string }>(
-            `UPDATE operaciones SET estado = 'aprobada', fecha_cierre = NOW(), updated_at = NOW(), 
-             notas = COALESCE(notas, '') || $1 
-             WHERE nro_operacion = $2 AND estado != 'aprobada' RETURNING rut_cliente, notas`,
-            [`\nAprobada: ${nroAceptacion} (${fechaAceptacion})`, op.nro_operacion]
-          );
-
-          // Si se actualizó, enviar correo + provisión
-          if (updatedAdu.length > 0) {
-            const rutClienteAdu = updatedAdu[0].rut_cliente || "";
-            const notasAdu = updatedAdu[0].notas || "";
-            const refMatchAdu = notasAdu.match(/ref:\s*([^\s|\n]+)/i);
-            const referenciaAdu = refMatchAdu ? refMatchAdu[1] : "";
-
-            // Correo aprobación
-            try {
-              const { Resend: ResendAdu } = await import("resend");
-              const resendAdu = new ResendAdu(process.env.RESEND_API_KEY);
-              const { emailsEjecutivosCliente: ejAdu } = await import("@/lib/permisos");
-              const ccAdu = await ejAdu(rutClienteAdu);
-              await resendAdu.emails.send({
-                from: process.env.RESEND_FROM || "AgaTrack <reportes@agatrack.com>",
-                to: ["oscar@agenciaguerra.com", "pbalmaceda@agenciaguerra.com", "daviles@agenciaguerra.com", "transmision@agenciaguerra.com", "comercial@agenciaguerra.com", "fguerrab@agenciaguerra.com"],
-                cc: ccAdu.length > 0 ? ccAdu : undefined,
-                subject: `✅ Despacho Aprobado ${op.nro_operacion} - Aceptación: ${nroAceptacion} - ${fechaAceptacion}${referenciaAdu ? " - REF: " + referenciaAdu : ""}`,
-                html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;"><p>Estimados,</p><p>El despacho <b>${op.nro_operacion}</b> ha sido <span style="color:#16a34a;font-weight:bold;">APROBADO</span>.</p><table style="border-collapse:collapse;margin:16px 0;"><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">N° Despacho</td><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;color:#2563eb;">${op.nro_operacion}</td></tr><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">N° Aceptación</td><td style="padding:8px 12px;border:1px solid #ddd;">${nroAceptacion}</td></tr><tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:bold;background:#f5f5f5;">Fecha</td><td style="padding:8px 12px;border:1px solid #ddd;">${fechaAceptacion}</td></tr></table><p style="color:#666;font-size:12px;">Notificación automática de AgaTrack.</p></div>`,
-              });
-            } catch {}
-
-            // Auto-provisión para Petroquímica
-            if (rutClienteAdu === "92933000-5") {
-              fetch(`http://localhost:${process.env.PORT || 3000}/api/operaciones/provision-fondos`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "x-inbound-secret": process.env.INBOUND_SECRET || "" },
-                body: JSON.stringify({ nro_operacion: op.nro_operacion }),
-              }).catch(err => console.error("[verificar] Error auto-provisión:", err));
-            }
-          }
-          break;
-        }
-      }
-    } catch (err) {
-      console.error(`[verificar] Error para ${op.nro_operacion}:`, err instanceof Error ? err.message : err);
-    }
-  }
+  // NOTA: Se eliminó el fallback que consultaba la lista de DIN terminadas de AduanaNet.
+  // Ese parseo marcaba como aprobados despachos en trámite (e incluso inexistentes en la
+  // réplica), enviando correos de "Despacho Aprobado" y disparando provisiones indebidas.
+  // La réplica (estado 'C') es ahora la única fuente de aprobación.
 
   return NextResponse.json({
     ok: true,
