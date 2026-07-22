@@ -403,7 +403,11 @@ export default function ContabilidadPanel() {
                         <a href={d.url_factura || d.url_factura_final || d.dte_url_notas || ""} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="Factura / DTE">
                           <span className="text-xs">📄</span>
                         </a>
-                      ) : "-"}
+                      ) : (
+                        <a href={`https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/lista.php`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-error" title="Sin factura — generar en AduanaNet">
+                          <span className="text-xs">📄</span>
+                        </a>
+                      )}
                     </td>
                     <td className="text-sm">{d.aduana || "-"}</td>
                     <td className="text-center">
