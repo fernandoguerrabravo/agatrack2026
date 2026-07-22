@@ -404,9 +404,9 @@ export default function ContabilidadPanel() {
                           <span className="text-xs">📄</span>
                         </a>
                       ) : (
-                        <a href={`https://fguerragodoy.aduananet2.cl/modulos/contabilidad/facturacion/afecta/lista.php`} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-error" title="Sin factura — generar en AduanaNet">
+                        <span className="btn btn-xs btn-circle btn-error no-animation cursor-default" title="Sin factura">
                           <span className="text-xs">📄</span>
-                        </a>
+                        </span>
                       )}
                     </td>
                     <td className="text-sm">{d.aduana || "-"}</td>
