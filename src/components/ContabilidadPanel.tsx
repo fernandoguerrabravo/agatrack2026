@@ -372,7 +372,7 @@ export default function ContabilidadPanel() {
                   <th className="font-semibold text-xs uppercase tracking-wider">Cliente</th>
                   <th className="font-semibold text-xs uppercase tracking-wider">Tipo Exportación</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-right">FOB USD</th>
-                  <th className="font-semibold text-xs uppercase tracking-wider text-center">T/C</th>
+                  <th className="font-semibold text-xs uppercase tracking-wider text-center">Factura</th>
                   <th className="font-semibold text-xs uppercase tracking-wider">Aduana</th>
                   <th className="font-semibold text-xs uppercase tracking-wider text-center">DUS</th>
                 </tr>
@@ -398,7 +398,13 @@ export default function ContabilidadPanel() {
                       })()}
                     </td>
                     <td className="text-right font-mono text-sm">{d.total_fob ? Number(d.total_fob).toLocaleString("es-CL") : "-"}</td>
-                    <td className="text-center text-xs text-base-content/60">{d.tipo_cambio || "-"}</td>
+                    <td className="text-center">
+                      {(d.url_factura || d.url_factura_final || d.dte_url_notas) ? (
+                        <a href={d.url_factura || d.url_factura_final || d.dte_url_notas || ""} target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-circle btn-ghost" title="Factura / DTE">
+                          <span className="text-xs">📄</span>
+                        </a>
+                      ) : "-"}
+                    </td>
                     <td className="text-sm">{d.aduana || "-"}</td>
                     <td className="text-center">
                       {d.url_despacho ? (
