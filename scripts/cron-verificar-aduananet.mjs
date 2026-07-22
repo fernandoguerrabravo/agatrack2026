@@ -31,6 +31,9 @@ const BASE_URL = get("ADUANANET_URL") || "https://fguerragodoy.aduananet2.cl";
 const LOGIN = get("ADUANANET_LOGIN");
 const CLAVE = get("ADUANANET_CLAVE");
 
+// Chrome del sistema (mismo que usa la app). Evita el Chrome bundled de Puppeteer,
+// que en el servidor no tiene las librerías del sistema (falla libatk-1.0.so.0).
+const CHROME_PATH = get("PUPPETEER_EXECUTABLE_PATH") || process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
 const DRY_RUN = process.env.DRY_RUN === "1";
 const MAX_OPS = Number(process.env.MAX_OPS || 40);
 // Correos + auto-provisión: true para enviar; se controla con env ENVIAR_CORREOS.
@@ -137,7 +140,7 @@ async function enviarCorreoAprobacion(op, nroAceptacion, fecha, referencia, rutC
   if (pendientes.length === 0) { await pool.end(); return; }
   console.log(`[${new Date().toISOString()}] aduananet-check: ${pendientes.length} pendientes (DRY_RUN=${DRY_RUN})`);
 
-  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage","--disable-gpu"] });
+  const browser = await puppeteer.launch({ headless: true, executablePath: CHROME_PATH, args: ["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage","--disable-gpu"] });
   let aprobadas = 0;
   try {
     const page = await loginBrowser(browser);
